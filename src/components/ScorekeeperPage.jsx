@@ -148,8 +148,7 @@ function ScorekeeperPage() {
         setWinner(null);
         setGameState('playing'); // <-- CORRECCIÓN CLAVE
     };
-                                      };
-    
+                                     
     const handleStartGame = async (firstServingTeamId) => {
         const category = matchDetails.match.category;
         const team1Players = matchDetails.team1.players.filter(p => p.category === category);
