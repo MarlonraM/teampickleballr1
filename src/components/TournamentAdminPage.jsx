@@ -522,11 +522,8 @@ const JuegosEnCursoTab = () => {
 
     const matchesByCourt = useMemo(() => {
         const data = {};
-        courts.forEach(court => {
-            const matchesByCourt = useMemo(() => {
-        const data = {};
         if (!courts || !matches) return data;
-            courts.forEach(court => {
+        courts.forEach(court => {
             const courtMatches = matches.filter(m => m.court_id === court.id);
             data[court.id] = {
                 name: court.name,
@@ -534,8 +531,8 @@ const JuegosEnCursoTab = () => {
                 upcoming: courtMatches.filter(m => m.status === 'asignado'),
                 played: courtMatches
                     .filter(m => m.status === 'finalizado')
-                    .sort((a,b) => new Date(b.end_time) - new Date(a.end_time))
-                    .slice(0, 3) 
+                    .sort((a, b) => new Date(b.end_time) - new Date(a.end_time))
+                    .slice(0, 3)
             };
         });
         return data;
