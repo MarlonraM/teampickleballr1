@@ -135,8 +135,32 @@ function ScorekeeperPage() {
     }, [fetchMatchDetails]);
     
     const saveStateToHistory = () => { setHistory(prev => [...prev, { score, servingTeamId, serverNumber, playerPositions, firstSideOutDone }]);};
-    const handleUndo = () => { /* ... */ };
-    
+    const handleUndo = () => {
+        if (history.length === 0) return;
+        const lastState = history[history.length - 1];
+        setScore(lastState.score);
+        setServingTeamId(lastState.servingTeamId);
+        setServerNumber(lastState.serverNumber);
+        setPlayerPositions(lastState.playerPositions);
+        setFirstSideOutDone(lastState.firstSideOutDone);
+        setHistory(prev => prev.slice(0, -1));
+        persistGameState({
+            team1_score: lastState.score.team1,
+            team2_score: lastState.score.team2,
+            server_team_id: lastState.servingTeamId,
+            server_number: lastState.serverNumber,
+            player_positions: lastState.playerPositions,
+            first_side_out_done: lastState.firstSideOutDone,
+            status: 'en_vivo'
+        });
+    };
+
+        const handleUndoFromModal = () => {
+        handleUndo();
+        setIsGameOver(false);
+        setWinner(null);
+        setGameState('playing'); // <-- CORRECCIÓN CLAVE
+    };
     const handleStartGame = async (firstServingTeamId) => {
         const category = matchDetails.match.category;
         const team1Players = matchDetails.team1.players.filter(p => p.category === category);
@@ -164,19 +188,70 @@ function ScorekeeperPage() {
         }
     };
 
-    const checkWinCondition = (newScore) => { /* ... */ };
-    const handlePoint = () => { /* ... */ };
-    const handleSideOut = () => { /* ... */ };
-    const handleConfirmWin = async () => { /* ... */ };
+    const checkWinCondition = (newScore) => { const { team1: team1Score, team2: team2Score } = newScore; const winByTwo = Math.abs(team1Score - team2Score) >= 2; if ((team1Score >= 11 || team2Score >= 11) && winByTwo) { const currentWinner = team1Score > team2Score ? matchDetails.team1 : matchDetails.team2; setWinner(currentWinner); setEditableFinalScore(newScore); setIsGameOver(true); } };
+    const handlePoint = () => { saveStateToHistory(); let newScore = { ...score }; if (servingTeamId === matchDetails.team1.id) newScore.team1++; else newScore.team2++; setScore(newScore); persistGameState({ team1_score: newScore.team1, team2_score: newScore.team2 }); checkWinCondition(newScore); setPlayerPositions(prev => { if (servingTeamId === matchDetails.team1.id) { return { ...prev, team1_right: prev.team1_left, team1_left: prev.team1_right }; } else { return { ...prev, team2_right: prev.team2_left, team2_left: prev.team2_right }; } }); };
+    const handleSideOut = () => { saveStateToHistory(); const isFirstServeOfGame = !firstSideOutDone; const performSideOut = () => { const otherTeamId = servingTeamId === matchDetails.team1.id ? matchDetails.team2.id : matchDetails.team1.id; setServingTeamId(otherTeamId); setServerNumber(1); persistGameState({ server_team_id: otherTeamId, server_number: 1, first_side_out_done: true }); }; if (isFirstServeOfGame) { setFirstSideOutDone(true); performSideOut(); } else if (serverNumber === 1) { setServerNumber(2); persistGameState({ server_number: 2 }); } else { performSideOut(); } };
+    const handleConfirmWin = async () => {
+        const { team1: score1, team2: score2 } = editableFinalScore;
+        if (Math.max(score1, score2) < 11 || Math.abs(score1 - score2) < 2) {
+            alert("Puntuación final inválida.");
+            return;
+
+        }
+
+        try {
+
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/${matchId}/finalize`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team1_score: score1, team2_score: score2 })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.msg || 'Error al guardar el resultado');
+            }
+            const finalizedMatch = await response.json();
+            if (socket.current && socket.current.readyState === WebSocket.OPEN) {
+                socket.current.send(JSON.stringify({
+                    type: 'SCORE_UPDATE',
+                    matchId: finalizedMatch.id,
+                    payload: { status: 'finalizado', winner_id: finalizedMatch.winner_id, team1_score: finalizedMatch.team1_score, team2_score: finalizedMatch.team2_score }
+                }));
+            }
+            alert("Resultado guardado y puntos de torneo asignados exitosamente");
+            setScore(editableFinalScore);
+            setIsGameOver(false);
+            setGameState('finished');
+        } catch (error) {
+            console.error("Error al confirmar el resultado:", error);
+            alert(error.message);
+        }
+    };
+
     
-    if (gameState === 'loading' || !matchDetails) return <div className="flex justify-center items-center h-screen"><p>Cargando partido...</p></div>;
+// --- LÓGICA DE RENDERIZADO CORREGIDA ---
+if (gameState === 'loading' || !matchDetails) return <div className="flex justify-center items-center h-screen"><p>Cargando partido...</p></div>;
     if (gameState === 'error') return <div className="flex justify-center items-center h-screen text-red-500"><p>Error al cargar el partido.</p></div>;
 
+
+    const getPlayerById = (id) => {
+        if (!id || !team1?.players || !team2?.players) return null;
+        return team1.players.find(p => p.id === id) || team2.players.find(p => p.id === id);
+    };
+   
+    const { team1, team2 } = matchDetails;
+    const team1PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team1_left), getPlayerById(playerPositions.team1_right)] : [];
+    const team2PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team2_left), getPlayerById(playerPositions.team2_right)] : [];
+    const team1PlayerNames = team1PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
+    const team2PlayerNames = team2PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
+    
+    
+    
     const PlayerInfo = ({ playerId }) => {
         const player = matchDetails.team1.players.find(p => p.id === playerId) || matchDetails.team2.players.find(p => p.id === playerId);
         return <p className="font-semibold text-lg">{player?.full_name || 'Jugador'}</p>;
     };
-
+ 
     const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
     
     if (gameState === 'setup') {
@@ -185,12 +260,6 @@ function ScorekeeperPage() {
     if (gameState === 'finished') {
         return <div className="flex flex-col items-center justify-center h-screen text-center"><h1 className="text-4xl font-bold">Partido Finalizado</h1><p className="text-2xl mt-4">{matchDetails.team1.name}: {score.team1} - {matchDetails.team2.name}: {score.team2}</p></div>;
     }
-    const { team1, team2 } = matchDetails;
-    const team1PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team1_left), getPlayerById(playerPositions.team1_right)] : [];
-    const team2PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team2_left), getPlayerById(playerPositions.team2_right)] : [];
-    const team1PlayerNames = team1PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
-    const team2PlayerNames = team2PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
-
 return (
         <div className="bg-slate-900 min-h-screen text-white p-4 font-sans">
             <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndoFromModal} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
