@@ -49,7 +49,7 @@ const GameOverModal = ({ isOpen, onClose, winner, finalScore, onConfirm, onScore
 };
 
 
-const isFirstServeOfGame = !firstSideOutDone;
+
 const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
     const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
     const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
