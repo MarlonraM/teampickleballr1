@@ -217,7 +217,7 @@ function ScorekeeperPage() {
                     setGameState('setup');
                 }
 
-                socket.current = new WebSocket(`import.meta.env.VITE_API_URL.replace(/^http/, 'ws')`);
+                socket.current = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
                 socket.current.onopen = () => console.log("Scorekeeper conectado al WebSocket.");
                 socket.current.onclose = () => console.log("Scorekeeper desconectado del WebSocket.");
             } catch (err) {
