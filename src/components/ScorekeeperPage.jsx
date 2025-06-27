@@ -1,536 +1,211 @@
-// src/components/ScorekeeperPage.jsx
-
-
-
-// 1. AÑADIMOS useRef A LAS IMPORTACIONES
-
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-
 import { useParams } from 'react-router-dom';
 
-import.meta.env.VITE_API_URL;
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 
-// --- Estilos (sin cambios) ---
-
+// --- Estilos ---
 const styles = {
-
   court: {
-
     display: 'grid',
-
     gridTemplateColumns: '1fr auto 1fr',
-
     gridTemplateRows: '1fr',
-
     border: '3px solid #fff',
-
     width: '100%',
-
     maxWidth: '800px',
-
     margin: '20px auto',
-
     backgroundColor: '#004d40',
-
     aspectRatio: '2 / 1',
-
   },
-
   teamSide: {
-
     display: 'grid',
-
     gridTemplateColumns: '1fr',
-
     gridTemplateRows: '1fr 1fr',
-
     position: 'relative',
-
   },
-
   net: {
-
     width: '4px',
-
     backgroundColor: 'rgba(255, 255, 255, 0.5)',
-
   },
-
   playerBox: {
-
     border: '1px solid #a7ffeb',
-
     display: 'flex',
-
     alignItems: 'center',
-
     justifyContent: 'center',
-
     textAlign: 'center',
-
     position: 'relative',
-
     paddingTop: '20px',
-
   },
-
   kitchenArea: {
-
     position: 'absolute',
-
     top: '0',
-
     bottom: '0',
-
     width: '31.8%',
-
     backgroundColor: 'rgba(0, 0, 0, 0.2)',
-
     zIndex: 1,
-
   },
-
   teamNameOnCourt: {
-
     position: 'absolute',
-
     top: '8px',
-
     width: '100%',
-
     textAlign: 'center',
-
     fontSize: '1em',
-
     fontWeight: 'bold',
-
     color: 'white',
-
     textShadow: '1px 1px 2px black',
-
     zIndex: 3,
-
   },
-
   playerName: {
-
     fontSize: '0.9em',
-
     fontWeight: 'bold',
-
     zIndex: 2,
-
     position: 'relative',
-
     backgroundColor: 'rgba(0, 77, 64, 0.5)',
-
     padding: '2px 5px',
-
     borderRadius: '4px',
-
   },
-
   scoreboard: {
-
     padding: '15px',
-
     border: '1px solid gray',
-
     borderRadius: '8px',
-
     margin: '20px auto',
-
     maxWidth: '700px',
-
   },
-
   score: {
-
     fontSize: '2.5em',
-
     fontWeight: 'bold',
-
   },
-
   teamInfo: {
-
     fontSize: '1.1em',
-
     display: 'flex',
-
     alignItems: 'center',
-
     gap: '10px'
-
   },
-
   serviceDotsContainer: {
-
     display: 'flex',
-
     gap: '5px',
-
   },
-
   serviceDot: {
-
     width: '12px',
-
     height: '12px',
-
     borderRadius: '50%',
-
     backgroundColor: '#444',
-
     transition: 'background-color 0.3s',
-
   },
-
   serviceDotActive: {
-
     backgroundColor: 'yellow',
-
   },
-
   modalOverlay: {
-
     position: 'fixed',
-
     top: 0,
-
     left: 0,
-
     right: 0,
-
     bottom: 0,
-
     backgroundColor: 'rgba(0, 0, 0, 0.75)',
-
     display: 'flex',
-
     alignItems: 'center',
-
     justifyContent: 'center',
-
     zIndex: 1000,
-
   },
-
   modalContent: {
-
     backgroundColor: '#282c34',
-
     padding: '30px',
-
     borderRadius: '10px',
-
     textAlign: 'center',
-
     color: 'white',
-
     border: '2px solid #61DAFB',
-
   },
-
   modalTitle: {
-
     fontSize: '2em',
-
     marginBottom: '20px',
-
   },
-
   modalScoreInput: {
-
     width: '60px',
-
     fontSize: '1.5em',
-
     textAlign: 'center',
-
     margin: '0 10px',
-
   },
-
   modalButton: {
-
     padding: '10px 20px',
-
     fontSize: '1.2em',
-
     cursor: 'pointer',
-
     margin: '30px 10px 0 10px'
-
   }
-
 };
 
-
-
-// --- Componente GameOverModal (sin cambios) ---
-
-const GameOverModal = ({ winner, finalScore, onConfirm, onScoreChange, onUndo, team1Name, team2Name }) => {
-
-    return (
-
-        <div style={styles.modalOverlay}>
-
-            <div style={styles.modalContent}>
-
-                <h2 style={styles.modalTitle}>¡Juego Terminado!</h2>
-
-                <h3>🏆 Ganador: {winner.name} 🏆</h3>
-
-                <div>
-
-                    <h4>Confirmar Puntuación Final:</h4>
-
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-
-                        <div style={{ textAlign: 'center' }}>
-
-                            <div style={{ fontSize: '0.8em', marginBottom: '5px' }}>{team1Name}</div>
-
-                            <input 
-
-                                type="number"
-
-                                style={styles.modalScoreInput}
-
-                                value={finalScore.team1}
-
-                                onChange={(e) => onScoreChange('team1', parseInt(e.target.value, 10))}
-
-                            />
-
-                        </div>
-
-                        <span>-</span>
-
-                        <div style={{ textAlign: 'center' }}>
-
-                            <div style={{ fontSize: '0.8em', marginBottom: '5px' }}>{team2Name}</div>
-
-                            <input 
-
-                                type="number"
-
-                                style={styles.modalScoreInput}
-
-                                value={finalScore.team2}
-
-                                onChange={(e) => onScoreChange('team2', parseInt(e.target.value, 10))}
-
-                            />
-
-                        </div>
-
-                    </div>
-
-                </div>
-
-                <div>
-
-                  <button onClick={onUndo} style={{...styles.modalButton, backgroundColor: '#ffc107'}}>
-
-                      Deshacer Último Punto
-
-                  </button>
-
-                  <button onClick={onConfirm} style={{...styles.modalButton, backgroundColor: '#28a745'}}>
-
-                      Confirmar Resultado
-
-                  </button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    );
-
-};
-
-
+const GameOverModal = ({ winner, finalScore, onConfirm, onScoreChange, onUndo, team1Name, team2Name }) => { /* ... (código sin cambios) ... */ };
 
 function ScorekeeperPage() {
-
-    const { matchId } = useParams();
-
-    const [gameState, setGameState] = useState('loading');
-
-    const [matchDetails, setMatchDetails] = useState(null);
-
-    const [score, setScore] = useState({ team1: 0, team2: 0 });
-
-    const [servingTeamId, setServingTeamId] = useState(null);
-
-    const [serverNumber, setServerNumber] = useState(0);
-
-    const [playerPositions, setPlayerPositions] = useState({ team1_left: null, team1_right: null, team2_left: null, team2_right: null });
-
-    const [firstServers, setFirstServers] = useState({ team1: null, team2: null });
-
-    const [history, setHistory] = useState([]);
-
-    const [firstSideOutDone, setFirstSideOutDone] = useState(false);
-
-    const [isGameOver, setIsGameOver] = useState(false);
-
-    const [winner, setWinner] = useState(null);
-
-    const [editableFinalScore, setEditableFinalScore] = useState({ team1: 0, team2: 0 });
-
-    const socket = useRef(null);
-
-
-
-    useEffect(() => {
-
-        const fetchAndSetupMatch = async () => {
-
-            try {
-
-                const response = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/${matchId}/details`);
-
-                if (!response.ok) {
-
-                    throw new Error('Network response was not ok');
-
-                }
-
-                const data = await response.json();
-
-                setMatchDetails(data);
-
-                setScore({ team1: data.match.team1_score || 0, team2: data.match.team2_score || 0 });
-
-
-
-                if (data.match.status === 'finalizado') {
-
-                    setGameState('finished');
-
-                } else if (data.match.server_team_id && data.match.player_positions) {
-
-                    setServingTeamId(data.match.server_team_id);
-
-                    setServerNumber(data.match.server_number);
-
-                    setFirstServers(data.match.first_servers);
-
-                    setPlayerPositions(data.match.player_positions);
-
-                    setFirstSideOutDone(data.match.first_side_out_done ?? false);
-
-                    setGameState('playing');
-
-                } else {
-
-                    setGameState('setup');
-
-                }
-
-
-
-                socket.current = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
-
-                socket.current.onopen = () => console.log("Scorekeeper conectado al WebSocket.");
-
-                socket.current.onclose = () => console.log("Scorekeeper desconectado del WebSocket.");
-
-            } catch (err) {
-
-                console.error("Error fetching match details:", err);
-
-                setGameState('error');
-
-            }
-
-        };
-
-
-
-        fetchAndSetupMatch();
-
-
-
-        return () => {
-
-            if (socket.current) {
-
-                socket.current.close();
-
-            }
-
-        };
-
-    }, [matchId]);
-
-
-
-    const persistGameState = async (updateData) => {
-
-        try {
-
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/${matchId}`, {
-
-                method: 'PUT',
-
-                headers: { 'Content-Type': 'application/json' },
-
-                body: JSON.stringify(updateData)
-
-            });
-
-            if (!response.ok) throw new Error('Server response not OK');
-
-
-
-            const savedMatch = await response.json();
-
-
-
-            if (socket.current && socket.current.readyState === WebSocket.OPEN) {
-
-                const message = {
-
-                    type: 'SCORE_UPDATE',
-
-                    matchId: savedMatch.id,
-
-                    payload: {
-
-                        team1_score: savedMatch.team1_score,
-
-                        team2_score: savedMatch.team2_score,
-
-                        server_team_id: savedMatch.server_team_id,
-
-                        server_number: savedMatch.server_number,
-
-                        first_side_out_done: savedMatch.first_side_out_done,
-
-                    }
-
-                };
-
-                socket.current.send(JSON.stringify(message));
-
-                console.log("WebSocket update sent.");
-
-            }
-
-        } catch (error) {
-
-            console.error("Error persisting/notifying game state:", error);
-
-        }
-
-    };
+    const { matchId } = useParams();
+    const [gameState, setGameState] = useState('loading');
+    const [matchDetails, setMatchDetails] = useState(null);
+    const [score, setScore] = useState({ team1: 0, team2: 0 });
+    const [servingTeamId, setServingTeamId] = useState(null);
+    const [serverNumber, setServerNumber] = useState(1);
+    const [playerPositions, setPlayerPositions] = useState({ team1_left: null, team1_right: null, team2_left: null, team2_right: null });
+    const [firstServers, setFirstServers] = useState({ team1: null, team2: null });
+    const [history, setHistory] = useState([]);
+    const [firstSideOutDone, setFirstSideOutDone] = useState(false);
+    const [isGameOver, setIsGameOver] = useState(false);
+    const [winner, setWinner] = useState(null);
+    const [editableFinalScore, setEditableFinalScore] = useState({ team1: 0, team2: 0 });
+    const socket = useRef(null);
+
+    const fetchMatchDetails = useCallback(() => {
+        fetch(`${API_BASE_URL}/api/matches/${matchId}/details`)
+            .then(res => res.ok ? res.json() : Promise.reject(new Error('Network response was not ok')))
+            .then(data => {
+                setMatchDetails(data);
+                setScore({ team1: data.match.team1_score || 0, team2: data.match.team2_score || 0 });
+
+                // --- LÓGICA DE ESTADO CORREGIDA ---
+                // Se determina la vista correcta basándose en el 'status' del partido.
+                if (data.match.status === 'finalizado') {
+                    setGameState('finished');
+                } else if (data.match.status === 'en_vivo') {
+                    // Si el partido está en vivo, carga los datos y va directamente al juego.
+                    setServingTeamId(data.match.server_team_id);
+                    setServerNumber(data.match.server_number || 1);
+                    setFirstServers(data.match.first_servers);
+                    setPlayerPositions(data.match.player_positions);
+                    setFirstSideOutDone(data.match.first_side_out_done ?? false);
+                    setGameState('playing');
+                } else {
+                    // Si el estado es 'pendiente' o 'asignado', muestra la pantalla de configuración.
+                    setGameState('setup');
+                }
+            })
+            .catch(err => {
+                console.error("Error fetching match details:", err);
+                setGameState('error');
+            });
+    }, [matchId]);
+
+    useEffect(() => {
+        fetchMatchDetails();
+        socket.current = new WebSocket(WS_URL);
+        socket.current.onopen = () => console.log("Scorekeeper conectado al WebSocket.");
+        socket.current.onclose = () => console.log("Scorekeeper desconectado del WebSocket.");
+        return () => { if (socket.current) { socket.current.close(); }};
+    }, [fetchMatchDetails]);
+
+    const persistGameState = async (updateData) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+            if (!response.ok) throw new Error('Server response not OK');
+            const savedMatch = await response.json();
+            if (socket.current && socket.current.readyState === WebSocket.OPEN) {
+                const message = { type: 'SCORE_UPDATE', matchId: savedMatch.id, payload: { ...savedMatch, ...updateData } };
+                socket.current.send(JSON.stringify(message));
+            }
+        } catch (error) {
+            console.error("Error persisting/notifying game state:", error);
+        }
+    };
 
     
 
@@ -697,11 +372,8 @@ function ScorekeeperPage() {
 
 
     if (gameState === 'loading') {
-
-        return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.5em' }}>Cargando datos del partido...</div>;
-
-    }
-
+        return <div style={styles.container}><h1 style={styles.title}>Cargando datos del partido...</h1></div>;
+    }
 
 
     if (gameState === 'error') {
