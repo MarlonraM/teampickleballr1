@@ -49,14 +49,21 @@ const GameOverModal = ({ isOpen, onClose, winner, finalScore, onConfirm, onScore
 };
 
 // --- Componente ServiceDots con Tailwind CSS ---
-const ServiceDots = ({ isServingTeam }) => {
+const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
+    const firstDotActive = isServingTeam && (isFirstServeOfGame || serverNum === 1);
+    const secondDotActive = isServingTeam && (isFirstServeOfGame || serverNum === 2);
+
+    const dotClass = (active) =>
+        `w-3 h-3 rounded-full transition-all ${active ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`;
+
     return (
         <div className="flex flex-col gap-1.5">
-            <div className={`w-3 h-3 rounded-full transition-all ${isServingTeam ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
-            <div className={`w-3 h-3 rounded-full transition-all ${isServingTeam ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+            <div className={dotClass(firstDotActive)}></div>
+            <div className={dotClass(secondDotActive)}></div>
         </div>
     );
 };
+
 
 function ScorekeeperPage() {
     const { matchId } = useParams();
@@ -310,7 +317,11 @@ return (
                 </div>
                 <div className="bg-slate-800 p-4 rounded-lg space-y-3">
                     <div className="flex items-center">
-                        <div className="w-10"><ServiceDots isServingTeam={servingTeamId === matchDetails.team1.id} /></div>
+                        <div className="w-10"><ServiceDots
+    isServingTeam={servingTeamId === matchDetails.team1.id}
+    serverNum={serverNumber}
+    isFirstServeOfGame={!firstSideOutDone}
+/></div>
                         <div className="flex-grow">
                             <p className="text-xs text-slate-400">{matchDetails.team1.players.map(p=>p.full_name).join(' / ')}</p>
                             <p className="font-bold text-xl">{matchDetails.team1.name}</p>
@@ -319,7 +330,11 @@ return (
                     </div>
                     <hr className="border-slate-600" />
                     <div className="flex items-center">
-                         <div className="w-10"><ServiceDots isServingTeam={servingTeamId === matchDetails.team2.id} /></div>
+                         <div className="w-10"><ServiceDots
+    isServingTeam={servingTeamId === matchDetails.team2.id}
+    serverNum={serverNumber}
+    isFirstServeOfGame={!firstSideOutDone}
+/></div>
                         <div className="flex-grow">
                             <p className="text-xs text-slate-400">{matchDetails.team2.players.map(p=>p.full_name).join(' / ')}</p>
                             <p className="font-bold text-xl">{matchDetails.team2.name}</p>
