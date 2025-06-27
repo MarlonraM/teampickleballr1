@@ -133,7 +133,35 @@ const styles = {
   }
 };
 
-const GameOverModal = ({ winner, finalScore, onConfirm, onScoreChange, onUndo, team1Name, team2Name }) => { /* ... (código sin cambios) ... */ };
+const GameOverModal = ({ isOpen, winner, finalScore, onConfirm, onScoreChange, onUndo, team1Name, team2Name }) => {
+    if (!isOpen) return null;
+    return (
+        <div style={styles.modalOverlay}>
+            <div style={styles.modalContent}>
+                <h2 style={styles.modalTitle}>¡Juego Terminado!</h2>
+                <h3>🏆 Ganador: {winner?.name || 'N/A'} 🏆</h3>
+                <div>
+                    <h4>Confirmar Puntuación Final:</h4>
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.8em', marginBottom: '5px' }}>{team1Name}</div>
+                            <input type="number" style={styles.modalScoreInput} value={finalScore.team1} onChange={(e) => onScoreChange('team1', parseInt(e.target.value, 10))} />
+                        </div>
+                        <span>-</span>
+                        <div style={{ textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.8em', marginBottom: '5px' }}>{team2Name}</div>
+                            <input type="number" style={styles.modalScoreInput} value={finalScore.team2} onChange={(e) => onScoreChange('team2', parseInt(e.target.value, 10))} />
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <button onClick={onUndo} style={{...styles.modalButton, backgroundColor: '#ffc107'}}>Deshacer Último Punto</button>
+                    <button onClick={onConfirm} style={{...styles.modalButton, backgroundColor: '#28a745'}}>Confirmar Resultado</button>
+                </div>
+            </div>
+        </div>
+    );
+}
 
 function ScorekeeperPage() {
     const { matchId } = useParams();
@@ -158,12 +186,9 @@ function ScorekeeperPage() {
                 setMatchDetails(data);
                 setScore({ team1: data.match.team1_score || 0, team2: data.match.team2_score || 0 });
 
-                // --- LÓGICA DE ESTADO CORREGIDA ---
-                // Se determina la vista correcta basándose en el 'status' del partido.
                 if (data.match.status === 'finalizado') {
                     setGameState('finished');
-                } else if (data.match.status === 'en_vivo') {
-                    // Si el partido está en vivo, carga los datos y va directamente al juego.
+                } else if (data.match.status === 'en_vivo' && data.match.player_positions) {
                     setServingTeamId(data.match.server_team_id);
                     setServerNumber(data.match.server_number || 1);
                     setFirstServers(data.match.first_servers);
@@ -171,7 +196,6 @@ function ScorekeeperPage() {
                     setFirstSideOutDone(data.match.first_side_out_done ?? false);
                     setGameState('playing');
                 } else {
-                    // Si el estado es 'pendiente' o 'asignado', muestra la pantalla de configuración.
                     setGameState('setup');
                 }
             })
@@ -180,6 +204,7 @@ function ScorekeeperPage() {
                 setGameState('error');
             });
     }, [matchId]);
+
 
     useEffect(() => {
         fetchMatchDetails();
@@ -371,31 +396,21 @@ function ScorekeeperPage() {
 
 
 
-    if (gameState === 'loading') {
-        return <div style={styles.container}><h1 style={styles.title}>Cargando datos del partido...</h1></div>;
+   if (gameState === 'loading' || !matchDetails) {
+        return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.5em' }}>Cargando datos del partido...</div>;
     }
-
-
-    if (gameState === 'error') {
-
-        return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.5em', color: 'red' }}>Error al cargar los datos. Revisa la consola.</div>;
-
-    }
+    if (gameState === 'error') {
+        return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.5em', color: 'red' }}>Error al cargar los datos. Revisa la consola.</div>;
+    }
 
 
 
     // A partir de aquí, es seguro usar matchDetails porque ya no es null
 
     const { team1, team2 } = matchDetails;
-
-
-
     if (gameState === 'setup') {
-
         return (
-
             <div style={{ padding: '20px', textAlign: 'center' }}>
-
                 <h2>Configurar Partido #{matchDetails.match.id}</h2>
 
                 <h3>{team1.name} vs {team2.name}</h3>
@@ -415,30 +430,18 @@ function ScorekeeperPage() {
 
 
     if (gameState === 'finished') {
-
         return (
-
             <div style={{ padding: '40px', textAlign: 'center' }}>
-
                 <h1>Partido Finalizado</h1>
-
                 <h2>{team1.name}: {score.team1}</h2>
-
                 <h2>{team2.name}: {score.team2}</h2>
-
             </div>
-
         );
-
     }
-
-    
-
+   
     // --- HELPER COMPONENTS DEFINIDOS AQUÍ (DONDE ES SEGURO) ---
-
     const getPlayerById = (id) => team1.players.find(p => p.id === id) || team2.players.find(p => p.id === id);
-
-    
+ 
 
     const PlayerInfo = ({ playerId, teamId }) => {
 
