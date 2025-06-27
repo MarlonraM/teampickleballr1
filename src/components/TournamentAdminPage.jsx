@@ -509,7 +509,7 @@ const JuegosEnCursoTab = () => {
             }
         };
         fetchData();
-        const socket = new WebSocket(${import.meta.env.VITE_API_URL.replace(/^http/, 'ws')});
+        const socket = new WebSocket(`${import.meta.env.VITE_API_URL.replace(/^http/, 'ws')}`);
         socket.onmessage = (event) => {
             const updatedData = JSON.parse(event.data);
             if (updatedData.type === 'SCORE_UPDATE') {
