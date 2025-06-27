@@ -523,12 +523,16 @@ const JuegosEnCursoTab = () => {
     const matchesByCourt = useMemo(() => {
         const data = {};
         courts.forEach(court => {
-            const courtMatches = matches.filter(m => m.court_id === court.id);
-            data[court.id] = {
+            const matchesByCourt = useMemo(() => {
+        const data = {};
+        if (!courts || !matches) return data;
                 name: court.name,
                 live: courtMatches.filter(m => m.status === 'en_vivo'),
                 upcoming: courtMatches.filter(m => m.status === 'asignado'),
-                played: courtMatches.filter(m => m.status === 'finalizado').sort((a,b) => new Date(b.end_time) - new Date(a.end_time)).slice(0, 4)
+                played: courtMatches
+                    .filter(m => m.status === 'finalizado')
+                    .sort((a,b) => new Date(b.end_time) - new Date(a.end_time))
+                    .slice(0, 3) 
             };
         });
         return data;
@@ -639,7 +643,7 @@ export default function TournamentAdminPage() {
     const [eliminationCount, setEliminationCount] = useState({});
     const [allData, setAllData] = useState({ matches: [], teams: [], courts: [] });
     const [loading, setLoading] = useState(true);
-    
+    const [error, setError] = useState(null);
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -660,10 +664,19 @@ export default function TournamentAdminPage() {
         } finally {
             setLoading(false);
         }
-    };
+    }; 
 
+    // --- SINCRONIZACIÓN EN TIEMPO REAL ---
     useEffect(() => {
         fetchData();
+        const socket = new WebSocket(WS_URL);
+        socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'SCORE_UPDATE') {
+                fetchData(); // Recarga todos los datos al recibir una actualización
+            }
+        };
+        return () => socket.close();
     }, []);
     
     const handleGenerationComplete = () => {
