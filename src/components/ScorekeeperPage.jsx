@@ -170,11 +170,11 @@ function ScorekeeperPage() {
     const [score, setScore] = useState({ team1: 0, team2: 0 });
     const [servingTeamId, setServingTeamId] = useState(null);
     const [serverNumber, setServerNumber] = useState(1);
-    const [playerPositions, setPlayerPositions] = useState(null);
-    const [firstServers, setFirstServers] = useState(null);
+    const [playerPositions, setPlayerPositions] = useState({ team1_left: null, team1_right: null, team2_left: null, team2_right: null });
+    const [firstServers, setFirstServers] = useState({ team1: null, team2: null });
     const [history, setHistory] = useState([]);
     const [firstSideOutDone, setFirstSideOutDone] = useState(false);
-    const { isOpen: isGameOver, onOpen: openGameOverModal, onClose: closeGameOverModal } = { isOpen: false, onOpen: () => {}, onClose: () => {} }; // Simulación de useDisclosure
+    const [isGameOver, setIsGameOver] = useState(false);
     const [winner, setWinner] = useState(null);
     const [editableFinalScore, setEditableFinalScore] = useState({ team1: 0, team2: 0 });
     const socket = useRef(null);
@@ -395,125 +395,73 @@ function ScorekeeperPage() {
 
 
 
-   if (gameState === 'loading' || !matchDetails) {
+  if (gameState === 'loading') {
         return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.5em' }}>Cargando datos del partido...</div>;
     }
-    if (gameState === 'error') {
+
+    if (gameState === 'error' || !matchDetails || !matchDetails.team1 || !matchDetails.team2) {
         return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.5em', color: 'red' }}>Error al cargar los datos. Revisa la consola.</div>;
     }
 
+    // A partir de aquí, es seguro usar matchDetails
+    const { team1, team2 } = matchDetails;
 
+    if (gameState === 'setup') {
+        return (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+                <h2>Configurar Partido #{matchDetails.match.id}</h2>
+                <h3>{team1.name} vs {team2.name}</h3>
+                <p>Por favor, define qué equipo sirve primero.</p>
+                <button style={{padding: '10px 20px', fontSize: '1.2em', marginRight: '20px'}} onClick={() => handleStartGame(team1.id)}>{team1.name} Sirve Primero</button>
+                <button style={{padding: '10px 20px', fontSize: '1.2em'}} onClick={() => handleStartGame(team2.id)}>{team2.name} Sirve Primero</button>
+            </div>
+        );
+    }
 
-    // A partir de aquí, es seguro usar matchDetails porque ya no es null
-
-    const { team1, team2 } = matchDetails;
-    if (gameState === 'setup') {
-        return (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-                <h2>Configurar Partido #{matchDetails.match.id}</h2>
-
-                <h3>{team1.name} vs {team2.name}</h3>
-
-                <p>Por favor, define qué equipo sirve primero.</p>
-
-                <button style={{padding: '10px 20px', fontSize: '1.2em', marginRight: '20px'}} onClick={() => handleStartGame(team1.id)}>{team1.name} Sirve Primero</button>
-
-                <button style={{padding: '10px 20px', fontSize: '1.2em'}} onClick={() => handleStartGame(team2.id)}>{team2.name} Sirve Primero</button>
-
-            </div>
-
-        );
-
-    }
-
-
-
-    if (gameState === 'finished') {
-        return (
-            <div style={{ padding: '40px', textAlign: 'center' }}>
-                <h1>Partido Finalizado</h1>
-                <h2>{team1.name}: {score.team1}</h2>
-                <h2>{team2.name}: {score.team2}</h2>
-            </div>
-        );
-    }
-   
-    // --- HELPER COMPONENTS DEFINIDOS AQUÍ (DONDE ES SEGURO) ---
-    const getPlayerById = (id) => team1.players.find(p => p.id === id) || team2.players.find(p => p.id === id);
- 
-
-    const PlayerInfo = ({ playerId, teamId }) => {
-
-        const player = getPlayerById(playerId);
-
-        if (!player) return null;
-
-        const isFirstServer = firstServers[teamId === team1.id ? 'team1' : 'team2'] === playerId;
-
-        return (
-
-            <div style={styles.playerName}>{player.full_name} {isFirstServer && '(1)'}</div>
-
-        );
-
-    };
+    if (gameState === 'finished') {
+        return (
+            <div style={{ padding: '40px', textAlign: 'center' }}>
+                <h1>Partido Finalizado</h1>
+                <h2>{team1.name}: {score.team1}</h2>
+                <h2>{team2.name}: {score.team2}</h2>
+            </div>
+        );
+    }
+    
+    const getPlayerById = (id) => team1.players.find(p => p.id === id) || team2.players.find(p => p.id === id);
+    const PlayerInfo = ({ playerId, teamId }) => {
+        const player = getPlayerById(playerId);
+        if (!player) return null;
+        const isFirstServer = firstServers && firstServers[teamId === team1.id ? 'team1' : 'team2'] === playerId;
+        return <div style={styles.playerName}>{player.full_name} {isFirstServer && '(1)'}</div>
+    };
 
 
 
     const isFirstServeOfGame = !firstSideOutDone;
-
-
-
-    // ----- INICIO DE LA CORRECCIÓN -----
-
     const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
-
         const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
-
         const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
 
-
-
         return (
-
             <div style={styles.serviceDotsContainer}>
-
                 <div style={{...styles.serviceDot, ...(firstDotActive && styles.serviceDotActive)}}></div>
-
                 <div style={{...styles.serviceDot, ...(secondDotActive && styles.serviceDotActive)}}></div>
-
             </div>
-
         );
-
     };
 
-    
-
-    // Renderizado principal para gameState === 'playing'
-
     return (
-
         <div style={{ textAlign: 'center' }}>
-
             {isGameOver && (
-
                 <GameOverModal 
-
                     winner={winner} 
-
                     finalScore={editableFinalScore}
-
                     onConfirm={handleConfirmWin}
-
                     onUndo={handleUndoFromModal}
-
                     onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: isNaN(value) ? 0 : value}))}
-
                     team1Name={team1.name}
-
                     team2Name={team2.name}
-
                 />
 
             )}
