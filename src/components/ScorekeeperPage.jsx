@@ -185,18 +185,73 @@ function ScorekeeperPage() {
     if (gameState === 'finished') {
         return <div className="flex flex-col items-center justify-center h-screen text-center"><h1 className="text-4xl font-bold">Partido Finalizado</h1><p className="text-2xl mt-4">{matchDetails.team1.name}: {score.team1} - {matchDetails.team2.name}: {score.team2}</p></div>;
     }
-    
+    const { team1, team2 } = matchDetails;
     const team1PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team1_left), getPlayerById(playerPositions.team1_right)] : [];
     const team2PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team2_left), getPlayerById(playerPositions.team2_right)] : [];
     const team1PlayerNames = team1PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
     const team2PlayerNames = team2PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
 
-    return (
+return (
         <div className="bg-slate-900 min-h-screen text-white p-4 font-sans">
-            <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndo} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
-            <div className="max-w-md mx-auto">{/* ... (JSX del marcador y cancha) ... */}</div>
+            <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndoFromModal} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
+            
+            <div className="max-w-md mx-auto">
+                <header className="text-center mb-4">
+                    <h1 className="text-2xl font-bold">CANCHA #{matchDetails.match.court_id || 'N/A'}</h1>
+                    <p className="text-sm text-slate-500 font-mono">PARTIDO #{matchDetails.match.id}</p>
+                    <div className="flex justify-between items-center text-sm text-slate-400 mt-2">
+                        <span>GRUPO {getGroupLetter(matchDetails.match.group_id) || '?'}</span>
+                        <span className="bg-slate-700 px-2 py-0.5 rounded">{matchDetails.match.category}</span>
+                        <span>{matchDetails.team1.name} VS {matchDetails.team2.name}</span>
+                    </div>
+                </header>
+
+                <div className="grid grid-cols-2 gap-px bg-slate-600 rounded-lg overflow-hidden my-6">
+                  {playerPositions && <>
+                    <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[80px] md:min-h-[140px]">
+                      <PlayerInfo playerId={playerPositions.team1_left} />
+                    </div>
+                    <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[80px] md:min-h-[140px]">
+                      <PlayerInfo playerId={playerPositions.team2_left} />
+                    </div>
+                    <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[80px] md:min-h-[140px]">
+                      <PlayerInfo playerId={playerPositions.team1_right} />
+                    </div>
+                    <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[80px] md:min-h-[140px]">
+                      <PlayerInfo playerId={playerPositions.team2_right} />
+                    </div>
+                  </>}
+                </div>
+                <div className="bg-slate-800 p-4 rounded-lg space-y-3">
+                    <div className="flex items-center">
+                        <div className="w-10"><ServiceDots isServingTeam={servingTeamId === matchDetails.team1.id} /></div>
+                        <div className="flex-grow">
+                            <p className="text-xs text-slate-400">{matchDetails.team1.players.map(p=>p.full_name).join(' / ')}</p>
+                            <p className="font-bold text-xl">{matchDetails.team1.name}</p>
+                        </div>
+                        <p className="text-5xl font-bold">{score.team1}</p>
+                    </div>
+                    <hr className="border-slate-600" />
+                    <div className="flex items-center">
+                         <div className="w-10"><ServiceDots isServingTeam={servingTeamId === matchDetails.team2.id} /></div>
+                        <div className="flex-grow">
+                            <p className="text-xs text-slate-400">{matchDetails.team2.players.map(p=>p.full_name).join(' / ')}</p>
+                            <p className="font-bold text-xl">{matchDetails.team2.name}</p>
+                        </div>
+                        <p className="text-5xl font-bold">{score.team2}</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 mt-6">
+                    <button className="col-span-2 py-4 bg-green-600 hover:bg-green-700 rounded-lg text-lg font-bold uppercase" onClick={handlePoint}>Punto (+)</button>
+                    <button className="py-4 bg-slate-600 hover:bg-slate-700 rounded-lg flex items-center justify-center" onClick={handleUndo} disabled={history.length === 0}>
+                        <Undo />
+                    </button>
+                    <button className="col-span-3 py-4 bg-red-600 hover:bg-red-700 rounded-lg text-lg font-bold uppercase" onClick={handleSideOut}>Side Out / Falta</button>
+                </div>
+            </div>
         </div>
     );
 }
-
 export default ScorekeeperPage;
+
