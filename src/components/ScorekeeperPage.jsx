@@ -214,7 +214,10 @@ function ScorekeeperPage() {
 
     const checkWinCondition = (newScore) => { const { team1: team1Score, team2: team2Score } = newScore; const winByTwo = Math.abs(team1Score - team2Score) >= 2; if ((team1Score >= 11 || team2Score >= 11) && winByTwo) { const currentWinner = team1Score > team2Score ? matchDetails.team1 : matchDetails.team2; setWinner(currentWinner); setEditableFinalScore(newScore); setIsGameOver(true); } };
     const handlePoint = () => { saveStateToHistory(); let newScore = { ...score }; if (servingTeamId === matchDetails.team1.id) newScore.team1++; else newScore.team2++; setScore(newScore); persistGameState({ team1_score: newScore.team1, team2_score: newScore.team2 }); checkWinCondition(newScore); setPlayerPositions(prev => { if (servingTeamId === matchDetails.team1.id) { return { ...prev, team1_right: prev.team1_left, team1_left: prev.team1_right }; } else { return { ...prev, team2_right: prev.team2_left, team2_left: prev.team2_right }; } }); };
-    const handleSideOut = () => { saveStateToHistory(); const isFirstServeOfGame = !firstSideOutDone; const performSideOut = () => { const otherTeamId = servingTeamId === matchDetails.team1.id ? matchDetails.team2.id : matchDetails.team1.id; setServingTeamId(otherTeamId); setServerNumber(1); persistGameState({ server_team_id: otherTeamId, server_number: 1, first_side_out_done: true }); }; if (isFirstServeOfGame) { setFirstSideOutDone(true); performSideOut(); } else if (serverNumber === 1) { setServerNumber(2); persistGameState({ server_number: 2 }); } else { performSideOut(); } };
+    
+    const handleSideOut = () => { saveStateToHistory(); 
+    const isFirstServeOfGame = !firstSideOutDone; 
+    const performSideOut = () => { const otherTeamId = servingTeamId === matchDetails.team1.id ? matchDetails.team2.id : matchDetails.team1.id; setServingTeamId(otherTeamId); setServerNumber(1); persistGameState({ server_team_id: otherTeamId, server_number: 1, first_side_out_done: true }); }; if (isFirstServeOfGame) { setFirstSideOutDone(true); performSideOut(); } else if (serverNumber === 1) { setServerNumber(2); persistGameState({ server_number: 2 }); } else { performSideOut(); } };
     const handleConfirmWin = async () => {
         const { team1: score1, team2: score2 } = editableFinalScore;
         if (Math.max(score1, score2) < 11 || Math.abs(score1 - score2) < 2) {
