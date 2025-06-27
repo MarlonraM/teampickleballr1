@@ -256,7 +256,7 @@ if (gameState === 'loading' || !matchDetails) return <div className="flex justif
     }
 return (
         <div className="bg-slate-900 min-h-screen text-white p-4 font-sans">
-            <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndo} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
+            <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndoFromModal} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
             
             <div className="max-w-md mx-auto">
                 <header className="text-center mb-4">
