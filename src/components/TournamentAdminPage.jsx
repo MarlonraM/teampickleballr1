@@ -526,6 +526,9 @@ const JuegosEnCursoTab = () => {
             const matchesByCourt = useMemo(() => {
         const data = {};
         if (!courts || !matches) return data;
+            courts.forEach(court => {
+            const courtMatches = matches.filter(m => m.court_id === court.id);
+            data[court.id] = {
                 name: court.name,
                 live: courtMatches.filter(m => m.status === 'en_vivo'),
                 upcoming: courtMatches.filter(m => m.status === 'asignado'),
