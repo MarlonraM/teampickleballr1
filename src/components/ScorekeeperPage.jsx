@@ -117,13 +117,7 @@ function ScorekeeperPage() {
             console.error("Error persisting/notifying game state:", error);
         }
     };
-
-    const team1PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team1_left), getPlayerById(playerPositions.team1_right)] : [];
-    const team2PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team2_left), getPlayerById(playerPositions.team2_right)] : [];
-    const team1PlayerNames = team1PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
-    const team2PlayerNames = team2PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
-    
-
+  
     // El resto de tus funciones lógicas (handleStartGame, handlePoint, etc.)
 
     const saveStateToHistory = () => { setHistory(prev => [...prev, { score, servingTeamId, serverNumber, playerPositions, firstSideOutDone }]);};
@@ -224,6 +218,12 @@ if (gameState === 'loading' || !matchDetails) return <div className="flex justif
         return <div className="flex flex-col items-center justify-center h-screen text-center"><h1 className="text-4xl font-bold">Partido Finalizado</h1><p className="text-2xl mt-4">{matchDetails.team1.name}: {score.team1} - {matchDetails.team2.name}: {score.team2}</p></div>;
     }
 
+   
+    const team1PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team1_left), getPlayerById(playerPositions.team1_right)] : [];
+    const team2PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team2_left), getPlayerById(playerPositions.team2_right)] : [];
+    const team1PlayerNames = team1PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
+    const team2PlayerNames = team2PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
+   
     return (
         <div className="bg-slate-900 min-h-screen text-white p-4 font-sans">
             <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndo} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
