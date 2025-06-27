@@ -248,14 +248,17 @@ if (gameState === 'loading' || !matchDetails) return <div className="flex justif
                     </div>
                 </header>
 
-                <div className="grid grid-cols-2 gap-px bg-slate-600 rounded-lg overflow-hidden my-6">
-                    {playerPositions && <>
-                        <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[100px]""><PlayerInfo playerId={playerPositions.team1_left} /></div>
-                        <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[100px]""><PlayerInfo playerId={playerPositions.team2_left} /></div>
-                        <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[100px]""><PlayerInfo playerId={playerPositions.team1_right} /></div>
-                        <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[100px]""><PlayerInfo playerId={playerPositions.team2_right} /></div>
-                    </>}
-                </div>
+                V<div className="grid grid-cols-2 gap-px bg-slate-600 rounded-lg overflow-hidden my-6">
+  {playerPositions && <>
+    <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[80px] md:min-h-[140px]">
+      <PlayerInfo playerId={playerPositions.team1_left} />
+    </div>
+    <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[80px] md:min-h-[140px]">
+      <PlayerInfo playerId={playerPositions.team2_left} />
+    </div>
+    <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center min-h-[80px] md:min-h-[140px]">
+      <PlayerInfo playerId={playerPositions.team1_right} />
+    </div>
                 
                 <div className="bg-slate-800 p-4 rounded-lg space-y-3">
                     <div className="flex items-center">
