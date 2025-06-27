@@ -118,7 +118,11 @@ function ScorekeeperPage() {
         }
     };
 
-    
+    const team1PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team1_left), getPlayerById(playerPositions.team1_right)] : [];
+    const team2PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team2_left), getPlayerById(playerPositions.team2_right)] : [];
+    const team1PlayerNames = team1PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
+    const team2PlayerNames = team2PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
+    
 
     // El resto de tus funciones lógicas (handleStartGame, handlePoint, etc.)
 
@@ -127,9 +131,7 @@ function ScorekeeperPage() {
     const handleUndo = () => { if (history.length === 0) return; const lastState = history[history.length - 1]; setScore(lastState.score); setServingTeamId(lastState.servingTeamId); setServerNumber(lastState.serverNumber); setPlayerPositions(lastState.playerPositions); setFirstSideOutDone(lastState.firstSideOutDone); setHistory(prev => prev.slice(0, -1)); };
 
     const handleUndoFromModal = () => { handleUndo(); setIsGameOver(false); setWinner(null); };
-
     
-
     const handleStartGame = async (firstServingTeamId) => {
         const category = matchDetails.match.category;
         const team1Players = matchDetails.team1.players.filter(p => p.category === category);
@@ -212,13 +214,7 @@ if (gameState === 'loading' || !matchDetails) return <div className="flex justif
         const player = matchDetails.team1.players.find(p => p.id === playerId) || matchDetails.team2.players.find(p => p.id === playerId);
         return <p className="font-semibold text-lg">{player?.full_name || 'Jugador'}</p>;
     };
-
-    const team1PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team1_left), getPlayerById(playerPositions.team1_right)] : [];
-    const team2PlayingPlayers = playerPositions ? [getPlayerById(playerPositions.team2_left), getPlayerById(playerPositions.team2_right)] : [];
-    const team1PlayerNames = team1PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
-    const team2PlayerNames = team2PlayingPlayers.map(p => p?.full_name).filter(Boolean).join(' / ');
-   
-   
+ 
     const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
     
     if (gameState === 'setup') {
