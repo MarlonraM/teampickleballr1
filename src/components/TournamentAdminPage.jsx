@@ -124,7 +124,7 @@ const GestionTorneoTab = () => {
     useEffect(() => {
         fetchData();
 
-        const socket = new WebSocket($import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
+        const socket = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
         socket.onopen = () => console.log("Tablero de Gestión conectado al WebSocket.");
         
         socket.onmessage = (event) => {
@@ -509,7 +509,7 @@ const JuegosEnCursoTab = () => {
             }
         };
         fetchData();
-        const socket = new WebSocket($import.meta.env.VITE_API_URL.replace(/^http/,'ws'));
+        const socket = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
         socket.onmessage = (event) => {
             try { // Añadir try-catch para manejar errores de parseo JSON del websocket
                 const updatedData = JSON.parse(event.data);
