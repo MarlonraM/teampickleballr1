@@ -127,12 +127,29 @@ function ScorekeeperPage() {
 
     useEffect(() => {
         fetchMatchDetails();
-        const ws = new WebSocket(WS_URL);
-        ws.onopen = () => console.log('WebSocket Connected');
-        ws.onclose = () => console.log('WebSocket Disconnected');
-        socket.current = ws;
-        return () => ws.close();
+        socket.current = new WebSocket(WS_URL);
+        socket.current.onopen = () => console.log("Scorekeeper conectado al WebSocket.");
+        socket.current.onclose = () => console.log("Scorekeeper desconectado del WebSocket.");
+        return () => { if (socket.current) { socket.current.close(); }};
     }, [fetchMatchDetails]);
+
+    const persistGameState = async (updateData) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+            if (!response.ok) throw new Error('Server response not OK');
+            const savedMatch = await response.json();
+            if (socket.current && socket.current.readyState === WebSocket.OPEN) {
+                const message = { type: 'SCORE_UPDATE', matchId: savedMatch.id, payload: { ...savedMatch, ...updateData } };
+                socket.current.send(JSON.stringify(message));
+            }
+        } catch (error) {
+            console.error("Error persisting/notifying game state:", error);
+        }
+    };
     
     const saveStateToHistory = () => { setHistory(prev => [...prev, { score, servingTeamId, serverNumber, playerPositions, firstSideOutDone }]);};
     const handleUndo = () => {
