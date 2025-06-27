@@ -122,29 +122,32 @@ function ScorekeeperPage() {
 
     const saveStateToHistory = () => { setHistory(prev => [...prev, { score, servingTeamId, serverNumber, playerPositions, firstSideOutDone }]);};
 
-    const handleUndo = () => { 
-        if (history.length === 0) 
-            return; 
-        const lastState = history[history.length - 1]; 
-        setScore(lastState.score); 
-        setServingTeamId(lastState.servingTeamId); 
-        setServerNumber(lastState.serverNumber); 
-        setPlayerPositions(lastState.playerPositions); 
-        setFirstSideOutDone(lastState.firstSideOutDone); 
-        setHistory(prev => prev.slice(0, -1)); 
-
+    const handleUndo = () => {
+        if (history.length === 0) return;
+        const lastState = history[history.length - 1];
+        setScore(lastState.score);
+        setServingTeamId(lastState.servingTeamId);
+        setServerNumber(lastState.serverNumber);
+        setPlayerPositions(lastState.playerPositions);
+        setFirstSideOutDone(lastState.firstSideOutDone);
+        setHistory(prev => prev.slice(0, -1));
         persistGameState({
-        team1_score: lastState.score.team1,
-        team2_score: lastState.score.team2,
-        server_team_id: lastState.servingTeamId,
-        server_number: lastState.serverNumber,
-        player_positions: lastState.playerPositions,
-        first_side_out_done: lastState.firstSideOutDone,
-        status: 'en_vivo' // Se asegura de que el estado vuelva a 'en_vivo'
-    });
-};
+            team1_score: lastState.score.team1,
+            team2_score: lastState.score.team2,
+            server_team_id: lastState.servingTeamId,
+            server_number: lastState.serverNumber,
+            player_positions: lastState.playerPositions,
+            first_side_out_done: lastState.firstSideOutDone,
+            status: 'en_vivo'
+        });
+    };
 
-    const handleUndoFromModal = () => { handleUndo(); setIsGameOver(false); setWinner(null); setGameState('playing');
+        const handleUndoFromModal = () => {
+        handleUndo();
+        setIsGameOver(false);
+        setWinner(null);
+        setGameState('playing'); // <-- CORRECCIÓN CLAVE
+    };
                                       };
     
     const handleStartGame = async (firstServingTeamId) => {
@@ -256,10 +259,10 @@ if (gameState === 'loading' || !matchDetails) return <div className="flex justif
 
    
     return (
-        <div className="bg-slate-900 min-h-screen text-white p-4 font-sans">
-            <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndo} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
-            
-            <div className="max-w-md mx-auto">
+        <div style={{ textAlign: 'center' }}>
+            {isGameOver && ( <GameOverModal isOpen={isGameOver} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onUndo={handleUndoFromModal} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: isNaN(value) ? 0 : value}))} team1Name={team1.name} team2Name={team2.name} /> )}
+            <h3>Partido #{matchDetails.match.id} - {matchDetails.match.category}</h3>
+               <div className="max-w-md mx-auto">
                 <header className="text-center mb-4">
                     <h1 className="text-2xl font-bold">CANCHA #{matchDetails.match.court_id || 'N/A'}</h1>
                     <div className="flex justify-between items-center text-sm text-slate-400 mt-1">
