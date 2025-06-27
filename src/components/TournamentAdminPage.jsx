@@ -544,8 +544,8 @@ const JuegosEnCursoTab = () => {
 
     // --- Componente ServiceDots (Puntos de Servicio) ---
     const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
-        const firstDotActive = isServingTeam;
-        const secondDotActive = isServingTeam && !isFirstServeOfGame && serverNum === 1;
+        const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
+        const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
         return (
             // Reducimos el 'gap' y el tamaño de los puntos para hacerlos más compactos
             <div className="flex gap-0.5 items-center"> 
