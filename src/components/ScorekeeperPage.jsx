@@ -1,168 +1,55 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
+import { Trophy, X, Undo } from 'lucide-react';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 
-// --- Estilos ---
-const styles = {
-  court: {
-    display: 'grid',
-    gridTemplateColumns: '1fr auto 1fr',
-    gridTemplateRows: '1fr',
-    border: '3px solid #fff',
-    width: '100%',
-    maxWidth: '800px',
-    margin: '20px auto',
-    backgroundColor: '#004d40',
-    aspectRatio: '2 / 1',
-  },
-  teamSide: {
-    display: 'grid',
-    gridTemplateColumns: '1fr',
-    gridTemplateRows: '1fr 1fr',
-    position: 'relative',
-  },
-  net: {
-    width: '4px',
-    backgroundColor: 'rgba(255, 255, 255, 0.5)',
-  },
-  playerBox: {
-    border: '1px solid #a7ffeb',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    textAlign: 'center',
-    position: 'relative',
-    paddingTop: '20px',
-  },
-  kitchenArea: {
-    position: 'absolute',
-    top: '0',
-    bottom: '0',
-    width: '31.8%',
-    backgroundColor: 'rgba(0, 0, 0, 0.2)',
-    zIndex: 1,
-  },
-  teamNameOnCourt: {
-    position: 'absolute',
-    top: '8px',
-    width: '100%',
-    textAlign: 'center',
-    fontSize: '1em',
-    fontWeight: 'bold',
-    color: 'white',
-    textShadow: '1px 1px 2px black',
-    zIndex: 3,
-  },
-  playerName: {
-    fontSize: '0.9em',
-    fontWeight: 'bold',
-    zIndex: 2,
-    position: 'relative',
-    backgroundColor: 'rgba(0, 77, 64, 0.5)',
-    padding: '2px 5px',
-    borderRadius: '4px',
-  },
-  scoreboard: {
-    padding: '15px',
-    border: '1px solid gray',
-    borderRadius: '8px',
-    margin: '20px auto',
-    maxWidth: '700px',
-  },
-  score: {
-    fontSize: '2.5em',
-    fontWeight: 'bold',
-  },
-  teamInfo: {
-    fontSize: '1.1em',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px'
-  },
-  serviceDotsContainer: {
-    display: 'flex',
-    gap: '5px',
-  },
-  serviceDot: {
-    width: '12px',
-    height: '12px',
-    borderRadius: '50%',
-    backgroundColor: '#444',
-    transition: 'background-color 0.3s',
-  },
-  serviceDotActive: {
-    backgroundColor: 'yellow',
-  },
-  modalOverlay: {
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.75)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000,
-  },
-  modalContent: {
-    backgroundColor: '#282c34',
-    padding: '30px',
-    borderRadius: '10px',
-    textAlign: 'center',
-    color: 'white',
-    border: '2px solid #61DAFB',
-  },
-  modalTitle: {
-    fontSize: '2em',
-    marginBottom: '20px',
-  },
-  modalScoreInput: {
-    width: '60px',
-    fontSize: '1.5em',
-    textAlign: 'center',
-    margin: '0 10px',
-  },
-  modalButton: {
-    padding: '10px 20px',
-    fontSize: '1.2em',
-    cursor: 'pointer',
-    margin: '30px 10px 0 10px'
-  }
-};
-
-const GameOverModal = ({ isOpen, winner, finalScore, onConfirm, onScoreChange, onUndo, team1Name, team2Name }) => {
+const GameOverModal = ({ isOpen, onClose, winner, finalScore, onConfirm, onScoreChange, onUndo, team1Name, team2Name }) => {
     if (!isOpen) return null;
+
     return (
-        <div style={styles.modalOverlay}>
-            <div style={styles.modalContent}>
-                <h2 style={styles.modalTitle}>¡Juego Terminado!</h2>
-                <h3>🏆 Ganador: {winner?.name || 'N/A'} 🏆</h3>
-                <div>
-                    <h4>Confirmar Puntuación Final:</h4>
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.8em', marginBottom: '5px' }}>{team1Name}</div>
-                            <input type="number" style={styles.modalScoreInput} value={finalScore.team1} onChange={(e) => onScoreChange('team1', parseInt(e.target.value, 10))} />
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 border-2 border-slate-700 rounded-2xl shadow-2xl p-8 w-full max-w-lg text-center">
+                <h2 className="text-3xl font-bold text-white mb-4">¡Juego Terminado!</h2>
+                <div className="space-y-2 mb-6">
+                    <h3 className="text-xl font-semibold text-amber-400">GANADOR:</h3>
+                    <p className="text-4xl font-bold text-white">{winner?.name}</p>
+                </div>
+
+                <div className="bg-slate-800 p-4 rounded-lg">
+                    <h4 className="font-semibold mb-4">Confirmar Puntuación Final</h4>
+                    <div className="flex items-center justify-center gap-4">
+                        <div className="text-center">
+                            <label className="text-sm text-slate-300">{team1Name}</label>
+                            <div className="text-6xl font-bold bg-slate-900/50 border-2 border-slate-600 rounded-lg p-2">{finalScore.team1}</div>
                         </div>
-                        <span>-</span>
-                        <div style={{ textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.8em', marginBottom: '5px' }}>{team2Name}</div>
-                            <input type="number" style={styles.modalScoreInput} value={finalScore.team2} onChange={(e) => onScoreChange('team2', parseInt(e.target.value, 10))} />
+                        <span className="text-4xl font-bold text-slate-500">-</span>
+                        <div className="text-center">
+                            <label className="text-sm text-slate-300">{team2Name}</label>
+                            <div className="text-6xl font-bold bg-slate-900/50 border-2 border-slate-600 rounded-lg p-2">{finalScore.team2}</div>
                         </div>
                     </div>
                 </div>
-                <div>
-                    <button onClick={onUndo} style={{...styles.modalButton, backgroundColor: '#ffc107'}}>Deshacer Último Punto</button>
-                    <button onClick={onConfirm} style={{...styles.modalButton, backgroundColor: '#28a745'}}>Confirmar Resultado</button>
+
+                <div className="mt-8 flex justify-center gap-4">
+                    <button onClick={onConfirm} className="px-8 py-3 bg-green-600 hover:bg-green-700 rounded-lg font-bold text-lg uppercase tracking-wider">Confirmar</button>
+                    <button onClick={onUndo} className="px-8 py-3 bg-slate-600 hover:bg-slate-700 rounded-lg font-bold text-lg uppercase tracking-wider flex items-center">
+                        <Undo className="mr-2 h-5 w-5" /> Deshacer
+                    </button>
                 </div>
             </div>
         </div>
     );
-}
-
+};
+const ServiceDots = ({ isServingTeam }) => {
+    return (
+        <div className="flex flex-col gap-1.5">
+            <div className={`w-3 h-3 rounded-full transition-all ${isServingTeam ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+            <div className={`w-3 h-3 rounded-full transition-all ${isServingTeam ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+        </div>
+    );
+};
 function ScorekeeperPage() {
     const { matchId } = useParams();
     const [gameState, setGameState] = useState('loading');
@@ -392,192 +279,74 @@ function ScorekeeperPage() {
 
 
     // --- LÓGICA DE RENDERIZADO CORREGIDA ---
+if (gameState === 'loading' || !matchDetails) return <div className="flex justify-center items-center h-screen"><p>Cargando partido...</p></div>;
+    if (gameState === 'error') return <div className="flex justify-center items-center h-screen text-red-500"><p>Error al cargar el partido.</p></div>;
 
-
-
-  if (gameState === 'loading') {
-        return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.5em' }}>Cargando datos del partido...</div>;
-    }
-
-    if (gameState === 'error' || !matchDetails || !matchDetails.team1 || !matchDetails.team2) {
-        return <div style={{ textAlign: 'center', padding: '50px', fontSize: '1.5em', color: 'red' }}>Error al cargar los datos. Revisa la consola.</div>;
-    }
-
-    // A partir de aquí, es seguro usar matchDetails
-    const { team1, team2 } = matchDetails;
-
-    if (gameState === 'setup') {
-        return (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-                <h2>Configurar Partido #{matchDetails.match.id}</h2>
-                <h3>{team1.name} vs {team2.name}</h3>
-                <p>Por favor, define qué equipo sirve primero.</p>
-                <button style={{padding: '10px 20px', fontSize: '1.2em', marginRight: '20px'}} onClick={() => handleStartGame(team1.id)}>{team1.name} Sirve Primero</button>
-                <button style={{padding: '10px 20px', fontSize: '1.2em'}} onClick={() => handleStartGame(team2.id)}>{team2.name} Sirve Primero</button>
-            </div>
-        );
-    }
-
-    if (gameState === 'finished') {
-        return (
-            <div style={{ padding: '40px', textAlign: 'center' }}>
-                <h1>Partido Finalizado</h1>
-                <h2>{team1.name}: {score.team1}</h2>
-                <h2>{team2.name}: {score.team2}</h2>
-            </div>
-        );
-    }
-    
-    const getPlayerById = (id) => team1.players.find(p => p.id === id) || team2.players.find(p => p.id === id);
-    const PlayerInfo = ({ playerId, teamId }) => {
-        const player = getPlayerById(playerId);
-        if (!player) return null;
-        const isFirstServer = firstServers && firstServers[teamId === team1.id ? 'team1' : 'team2'] === playerId;
-        return <div style={styles.playerName}>{player.full_name} {isFirstServer && '(1)'}</div>
+    const PlayerInfo = ({ playerId }) => {
+        const player = matchDetails.team1.players.find(p => p.id === playerId) || matchDetails.team2.players.find(p => p.id === playerId);
+        return <p className="font-semibold text-lg">{player?.full_name || 'Jugador'}</p>;
     };
 
+    const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
+    
+    if (gameState === 'setup') {
+        return ( <div className="flex flex-col items-center justify-center h-screen text-center p-8 text-white"> <h1 className="text-3xl font-bold">Configurar Partido #{matchDetails.match.id}</h1> <h2 className="text-xl mt-2">{matchDetails.team1.name} vs {matchDetails.team2.name}</h2> <p className="mt-4">Por favor, define qué equipo sirve primero.</p> <div className="flex gap-4 mt-4"> <button className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-md" onClick={() => handleStartGame(matchDetails.team1.id)}>{matchDetails.team1.name} Sirve</button> <button className="px-4 py-2 bg-teal-600 hover:bg-teal-700 rounded-md" onClick={() => handleStartGame(matchDetails.team2.id)}>{matchDetails.team2.name} Sirve</button> </div> </div> );
+    }
+    if (gameState === 'finished') {
+        return <div className="flex flex-col items-center justify-center h-screen text-center"><h1 className="text-4xl font-bold">Partido Finalizado</h1><p className="text-2xl mt-4">{matchDetails.team1.name}: {score.team1} - {matchDetails.team2.name}: {score.team2}</p></div>;
+    }
 
+    return (
+        <div className="bg-slate-900 min-h-screen text-white p-4 font-sans">
+            <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndo} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
+            
+            <div className="max-w-md mx-auto">
+                <header className="text-center mb-4">
+                    <h1 className="text-2xl font-bold">CANCHA #{matchDetails.match.court_id || 'N/A'}</h1>
+                    <div className="flex justify-between items-center text-sm text-slate-400 mt-1">
+                        <span>GRUPO {getGroupLetter(matchDetails.match.group_id) || '?'}</span>
+                        <span className="bg-slate-700 px-2 py-0.5 rounded">{matchDetails.match.category}</span>
+                        <span>{matchDetails.team1.name} VS {matchDetails.team2.name}</span>
+                    </div>
+                </header>
 
-    const isFirstServeOfGame = !firstSideOutDone;
-    const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
-        const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
-        const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
+                <div className="grid grid-cols-2 gap-px bg-slate-600 rounded-lg overflow-hidden my-6">
+                    {playerPositions && <>
+                        <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center"><PlayerInfo playerId={playerPositions.team1_left} /></div>
+                        <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center"><PlayerInfo playerId={playerPositions.team2_left} /></div>
+                        <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center"><PlayerInfo playerId={playerPositions.team1_right} /></div>
+                        <div className="bg-blue-900/50 p-4 flex items-center justify-center text-center"><PlayerInfo playerId={playerPositions.team2_right} /></div>
+                    </>}
+                </div>
+                
+                <div className="bg-slate-800 p-4 rounded-lg space-y-3">
+                    <div className="flex items-center">
+                        <div className="w-10"><ServiceDots isServingTeam={servingTeamId === matchDetails.team1.id} /></div>
+                        <div className="flex-grow">
+                            <p className="font-bold text-xl">{matchDetails.team1.name}</p>
+                            <p className="text-xs text-slate-400">{matchDetails.team1.players.map(p=>p.full_name).join(' / ')}</p>
+                        </div>
+                        <p className="text-5xl font-bold">{score.team1}</p>
+                    </div>
+                    <hr className="border-slate-600" />
+                    <div className="flex items-center">
+                         <div className="w-10"><ServiceDots isServingTeam={servingTeamId === matchDetails.team2.id} /></div>
+                        <div className="flex-grow">
+                            <p className="font-bold text-xl">{matchDetails.team2.name}</p>
+                            <p className="text-xs text-slate-400">{matchDetails.team2.players.map(p=>p.full_name).join(' / ')}</p>
+                        </div>
+                        <p className="text-5xl font-bold">{score.team2}</p>
+                    </div>
+                </div>
 
-        return (
-            <div style={styles.serviceDotsContainer}>
-                <div style={{...styles.serviceDot, ...(firstDotActive && styles.serviceDotActive)}}></div>
-                <div style={{...styles.serviceDot, ...(secondDotActive && styles.serviceDotActive)}}></div>
-            </div>
-        );
-    };
-
-    return (
-        <div style={{ textAlign: 'center' }}>
-            {isGameOver && (
-                <GameOverModal 
-                    winner={winner} 
-                    finalScore={editableFinalScore}
-                    onConfirm={handleConfirmWin}
-                    onUndo={handleUndoFromModal}
-                    onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: isNaN(value) ? 0 : value}))}
-                    team1Name={team1.name}
-                    team2Name={team2.name}
-                />
-
-            )}
-
-            <h3>Partido #{matchDetails.match.id} - {matchDetails.match.category}</h3>
-
-            
-
-            <div style={styles.court}>
-
-                <div style={styles.teamSide}>
-
-                    <div style={styles.teamNameOnCourt}>{team1.name}</div>
-
-                    <div style={{ ...styles.kitchenArea, right: '0' }}></div>
-
-                    <div style={{ ...styles.playerBox }}>
-
-                        <PlayerInfo playerId={playerPositions.team1_left} teamId={team1.id} />
-
-                    </div>
-
-                    <div style={{ ...styles.playerBox }}>
-
-                        <PlayerInfo playerId={playerPositions.team1_right} teamId={team1.id} />
-
-                    </div>
-
-                </div>
-
-                
-
-                <div style={styles.net}></div>
-
-                
-
-                <div style={styles.teamSide}>
-
-                    <div style={styles.teamNameOnCourt}>{team2.name}</div>
-
-                    <div style={{ ...styles.kitchenArea, left: '0' }}></div>
-
-                    <div style={{ ...styles.playerBox }}>
-
-                        <PlayerInfo playerId={playerPositions.team2_left} teamId={team2.id} />
-
-                    </div>
-
-                    <div style={{ ...styles.playerBox }}>
-
-                        <PlayerInfo playerId={playerPositions.team2_right} teamId={team2.id} />
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-
-            <div style={styles.scoreboard}>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-
-                    <div style={styles.teamInfo}>
-
-                        {/* Pasamos el prop 'isFirstServeOfGame' que faltaba */}
-
-                        <ServiceDots isServingTeam={servingTeamId === team1.id} serverNum={serverNumber} isFirstServeOfGame={isFirstServeOfGame} />
-
-                        {team1.name}
-
-                    </div>
-
-                    <div style={styles.score}>{score.team1}</div>
-
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-
-                    <div style={styles.teamInfo}>
-
-                        {/* Pasamos el prop 'isFirstServeOfGame' que faltaba */}
-
-                        <ServiceDots isServingTeam={servingTeamId === team2.id} serverNum={serverNumber} isFirstServeOfGame={isFirstServeOfGame} />
-
-                        {team2.name}
-
-                    </div>
-
-                    <div style={styles.score}>{score.team2}</div>
-
-                </div>
-
-                {/* ----- FIN DE LA CORRECCIÓN ----- */}
-
-                <hr style={{margin: '15px 0'}}/>
-
-                <div style={{display: 'flex', justifyContent: 'center', gap: '15px', marginTop: '20px'}}>
-
-                    <button onClick={handlePoint} style={{padding: '10px 15px', fontSize: '1em', backgroundColor: '#28a745', color: 'white', border: 'none', borderRadius: '5px'}}>Punto (+)</button>
-
-                    <button onClick={handleSideOut} style={{padding: '10px 15px', fontSize: '1em', backgroundColor: '#dc3545', color: 'white', border: 'none', borderRadius: '5px'}}>Side Out / Falta</button>
-
-                    <button onClick={handleUndo} disabled={history.length === 0} style={{padding: '10px 15px', fontSize: '1em', border: '1px solid white', borderRadius: '5px'}}>Deshacer</button>
-
-                </div>
-
-            </div>
-
-        </div>
-
-    );
-
+                <div className="grid grid-cols-3 gap-3 mt-6">
+                    <button className="col-span-2 py-4 bg-green-600 hover:bg-green-700 rounded-lg text-lg font-bold uppercase" onClick={handlePoint}>Punto (+)</button>
+                    <button className="py-4 bg-slate-600 hover:bg-slate-700 rounded-lg flex items-center justify-center" onClick={handleUndo} disabled={history.length === 0}>
+                        <Undo />
+                    </button>
+                    <button className="col-span-3 py-4 bg-red-600 hover:bg-red-700 rounded-lg text-lg font-bold uppercase" onClick={handleSideOut}>Side Out / Falta</button>
+                </div>
+            </div>
+        </div>
+    );
 }
-
-
-
-export default ScorekeeperPage;
