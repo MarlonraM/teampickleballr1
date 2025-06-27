@@ -204,6 +204,11 @@ function ScorekeeperPage() {
 if (gameState === 'loading' || !matchDetails) return <div className="flex justify-center items-center h-screen"><p>Cargando partido...</p></div>;
     if (gameState === 'error') return <div className="flex justify-center items-center h-screen text-red-500"><p>Error al cargar el partido.</p></div>;
 
+
+    const getPlayerById = (id) => {
+        if (!id || !team1?.players || !team2?.players) return null;
+        return team1.players.find(p => p.id === id) || team2.players.find(p => p.id === id);
+    };
     const PlayerInfo = ({ playerId }) => {
         const player = matchDetails.team1.players.find(p => p.id === playerId) || matchDetails.team2.players.find(p => p.id === playerId);
         return <p className="font-semibold text-lg">{player?.full_name || 'Jugador'}</p>;
