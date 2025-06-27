@@ -259,10 +259,11 @@ return (
         <div className="bg-slate-900 min-h-screen text-white p-4 font-sans">
             <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndo} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
             
-               <div className="max-w-md mx-auto">
+            <div className="max-w-md mx-auto">
                 <header className="text-center mb-4">
                     <h1 className="text-2xl font-bold">CANCHA #{matchDetails.match.court_id || 'N/A'}</h1>
-                    <div className="flex justify-between items-center text-sm text-slate-400 mt-1">
+                    <p className="text-sm text-slate-500 font-mono">PARTIDO #{matchDetails.match.id}</p>
+                    <div className="flex justify-between items-center text-sm text-slate-400 mt-2">
                         <span>GRUPO {getGroupLetter(matchDetails.match.group_id) || '?'}</span>
                         <span className="bg-slate-700 px-2 py-0.5 rounded">{matchDetails.match.category}</span>
                         <span>{matchDetails.team1.name} VS {matchDetails.team2.name}</span>
@@ -315,5 +316,5 @@ return (
             </div>
         </div>
     );
-
+}
 export default ScorekeeperPage;
