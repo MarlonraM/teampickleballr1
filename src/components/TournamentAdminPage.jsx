@@ -220,8 +220,10 @@ const GestionTorneoTab = () => {
             const opponentScore = isTeam1 ? match.team2_score : match.team1_score;
             if (myScore > opponentScore) { acc.G += 1; } else { acc.P += 1; }
             acc.GF += myScore; acc.GC += opponentScore;
+            // Suma los puntos de torneo desde el partido
+            acc.TournamentPoints += isTeam1 ? (match.team1_tournament_points || 0) : (match.team2_tournament_points || 0);
             return acc;
-        }, { G: 0, P: 0, GF: 0, GC: 0 });
+        }, { G: 0, P: 0, GF: 0, GC: 0, TournamentPoints: 0 });
     };
 
     const tiebreakerInfo = useMemo(() => {
