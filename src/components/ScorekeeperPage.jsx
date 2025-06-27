@@ -48,11 +48,11 @@ const GameOverModal = ({ isOpen, onClose, winner, finalScore, onConfirm, onScore
     );
 };
 
-// --- Componente ServiceDots con Tailwind CSS ---
-const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
-    const firstDotActive = isServingTeam && (isFirstServeOfGame || serverNum === 1);
-    const secondDotActive = isServingTeam && (isFirstServeOfGame || serverNum === 2);
 
+const isFirstServeOfGame = !firstSideOutDone;
+const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
+    const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
+    const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
     const dotClass = (active) =>
         `w-3 h-3 rounded-full transition-all ${active ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`;
 
