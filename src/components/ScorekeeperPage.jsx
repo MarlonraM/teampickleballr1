@@ -122,9 +122,30 @@ function ScorekeeperPage() {
 
     const saveStateToHistory = () => { setHistory(prev => [...prev, { score, servingTeamId, serverNumber, playerPositions, firstSideOutDone }]);};
 
-    const handleUndo = () => { if (history.length === 0) return; const lastState = history[history.length - 1]; setScore(lastState.score); setServingTeamId(lastState.servingTeamId); setServerNumber(lastState.serverNumber); setPlayerPositions(lastState.playerPositions); setFirstSideOutDone(lastState.firstSideOutDone); setHistory(prev => prev.slice(0, -1)); };
+    const handleUndo = () => { 
+        if (history.length === 0) 
+            return; 
+        const lastState = history[history.length - 1]; 
+        setScore(lastState.score); 
+        setServingTeamId(lastState.servingTeamId); 
+        setServerNumber(lastState.serverNumber); 
+        setPlayerPositions(lastState.playerPositions); 
+        setFirstSideOutDone(lastState.firstSideOutDone); 
+        setHistory(prev => prev.slice(0, -1)); 
 
-    const handleUndoFromModal = () => { handleUndo(); setIsGameOver(false); setWinner(null); };
+        persistGameState({
+        team1_score: lastState.score.team1,
+        team2_score: lastState.score.team2,
+        server_team_id: lastState.servingTeamId,
+        server_number: lastState.serverNumber,
+        player_positions: lastState.playerPositions,
+        first_side_out_done: lastState.firstSideOutDone,
+        status: 'en_vivo' // Se asegura de que el estado vuelva a 'en_vivo'
+    });
+};
+
+    const handleUndoFromModal = () => { handleUndo(); setIsGameOver(false); setWinner(null); setGameState('playing');
+                                      };
     
     const handleStartGame = async (firstServingTeamId) => {
         const category = matchDetails.match.category;
