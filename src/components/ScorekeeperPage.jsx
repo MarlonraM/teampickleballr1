@@ -259,9 +259,10 @@ if (gameState === 'loading' || !matchDetails) return <div className="flex justif
 
    
     return (
-        <div style={{ textAlign: 'center' }}>
-            {isGameOver && ( <GameOverModal isOpen={isGameOver} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onUndo={handleUndoFromModal} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: isNaN(value) ? 0 : value}))} team1Name={team1.name} team2Name={team2.name} /> )}
-            <h3>Partido #{matchDetails.match.id} - {matchDetails.match.category}</h3>
+return (
+        <div className="bg-slate-900 min-h-screen text-white p-4 font-sans">
+            <GameOverModal isOpen={isGameOver} onClose={() => setIsGameOver(false)} winner={winner} finalScore={editableFinalScore} onConfirm={handleConfirmWin} onScoreChange={(team, value) => setEditableFinalScore(prev => ({...prev, [team]: value}))} onUndo={handleUndo} team1Name={matchDetails.team1.name} team2Name={matchDetails.team2.name} />
+            
                <div className="max-w-md mx-auto">
                 <header className="text-center mb-4">
                     <h1 className="text-2xl font-bold">CANCHA #{matchDetails.match.court_id || 'N/A'}</h1>
