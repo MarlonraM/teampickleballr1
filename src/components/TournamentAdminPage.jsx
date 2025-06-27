@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, ArrowRight, Trophy, Swords, MonitorPlay, ListOrdered } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
 import.meta.env.VITE_API_URL;
 
 // --- Componentes de UI Reutilizables ---
@@ -511,11 +512,15 @@ const JuegosEnCursoTab = () => {
         fetchData();
         const socket = new WebSocket(`${import.meta.env.VITE_API_URL.replace(/^http/, 'ws')}`);
         socket.onmessage = (event) => {
-            const updatedData = JSON.parse(event.data);
-            if (updatedData.type === 'SCORE_UPDATE') {
-                setMatches(prevMatches =>
-                    prevMatches.map(m => m.id === parseInt(updatedData.matchId, 10) ? { ...m, ...updatedData.payload } : m)
-                );
+            try { // Añadir try-catch para manejar errores de parseo JSON del websocket
+                const updatedData = JSON.parse(event.data);
+                if (updatedData.type === 'SCORE_UPDATE') {
+                    setMatches(prevMatches =>
+                        prevMatches.map(m => m.id === parseInt(updatedData.matchId, 10) ? { ...m, ...updatedData.payload } : m)
+                    );
+                }
+            } catch (e) {
+                console.error("Error al procesar mensaje del WebSocket:", e);
             }
         };
         return () => socket.close();
@@ -538,27 +543,31 @@ const JuegosEnCursoTab = () => {
     if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando estado de las canchas...</span></div>;
     if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
 
+    // --- Componente ServiceDots (Puntos de Servicio) ---
     const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
         const firstDotActive = isServingTeam;
         const secondDotActive = isServingTeam && !isFirstServeOfGame && serverNum === 1;
         return (
-            <div className="flex gap-1.5">
-                <div className={`w-3 h-3 rounded-full transition-all ${isServingTeam ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
-                <div className={`w-3 h-3 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+            // Reducimos el 'gap' y el tamaño de los puntos para hacerlos más compactos
+            <div className="flex gap-0.5 items-center"> 
+                <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+                <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
             </div>
         );
     };
 
+    // --- Componente MatchCard (Tarjeta de Partido) ---
     const MatchCard = ({ match }) => {
         const winner = match.winner_id ? (match.winner_id === match.team1_id ? 'team1' : 'team2') : null;
         const isFirstServeOfGame = !match.first_side_out_done;
         return (
-            <div className={`bg-slate-800 p-3 rounded-lg border border-slate-700`}>
+            <div className={`bg-slate-800 p-2.5 rounded-lg border border-slate-700`}> {/* Padding ligeramente reducido */}
                 <div className="text-center text-xs font-bold text-cyan-400 mb-2">{match.category}</div>
-                <div className="space-y-2">
-                    {/* Team 1 Row */}
-                    <div className={`flex items-center p-1 rounded-md ${winner === 'team1' ? 'bg-green-800/30' : ''}`}>
-                        <div className="flex-grow">
+                <div className="space-y-1.5"> {/* Espaciado vertical más compacto */}
+                    {/* Fila del Equipo 1 */}
+                    <div className={`flex items-center rounded-md ${winner === 'team1' ? 'bg-green-800/30' : ''}`}>
+                        {/* Contenedor del nombre del equipo y jugadores - flex-grow para ocupar espacio, min-w-0 para permitir truncar */}
+                        <div className="flex-grow min-w-0"> 
                             <div className={`text-sm font-semibold ${winner === 'team1' ? 'text-amber-400' : ''}`}>
                                 {winner === 'team1' && '🏆 '}{match.team1_name}
                             </div>
@@ -566,26 +575,29 @@ const JuegosEnCursoTab = () => {
                                 {match.team1_player1_name} / {match.team1_player2_name}
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                           <ServiceDots isServingTeam={match.server_team_id === match.team1_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
-                           <div className="w-px h-8 bg-slate-600"></div>
-                           <span className="font-mono font-bold text-xl w-8 text-right">{match.team1_score ?? '-'}</span>
+                        {/* Contenedor para puntos de servicio, divisor y score - flex-shrink-0 para evitar que se encoja */}
+                        <div className="flex items-center justify-end gap-1 flex-shrink-0"> {/* justify-end para alinear a la derecha, gap reducido */}
+                            <ServiceDots isServingTeam={match.server_team_id === match.team1_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
+                            {/* Divisor más corto y con margen horizontal mínimo */}
+                            <div className="w-px h-5 bg-slate-600 mx-0.5"></div> 
+                            {/* Score más pequeño y con ancho fijo para mantener alineación */}
+                            <span className="font-mono font-bold text-base w-6 text-right">{match.team1_score ?? '-'}</span>
                         </div>
                     </div>
-                    {/* Team 2 Row */}
-                    <div className={`flex items-center p-1 rounded-md ${winner === 'team2' ? 'bg-green-800/30' : ''}`}>
-                        <div className="flex-grow">
-                           <div className={`text-sm font-semibold ${winner === 'team2' ? 'text-amber-400' : ''}`}>
-                               {winner === 'team2' && '� '}{match.team2_name}
-                           </div>
-                           <div className="text-xs text-slate-400 truncate">
-                               {match.team2_player1_name} / {match.team2_player2_name}
-                           </div>
+                    {/* Fila del Equipo 2 - Se aplican los mismos ajustes */}
+                    <div className={`flex items-center rounded-md ${winner === 'team2' ? 'bg-green-800/30' : ''}`}>
+                        <div className="flex-grow min-w-0">
+                            <div className={`text-sm font-semibold ${winner === 'team2' ? 'text-amber-400' : ''}`}>
+                                {winner === 'team2' && '� '}{match.team2_name}
+                            </div>
+                            <div className="text-xs text-slate-400 truncate">
+                                {match.team2_player1_name} / {match.team2_player2_name}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                           <ServiceDots isServingTeam={match.server_team_id === match.team2_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
-                           <div className="w-px h-8 bg-slate-600"></div>
-                           <span className="font-mono font-bold text-xl w-8 text-right">{match.team2_score ?? '-'}</span>
+                        <div className="flex items-center justify-end gap-1 flex-shrink-0">
+                            <ServiceDots isServingTeam={match.server_team_id === match.team2_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
+                            <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
+                            <span className="font-mono font-bold text-base w-6 text-right">{match.team2_score ?? '-'}</span>
                         </div>
                     </div>
                 </div>
@@ -593,23 +605,25 @@ const JuegosEnCursoTab = () => {
         );
     };
     
+    // --- Componente Section (Contenedor de Secciones dentro de la columna de cancha) ---
     const Section = ({ title, children }) => (
         <div>
-            <h4 className="font-bold text-slate-400 text-sm mb-2 uppercase tracking-wider">{title}</h4>
-            <div className="space-y-2">{children}</div>
+            <h4 className="font-bold text-slate-400 text-xs mb-1.5 uppercase tracking-wider">{title}</h4> {/* mb reducido */}
+            <div className="space-y-1.5">{children}</div> {/* space-y reducido */}
         </div>
     );
 
     return (
-        <div className="flex overflow-x-auto space-x-6 pb-4">
+        // Contenedor principal de las canchas - w-72 para hacer las columnas ligeramente más estrechas
+        <div className="flex overflow-x-auto space-x-4 pb-4"> {/* space-x reducido */}
             {courts.map(court => {
                 const data = matchesByCourt[court.id] || { live: [], upcoming: [], played: [] };
                 return (
-                    <div key={court.id} className="w-80 flex-shrink-0 bg-slate-900/50 p-4 rounded-lg border border-slate-700">
-                        <h3 className="font-bold text-lg text-center mb-4">{court.name}</h3>
-                        <div className="space-y-6">
+                    <div key={court.id} className="w-72 flex-shrink-0 bg-slate-900/50 p-3 rounded-lg border border-slate-700"> {/* p y w reducidos */}
+                        <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3> {/* mb reducido */}
+                        <div className="space-y-4"> {/* space-y reducido */}
                             <Section title="En Vivo">
-                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 h-24 flex items-center justify-center rounded-lg text-slate-500">VACIA</div>}
+                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 h-20 flex items-center justify-center rounded-lg text-slate-500 text-sm">VACIA</div>} {/* h reducido, texto más pequeño */}
                             </Section>
                             <Section title="Próximos">
                                 {data.upcoming.length > 0 ? data.upcoming.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos próximos.</p>}
