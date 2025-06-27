@@ -170,11 +170,11 @@ function ScorekeeperPage() {
     const [score, setScore] = useState({ team1: 0, team2: 0 });
     const [servingTeamId, setServingTeamId] = useState(null);
     const [serverNumber, setServerNumber] = useState(1);
-    const [playerPositions, setPlayerPositions] = useState({ team1_left: null, team1_right: null, team2_left: null, team2_right: null });
-    const [firstServers, setFirstServers] = useState({ team1: null, team2: null });
+    const [playerPositions, setPlayerPositions] = useState(null);
+    const [firstServers, setFirstServers] = useState(null);
     const [history, setHistory] = useState([]);
     const [firstSideOutDone, setFirstSideOutDone] = useState(false);
-    const [isGameOver, setIsGameOver] = useState(false);
+    const { isOpen: isGameOver, onOpen: openGameOverModal, onClose: closeGameOverModal } = { isOpen: false, onOpen: () => {}, onClose: () => {} }; // Simulación de useDisclosure
     const [winner, setWinner] = useState(null);
     const [editableFinalScore, setEditableFinalScore] = useState({ team1: 0, team2: 0 });
     const socket = useRef(null);
@@ -204,7 +204,6 @@ function ScorekeeperPage() {
                 setGameState('error');
             });
     }, [matchId]);
-
 
     useEffect(() => {
         fetchMatchDetails();
