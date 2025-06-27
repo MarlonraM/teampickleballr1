@@ -2,7 +2,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, ArrowRight, Trophy, Swords, MonitorPlay, ListOrdered } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import.meta.env.VITE_API_URL;
-
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 // --- Componentes de UI Reutilizables ---
 const Card = ({ children, title, icon: Icon, titleClassName = 'text-cyan-400', extraHeaderContent }) => (
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-lg">
