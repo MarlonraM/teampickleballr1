@@ -318,5 +318,5 @@ if (gameState === 'loading' || !matchDetails) return <div className="flex justif
             </div>
         </div>
     );
-}
+
 export default ScorekeeperPage;
