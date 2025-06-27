@@ -247,97 +247,90 @@ const GestionTorneoTab = () => {
 
     const toggleRow = (teamId) => setExpandedRows(prev => ({ ...prev, [teamId]: !prev[teamId] }));
     
-    if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando partidos...</span></div>;
-    if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
-
     return (
         <div className="space-y-8">
-            {modalData && <MatchManagementModal matchData={modalData} courts={courts} onClose={() => setModalData(null)} onSave={handleSaveMatch} />}
-            {Object.keys(matchesByGroup).length > 0 ? Object.entries(matchesByGroup).map(([groupId, groupMatches]) => {
-                 const groupTeams = [...new Map(groupMatches.flatMap(m => [[m.team1_id, {id: m.team1_id, name: m.team1_name}], [m.team2_id, {id: m.team2_id, name: m.team2_name}]])).values()].sort((a,b) => a.id - b.id);
-                 
-                 const groupStandings = groupTeams
-                    .map(team => {
-                        const teamData = teams.find(t => t.id === team.id) || {};
-                        const teamStats = calculateStats(groupMatches, team.id);
-                        return { ...team, stats: teamStats, tournament_points: teamData.tournament_points || 0 };
-                    })
-                    .sort((a,b) => b.tournament_points - a.tournament_points || (b.stats.GF - b.stats.GC) - (a.stats.GF - a.stats.GC));
+            {modalData && <MatchManagementModal matchData={modalData} courts={courts} onClose={() => setModalData(null)} onSave={handleSaveMatch} isSaving={isSaving}/>}
+            {Object.keys(matchesByGroup).length > 0 ? (
+                Object.entries(matchesByGroup).map(([groupId, groupMatches]) => {
+                    const groupTeams = [...new Map(groupMatches.flatMap(m => [[m.team1_id, {id: m.team1_id, name: m.team1_name}], [m.team2_id, {id: m.team2_id, name: m.team2_name}]])).values()].sort((a,b) => a.id - b.id);
+                    const groupStandings = groupTeams.map(team => { const teamData = teams.find(t => t.id === team.id) || {}; const teamStats = calculateStats(groupMatches, team.id); return { ...team, stats: teamStats, tournament_points: teamData.tournament_points || 0 }; }).sort((a,b) => b.tournament_points - a.tournament_points || (b.stats.GF - b.stats.GC) - (a.stats.GF - a.stats.GC));
+                    const numToEliminate = eliminationCount[groupId] || 0;
+                    const eliminatedTeamIds = (numToEliminate > 0) ? groupStandings.slice(-numToEliminate).map(t => t.id) : [];
+                    const groupLetter = String.fromCharCode(64 + parseInt(groupId));
 
-                const numToEliminate = eliminationCount[groupId] || 0;
-                const eliminatedTeamIds = (numToEliminate > 0) ? groupStandings.slice(-numToEliminate).map(t => t.id) : [];
-                const groupLetter = String.fromCharCode(64 + parseInt(groupId));
+                    return (
+                        <Card key={groupId} title={`Round Robin - Grupo ${groupLetter}`} icon={BarChart2}
+                            extraHeaderContent={<div className="flex items-center gap-2 text-sm"><label htmlFor={`elim-${groupId}`} className="text-slate-400">Eliminar últimos:</label><input id={`elim-${groupId}`} type="number" min="0" max={groupTeams.length -1} value={eliminationCount[groupId] || 0} onChange={(e) => onEliminationCountChange({...eliminationCount, [groupId]: parseInt(e.target.value, 10) || 0})} className="w-16 bg-slate-700 p-1 rounded text-center border border-slate-600"/></div>}
+                        >
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm table-fixed">
+                                    <thead className="bg-slate-700/50">
+                                        <tr className="border-b border-slate-600">
+                                            <th className="p-3 font-semibold text-slate-300 w-[220px]">Equipo</th>
+                                            {groupTeams.map(team => <th key={team.id} className="p-3 font-semibold text-slate-300 text-center" title={team.name}>vs {team.name.substring(0,3).toUpperCase()}</th>)}
+                                            <th className="p-3 font-semibold text-slate-300 text-center w-16">G/P</th>
+                                            <th className="p-3 font-semibold text-slate-300 text-center w-24">Pts (F/C)</th>
+                                            <th className="p-3 font-semibold text-slate-300 text-center w-20">Dif.</th>
+                                            <th className="p-3 font-semibold text-slate-300 text-center w-28">Puntos Torneo</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {groupTeams.map(team => {
+                                            const teamStats = calculateStats(groupMatches, team.id);
+                                            const teamData = teams.find(t => t.id === team.id) || {};
+                                            const isEliminated = eliminatedTeamIds.includes(team.id);
 
-                return (
-                    <Card key={groupId} title={`Round Robin - Grupo ${groupLetter}`} icon={BarChart2}
-                        extraHeaderContent={<div className="flex items-center gap-2 text-sm"><label htmlFor={`elim-${groupId}`} className="text-slate-400">Eliminar últimos:</label><input id={`elim-${groupId}`} type="number" min="0" max={groupTeams.length -1} value={eliminationCount[groupId] || 0} onChange={(e) => setEliminationCount({...eliminationCount, [groupId]: parseInt(e.target.value, 10) || 0})} className="w-16 bg-slate-700 p-1 rounded text-center border border-slate-600"/></div>}
-                    >
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm table-fixed">
-                                <thead className="bg-slate-700/50">
-                                    <tr className="border-b border-slate-600">
-                                        <th className="p-3 font-semibold text-slate-300 w-[220px]">Equipo</th>
-                                        {groupTeams.map(team => <th key={team.id} className="p-3 font-semibold text-slate-300 text-center" title={team.name}>vs {team.name.substring(0,3).toUpperCase()}</th>)}
-                                        <th className="p-3 font-semibold text-slate-300 text-center w-16">G/P</th>
-                                        <th className="p-3 font-semibold text-slate-300 text-center w-24">Pts (F/C)</th>
-                                        <th className="p-3 font-semibold text-slate-300 text-center w-20">Dif.</th>
-                                        <th className="p-3 font-semibold text-slate-300 text-center w-28">Puntos Torneo</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {groupTeams.map(team => {
-                                        const teamStats = calculateStats(groupMatches, team.id);
-                                        const teamData = teams.find(t => t.id === team.id) || {};
-                                        const isEliminated = eliminatedTeamIds.includes(team.id);
-
-                                        return(
-                                        <React.Fragment key={team.id}>
-                                            <tr className={`border-b border-slate-700 transition-colors ${isEliminated ? 'bg-red-900/40' : 'hover:bg-slate-800/50'}`}>
-                                                <td className="p-3 font-semibold cursor-pointer" onClick={() => toggleRow(team.id)}>
-                                                    <div className="text-base">{team.name}</div>
-                                                    <div className="text-xs text-slate-400 font-normal flex items-center">Desplegar Partidos <ChevronsUpDown size={14} className={`inline-block ml-1 transition-transform ${expandedRows[team.id] ? 'rotate-180' : ''}`} /></div>
-                                                </td>
-                                                {groupTeams.map(opponent => {
-                                                    if (opponent.id === team.id) return <td key={opponent.id} className="p-1 bg-slate-700/30 text-center align-middle">-</td>;
-                                                    const relevantMatches = groupMatches.filter(m => m.status === 'finalizado' && ((m.team1_id === team.id && m.team2_id === opponent.id) || (m.team1_id === opponent.id && m.team2_id === team.id)));
-                                                    const gamesWon = relevantMatches.filter(m => m.winner_id === team.id).length;
-                                                    return <td key={opponent.id} className="p-1 text-center font-mono text-base align-middle">{relevantMatches.length > 0 ? `${gamesWon}/${relevantMatches.length}`: '-'}</td>;
-                                                })}
-                                                <td className="p-3 text-center font-mono align-middle">{teamStats.G}/{teamStats.P}</td>
-                                                <td className="p-3 text-center font-mono align-middle">{teamStats.GF}/{teamStats.GC}</td>
-                                                <td className="p-3 text-center font-semibold text-lg align-middle">{teamStats.GF - teamStats.GC}</td>
-                                                <td className="p-3 text-center font-semibold text-lg text-cyan-400 align-middle">{teamData.tournament_points || 0}</td>
-                                            </tr>
-                                            {expandedRows[team.id] && (
-                                                <tr className="bg-slate-900/70"><td colSpan={groupTeams.length + 5} className="p-0">
-                                                    <table className="w-full text-xs"><tbody>
+                                            return(
+                                            <React.Fragment key={team.id}>
+                                                <tr className={`border-b border-slate-700 transition-colors ${isEliminated ? 'bg-red-900/40' : 'hover:bg-slate-800/50'}`}>
+                                                    <td className="p-3 font-semibold cursor-pointer" onClick={() => toggleRow(team.id)}>
+                                                        <div className="text-base">{team.name}</div>
+                                                        <div className="text-xs text-slate-400 font-normal flex items-center">Desplegar Partidos <ChevronsUpDown size={14} className={`inline-block ml-1 transition-transform ${expandedRows[team.id] ? 'rotate-180' : ''}`} /></div>
+                                                    </td>
+                                                    {groupTeams.map(opponent => {
+                                                        if (opponent.id === team.id) return <td key={opponent.id} className="p-1 bg-slate-700/30 text-center align-middle">-</td>;
+                                                        const relevantMatches = groupMatches.filter(m => m.status === 'finalizado' && ((m.team1_id === team.id && m.team2_id === opponent.id) || (m.team1_id === opponent.id && m.team2_id === team.id)));
+                                                        const gamesWon = relevantMatches.filter(m => m.winner_id === team.id).length;
+                                                        return <td key={opponent.id} className="p-1 text-center font-mono text-base align-middle">{relevantMatches.length > 0 ? `${gamesWon}/${relevantMatches.length}`: '-'}</td>;
+                                                    })}
+                                                    <td className="p-3 text-center font-mono align-middle">{teamStats.G}/{teamStats.P}</td>
+                                                    <td className="p-3 text-center font-mono align-middle">{teamStats.GF}/{teamStats.GC}</td>
+                                                    <td className="p-3 text-center font-semibold text-lg align-middle">{teamStats.GF - teamStats.GC}</td>
+                                                    <td className="p-3 text-center font-semibold text-lg text-cyan-400 align-middle">{teamData.tournament_points || 0}</td>
+                                                </tr>
+                                                {expandedRows[team.id] && (
+                                                    <>
                                                         {['Avanzado', 'Intermedio Fuerte', 'Intermedio'].map(category => {
-                                                            const categoryMatches = groupMatches.filter(m => m.category === category && (m.team1_id === team.id || m.team2_id === team.id));
+                                                            const categoryMatches = groupMatches.filter(m => m.category === category);
+                                                            const categoryStats = calculateStats(categoryMatches, team.id);
                                                             return (
-                                                                <tr key={category} className="border-t border-slate-800">
-                                                                    <td className="p-2 font-bold text-left text-slate-400 w-[220px]">{category}</td>
+                                                                <tr key={category} className="bg-slate-800/40 text-xs">
+                                                                    <td className="py-2 px-3 pl-8 text-slate-400 font-semibold">{category}</td>
                                                                     {groupTeams.map(opponent => {
-                                                                        if (opponent.id === team.id) return <td key={opponent.id} className="p-2 text-center">-</td>;
+                                                                        if (opponent.id === team.id) return <td key={opponent.id} className="py-2 px-3 text-center">-</td>;
                                                                         const match = categoryMatches.find(m => (m.team1_id === team.id && m.team2_id === opponent.id) || (m.team1_id === opponent.id && m.team2_id === team.id));
-                                                                        const score1 = match ? (match.team1_id === team.id ? match.team1_score : match.team2_score) : '-';
-                                                                        const score2 = match ? (match.team1_id === team.id ? match.team2_score : match.team1_score) : '-';
-                                                                        return ( <td key={opponent.id} className="p-1 text-center">{match ? (<div onClick={() => setModalData(match)} className="bg-slate-800 hover:bg-slate-700 rounded-md p-2 cursor-pointer relative font-mono text-base">{`${score1 ?? '-'}/${score2 ?? '-'}`}<span className="absolute bottom-0 right-1 text-[8px] text-slate-500">ID:{match.id}</span></div>) : '-'}</td> )
+                                                                        const score1 = match ? (match.team1_id === team.id ? match.team1_score : match.team2_score) : null;
+                                                                        const score2 = match ? (match.team1_id === team.id ? match.team2_score : match.team1_score) : null;
+                                                                        return ( <td key={opponent.id} className="p-1 text-center">{match ? (<div onClick={() => setModalData(match)} className="bg-slate-700/50 hover:bg-slate-700 rounded-md p-2 cursor-pointer relative font-mono text-base">{score1 !== null ? `${score1}/${score2}` : '-'}<span className="absolute bottom-0 right-1 text-[8px] text-slate-500">ID:{match.id}</span></div>) : <div className="p-2">-</div>}</td> )
                                                                     })}
-                                                                    <td colSpan="4" className="w-[248px]"></td>
+                                                                    <td className="py-2 px-3 text-center font-mono">{categoryStats.G}/{categoryStats.P}</td>
+                                                                    <td className="py-2 px-3 text-center font-mono">{categoryStats.GF}/{categoryStats.GC}</td>
+                                                                    <td className="py-2 px-3 text-center font-semibold">{categoryStats.GF - categoryStats.GC}</td>
+                                                                    <td className="py-2 px-3"></td>
                                                                 </tr>
                                                             )
                                                         })}
-                                                    </tbody></table>
-                                                </td></tr>
-                                            )}
-                                        </React.Fragment>
-                                    )})}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
-                )
-            }) : ( <Card title="Gestión de Torneo" icon={Gamepad2}><div className="text-center text-slate-400 py-8"><p>No se encontraron partidos.</p></div></Card> )}
+                                                    </>
+                                                )}
+                                            </React.Fragment>
+                                        )})}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </Card>
+                    )
+                })
+            ) : ( <Card title="Gestión de Torneo" icon={Gamepad2}><div className="text-center text-slate-400 py-8"><p>No se encontraron partidos.</p></div></Card> )}
             
              <Card title="Juegos de Desempate (Tie-Breaks)" icon={Swords} titleClassName="text-amber-400">
                 <button onClick={() => setShowTiebreakers(!showTiebreakers)} className="text-sm text-slate-300 flex items-center">{showTiebreakers ? 'Ocultar Desempates' : 'Mostrar Desempates'} <ChevronsUpDown size={16} className="ml-2" /></button>
