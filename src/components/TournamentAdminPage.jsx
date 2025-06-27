@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, ArrowRight, Trophy, Swords, MonitorPlay, ListOrdered } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { Loader2 } from 'lucide-react';
 import.meta.env.VITE_API_URL;
 
 // --- Componentes de UI Reutilizables ---
@@ -510,7 +509,7 @@ const JuegosEnCursoTab = () => {
             }
         };
         fetchData();
-        const socket = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
+        const socket = new WebSocket($import.meta.env.VITE_API_URL.replace(/^http/,'ws'));
         socket.onmessage = (event) => {
             try { // Añadir try-catch para manejar errores de parseo JSON del websocket
                 const updatedData = JSON.parse(event.data);
