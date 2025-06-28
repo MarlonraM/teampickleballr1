@@ -659,26 +659,29 @@ export default function TournamentAdminPage() {
             const courtsData = await courtsRes.json();
             const teamsData = await teamsRes.json();
 
-            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
+             setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
+            setError(null);
         } catch (err) {
-            console.error(err);
+            setError(err.message);
         } finally {
             setLoading(false);
         }
-    }; 
+    }, []);
 
-    // --- SINCRONIZACIÓN EN TIEMPO REAL ---
-    useEffect(() => {
+useEffect(() => {
         fetchData();
         const socket = new WebSocket(WS_URL);
+        socket.onopen = () => console.log('Panel de Control conectado al WebSocket.');
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
-            if (message.type === 'SCORE_UPDATE') {
-                fetchData(); // Recarga todos los datos al recibir una actualización
+            if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
+                console.log('Actualización recibida, recargando todos los datos...');
+                fetchData();
             }
         };
+        socket.onclose = () => console.log('Panel de Control desconectado.');
         return () => socket.close();
-    }, []);
+    }, [fetchData]);
     
     const handleGenerationComplete = () => {
         fetchData(); // Recarga todos los datos después de generar partidos
