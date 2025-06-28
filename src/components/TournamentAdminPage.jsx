@@ -64,10 +64,11 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         // Si el partido estaba finalizado y la nueva puntuación ya no es válida para ganar,
         // se revierte el estado del partido a 'en_vivo' Y se eliminan los puntos.
         if (match.status === 'finalizado' && (maxScore < 11 || (maxScore >= 11 && diff < 2))) {
-            alert("El marcador ya no es válido para un partido finalizado. El estado del partido ha sido revertido a 'en_vivo' y los puntos de torneo han sido anulados.");
-            updatePayload.status = 'en_vivo';
+            alert("El marcador ya no es válido para un partido finalizado. El estado del partido ha sido revertido a 'Pendiente' y los puntos de torneo han sido anulados.");
+            updatePayload.status = 'pendiente';
             updatePayload.winner_id = null;
             updatePayload.end_time = null;
+            updatePayload.court_id = null;
             // --- CORRECCIÓN CLAVE ---
             // Se reinician los puntos de torneo para este partido.
             updatePayload.team1_tournament_points = 0;
