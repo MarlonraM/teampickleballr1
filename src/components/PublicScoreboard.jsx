@@ -3,36 +3,57 @@ import React, { useState, useEffect } from 'react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 
+// --- Estilos para el tablero y los nuevos avisos ---
 const styles = {
-  // ... mismo contenido de styles (omitido aquí por brevedad) ...
-  announcementsContainer: {
-    position: 'fixed',
-    top: '20px',
-    left: '50%',
-    transform: 'translateX(-50%)',
-    zIndex: 1000,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    gap: '10px',
-    width: '90%',
-    maxWidth: '800px',
-  },
-  announcementBar: {
-    width: '100%',
-    backgroundColor: '#0d6efd',
-    color: 'white',
-    padding: '12px 20px',
-    borderRadius: '8px',
-    textAlign: 'center',
-    fontSize: '1em',
-    fontWeight: 'bold',
-    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-    opacity: 1,
-    transition: 'opacity 0.5s ease-out',
-  },
+    // Estilos del tablero (sin cambios)
+    container: { padding: '20px', backgroundColor: '#1a1a1a', color: 'white', fontFamily: "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif", minHeight: '100vh', position: 'relative' },
+    title: { textAlign: 'center', color: '#61DAFB', marginBottom: '40px', fontWeight: '300', fontSize: '2.5em' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px' },
+    noMatches: { textAlign: 'center', color: '#888', fontSize: '1.2em', marginTop: '50px' },
+    matchCard: { backgroundColor: '#282c34', border: '1px solid #444', borderRadius: '8px', overflow: 'hidden', display: 'flex', flexDirection: 'column', boxShadow: '0 4px 8px rgba(0,0,0,0.2)' },
+    cardHeader: { backgroundColor: '#333', color: 'white', fontWeight: 'bold', padding: '10px', textAlign: 'center', fontSize: '1em' },
+    cardBody: { padding: '15px 20px', flexGrow: 1, display: 'flex', flexDirection: 'column' },
+    teamRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '15px' },
+    teamDetails: { textAlign: 'left' },
+    playersName: { fontWeight: 'bold', fontSize: '1em', color: '#FF8A80', minHeight: '22px' },
+    teamName: { color: '#A1887F', fontSize: '0.8em', fontWeight: 'bold', textTransform: 'uppercase' },
+    rightSection: { display: 'flex', alignItems: 'center', gap: '15px' },
+    score: { fontSize: '2em', fontWeight: 'bold', color: '#81C784', minWidth: '40px', textAlign: 'right' },
+    cardFooter: { marginTop: '15px', paddingTop: '10px', color: '#80CBC4', fontSize: '0.85em', fontWeight: 'bold', textAlign: 'left', borderTop: '1px solid #444' },
+    serviceDotsContainer: { display: 'flex', gap: '5px' },
+    serviceDot: { width: '12px', height: '12px', borderRadius: '50%', backgroundColor: '#555', transition: 'all 0.3s ease' },
+    serviceDotActive: { backgroundColor: 'yellow', boxShadow: '0 0 8px yellow' },
+    divider: { height: '1px', backgroundColor: '#444', border: 'none', margin: '12px 0' },
+    verticalDivider: { width: '2px', height: '35px', backgroundColor: '#444' },
+    
+    // --- NUEVOS ESTILOS PARA LA BARRA DE AVISOS ---
+    announcementsContainer: {
+        position: 'fixed',
+        top: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '10px',
+        width: '90%',
+        maxWidth: '800px',
+    },
+    announcementBar: {
+        width: '100%',
+        backgroundColor: '#0d6efd', // Un azul vibrante
+        color: 'white',
+        padding: '12px 20px',
+        borderRadius: '8px',
+        textAlign: 'center',
+        fontSize: '1em',
+        fontWeight: 'bold',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        opacity: 1,
+        transition: 'opacity 0.5s ease-out',
+    },
 };
-
 const Announcement = ({ message, onExpire }) => {
   useEffect(() => {
     const timer = setTimeout(onExpire, 5000);
@@ -61,10 +82,11 @@ const Announcement = ({ message, onExpire }) => {
   );
 };
 
-const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
-  // ... tu implementación original aquí ...
-  return null; // o tu lógica completa si ya la tienes
-};
+  const removeAnnouncement = (id) => {
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+  };
+// --- Componente de Puntos de Servicio (sin cambios) ---
+const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => { /* ... */ };
 
 function PublicScoreboard() {
   const [matches, setMatches] = useState([]);
