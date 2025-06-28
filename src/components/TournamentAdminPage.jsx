@@ -209,7 +209,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
                                 </td>
                             </tr>
                         ))}
-                    </Tbody>
+                    </tbody>
                 </table>
             </div>
         </Card>
