@@ -31,6 +31,8 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         team1: match.team1_score || 0,
         team2: match.team2_score || 0
     });
+    // Nuevo estado para controlar el modo de edición
+    const [isEditing, setIsEditing] = useState(match.status !== 'finalizado');
 
     if (!match) return null;
 
@@ -42,6 +44,10 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         onSave(match.id, {
             team1_score: scores.team1,
             team2_score: scores.team2,
+            // Si el partido estaba finalizado, lo reabrimos a 'en_vivo' al corregir
+            status: match.status === 'finalizado' ? 'en_vivo' : match.status,
+            winner_id: null, // Limpiamos el ganador al corregir
+            end_time: null
         });
     };
 
@@ -51,7 +57,6 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         const maxScore = Math.max(score1, score2);
         const diff = Math.abs(score1 - score2);
 
-        // --- VALIDACIÓN DE REGLA DE PUNTUACIÓN ---
         if (maxScore < 11 || (maxScore >= 11 && diff < 2)) {
             alert('Puntuación inválida para finalizar. El ganador debe tener al menos 11 puntos y una ventaja de 2.');
             return;
@@ -75,16 +80,19 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
                 <div className="bg-slate-900/50 p-4 rounded-lg space-y-3">
                     <p className="text-center font-semibold">{match.team1_name} vs {match.team2_name}</p>
                     <div className="flex items-center justify-center gap-4">
-                        <input type="number" value={scores.team1} onChange={(e) => handleScoreChange('team1', e.target.value)} className="w-24 p-2 text-center text-4xl font-bold bg-slate-700 rounded-md border-slate-600 border" disabled={match.status === 'finalizado'} />
+                        <input type="number" value={scores.team1} onChange={(e) => handleScoreChange('team1', e.target.value)} className="w-24 p-2 text-center text-4xl font-bold bg-slate-700 rounded-md border-slate-600 border disabled:opacity-50" disabled={!isEditing} />
                         <span className="text-3xl font-bold text-slate-500">-</span>
-                        <input type="number" value={scores.team2} onChange={(e) => handleScoreChange('team2', e.target.value)} className="w-24 p-2 text-center text-4xl font-bold bg-slate-700 rounded-md border-slate-600 border" disabled={match.status === 'finalizado'} />
+                        <input type="number" value={scores.team2} onChange={(e) => handleScoreChange('team2', e.target.value)} className="w-24 p-2 text-center text-4xl font-bold bg-slate-700 rounded-md border-slate-600 border disabled:opacity-50" disabled={!isEditing} />
                     </div>
                      <p className="text-center text-sm">Estado Actual: <span className="font-bold">{match.status}</span></p>
                 </div>
 
-                {match.status === 'finalizado' ? (
-                    <div className="mt-4 text-center text-amber-400 font-bold text-lg">
-                        🏆 Ganador: {match.winner_id === match.team1_id ? match.team1_name : match.team2_name}
+                {match.status === 'finalizado' && !isEditing ? (
+                    <div className="mt-6 flex flex-col items-center gap-4">
+                        <div className="text-center text-amber-400 font-bold text-lg">
+                            🏆 Ganador: {match.winner_id === match.team1_id ? match.team1_name : match.team2_name}
+                        </div>
+                        <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-md font-semibold">Corregir Puntuación</button>
                     </div>
                 ) : (
                     <div className="mt-6 flex justify-end gap-4">
@@ -96,6 +104,8 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         </div>
     );
 };
+
+
 // --- MODAL PARA GESTIONAR PARTIDO ---
 const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) => {
     const [courtId, setCourtId] = useState(matchData.court_id || '');
@@ -980,6 +990,8 @@ const handleSaveEditedMatch = async (matchId, updateData) => {
                 const errorBody = await response.json();
                 throw new Error(errorBody.msg || "Error al guardar el partido");
             }
+            // CORRECCIÓN: Se llama a refreshData para actualizar la UI inmediatamente
+            await refreshData();
             setEditingMatch(null); 
         } catch (err) {
             alert(err.message);
