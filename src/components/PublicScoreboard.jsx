@@ -3,9 +3,14 @@ import React, { useState, useEffect } from 'react';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 
+import React, { useState, useEffect } from 'react';
+import { Megaphone } from 'lucide-react'; // Asumiendo que usas lucide-react
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
+
 // --- Estilos para el tablero y los nuevos avisos ---
 const styles = {
-    // Estilos del tablero (sin cambios)
     container: { padding: '20px', backgroundColor: '#1a1a1a', color: 'white', fontFamily: "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif", minHeight: '100vh', position: 'relative' },
     title: { textAlign: 'center', color: '#61DAFB', marginBottom: '40px', fontWeight: '300', fontSize: '2.5em' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px' },
@@ -26,146 +31,119 @@ const styles = {
     divider: { height: '1px', backgroundColor: '#444', border: 'none', margin: '12px 0' },
     verticalDivider: { width: '2px', height: '35px', backgroundColor: '#444' },
     
-    // --- NUEVOS ESTILOS PARA LA BARRA DE AVISOS ---
-    announcementsContainer: {
-        position: 'fixed',
-        top: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '10px',
-        width: '90%',
-        maxWidth: '800px',
-    },
-    announcementBar: {
-        width: '100%',
-        backgroundColor: '#0d6efd', // Un azul vibrante
-        color: 'white',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        textAlign: 'center',
-        fontSize: '1em',
-        fontWeight: 'bold',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        opacity: 1,
-        transition: 'opacity 0.5s ease-out',
-    },
-};
-const Announcement = ({ message, onExpire }) => {
-  useEffect(() => {
-    const timer = setTimeout(onExpire, 5000);
-    return () => clearTimeout(timer);
-  }, [onExpire]);
-
-  return (
-    <div style={styles.announcementBar}>
-      <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>🏟️ {message.court}</div>
-        <div style={{ fontSize: '1.1em', margin: '6px 0' }}>
-          {message.team1} vs {message.team2}
-        </div>
-        <div style={{ fontSize: '0.9em', fontStyle: 'italic', color: '#d1e9ff' }}>
-          {message.category}
-        </div>
-        <div style={{ fontSize: '0.95em', marginTop: '6px' }}>
-          👥 {message.player1_1} / {message.player1_2}<br />
-          👥 {message.player2_1} / {message.player2_2}
-        </div>
-        <div style={{ fontSize: '1em', fontStyle: 'italic', marginTop: '10px' }}>
-          ⚠️ Favor presentarse en {message.court}
-        </div>
-      </div>
-    </div>
-  );
+    announcementsContainer: { position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '90%', maxWidth: '800px' },
+    announcementBarGeneral: { width: '100%', backgroundColor: '#0d6efd', color: 'white', padding: '12px 20px', borderRadius: '8px', textAlign: 'center', fontSize: '1em', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
+    announcementBarGame: { width: '100%', maxWidth: '450px', backgroundColor: '#282c34', color: 'white', padding: '16px', borderRadius: '12px', border: '2px solid #0d6efd', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
+    announcementHeader: { display: 'flex', alignItems: 'center', borderBottom: '1px solid #444', paddingBottom: '8px', marginBottom: '12px' },
+    announcementTitle: { fontSize: '1.3em', fontWeight: 'bold', marginLeft: '10px' },
+    announcementBody: { textAlign: 'center' },
+    announcementTeams: { fontSize: '1.5em', fontWeight: 'bold', margin: '6px 0' },
+    announcementCategory: { fontSize: '0.9em', color: '#aaa' },
+    announcementPlayers: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px', fontSize: '0.9em', textAlign: 'left' },
+    announcementPlayersTeam: { fontWeight: 'bold' },
+    announcementPlayersList: { color: '#ccc' },
+    announcementFooter: { fontSize: '1em', fontStyle: 'italic', marginTop: '12px', color: '#0d6efd' }
 };
 
-  const removeAnnouncement = (id) => {
-    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
-  };
-// --- Componente de Puntos de Servicio (sin cambios) ---
-const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => { /* ... */ };
+
+const Announcement = ({ announcement, onExpire }) => {
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            onExpire();
+        }, 5000);
+        return () => clearTimeout(timer);
+    }, [onExpire]);
+
+    if (announcement.type === 'game') {
+        return (
+            <div style={styles.announcementBarGame}>
+                <div style={styles.announcementHeader}>
+                    <Megaphone color="#61DAFB" size={28}/>
+                    <h3 style={styles.announcementTitle}>{announcement.courtName}</h3>
+                </div>
+                <div style={styles.announcementBody}>
+                    <p style={styles.announcementTeams}>{announcement.team1Name} vs {announcement.team2Name}</p>
+                    <p style={styles.announcementCategory}>{announcement.category}</p>
+                    <div style={styles.announcementPlayers}>
+                        <div>
+                            <p style={styles.announcementPlayersTeam}>{announcement.team1Name}:</p>
+                            <p style={styles.announcementPlayersList}>{(announcement.team1Players || []).join(' / ')}</p>
+                        </div>
+                        <div>
+                            <p style={styles.announcementPlayersTeam}>{announcement.team2Name}:</p>
+                            <p style={styles.announcementPlayersList}>{(announcement.team2Players || []).join(' / ')}</p>
+                        </div>
+                    </div>
+                </div>
+                 <p style={styles.announcementFooter}>Favor de aproximarse a la cancha.</p>
+            </div>
+        );
+    }
+
+    return (
+        <div style={styles.announcementBarGeneral}>
+            {announcement.text}
+        </div>
+    );
+};
 
 function PublicScoreboard() {
-  const [matches, setMatches] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [announcements, setAnnouncements] = useState([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch(`${API_BASE_URL}/api/matches/scoreboard`);
-        if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
-        const data = await response.json();
-        setMatches(data);
-        setError(null);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-
-    const socket = new WebSocket(WS_URL);
-    socket.onopen = () => console.log("WebSocket conectado.");
-    socket.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-
-      if (data.type === 'SCORE_UPDATE') {
-        setMatches(prev =>
-          prev.map(m => m.id === parseInt(data.matchId, 10)
-            ? { ...m, ...data.payload }
-            : m
-          )
-        );
-      }
-
-      if (data.type === 'ANNOUNCEMENT_NEW') {
-        const match = data.payload;
-        const message = {
-          id: match.id,
-          category: match.category,
-          team1: match.team1_name,
-          team2: match.team2_name,
-          player1_1: match.team1_player1_name,
-          player1_2: match.team1_player2_name,
-          player2_1: match.team2_player1_name,
-          player2_2: match.team2_player2_name,
-          court: match.court_name || `Cancha #${match.court_id}`,
+    const [matches, setMatches] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [announcements, setAnnouncements] = useState([]);
+    
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/matches/scoreboard`);
+                if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
+                const data = await response.json();
+                setMatches(data);
+                setError(null);
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setLoading(false);
+            }
         };
 
-        setAnnouncements(prev => [...prev, message]);
-      }
+        fetchData();
+
+        const socket = new WebSocket(WS_URL);
+        socket.onopen = () => console.log("Tablero público conectado al WebSocket.");
+        socket.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            if (data.type === 'SCORE_UPDATE') {
+                setMatches(prev => prev.map(m => m.id === parseInt(data.matchId, 10) ? { ...m, ...data.payload } : m));
+            }
+            if (data.type === 'ANNOUNCEMENT_NEW') {
+                setAnnouncements(prev => [...prev, data.payload]);
+            }
+        };
+        return () => socket.close();
+    }, []);
+
+    const removeAnnouncement = (id) => {
+        setAnnouncements(prev => prev.filter(ann => ann.id !== id));
     };
 
-    return () => socket.close();
-  }, []);
+    const liveMatches = matches.filter(m => m && m.status === 'en_vivo');
 
-  const removeAnnouncement = (id) => {
-    setAnnouncements(prev => prev.filter(a => a.id !== id));
-  };
+    if (loading) return <div>Cargando...</div>;
+    if (error) return <div>Error: {error}</div>;
 
-  const liveMatches = matches.filter(m => m && m.status === 'en_vivo');
-
-  if (loading) return <div>Cargando...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  return (
-    <div style={styles.container}>
-      <div style={styles.announcementsContainer}>
-        {announcements.map(ann => (
-          <Announcement
-            key={ann.id}
-            message={ann}
-            onExpire={() => removeAnnouncement(ann.id)}
-          />
-        ))}
-      </div>
+    return (
+        <div style={styles.container}>
+            <div style={styles.announcementsContainer}>
+                {announcements.map(ann => (
+                    <Announcement 
+                        key={ann.id} 
+                        announcement={ann} 
+                        onExpire={() => removeAnnouncement(ann.id)} 
+                    />
+                ))}
+            </div>
 
       <h1 style={styles.title}>Tablero de Puntuaciones en Vivo</h1>
       {liveMatches.length > 0 ? (
