@@ -180,35 +180,37 @@ function PublicScoreboard() {
     const [error, setError] = useState(null);
     const [announcements, setAnnouncements] = useState([]);
     
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            const response = await fetch(`${API_BASE_URL}/api/matches/scoreboard`);
+            if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
+            const data = await response.json();
+            setMatches(data);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     useEffect(() => {
-        const fetchData = async () => {
-            try {
-                const response = await fetch(`${API_BASE_URL}/api/matches/scoreboard`);
-                if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
-                const data = await response.json();
-                setMatches(data);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-
         fetchData();
-
         const socket = new WebSocket(WS_URL);
         socket.onopen = () => console.log("Tablero público conectado al WebSocket.");
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            if (data.type === 'SCORE_UPDATE') {
-                setMatches(prev => prev.map(m => m.id === parseInt(data.matchId, 10) ? { ...m, ...data.payload } : m));
+            // --- CORRECCIÓN ---
+            // Si llega una actualización de partido o un anuncio, recargamos los datos.
+            if (data.type === 'SCORE_UPDATE' || data.type === 'MATCH_UPDATE') {
+                fetchData();
             }
             if (data.type === 'ANNOUNCEMENT_NEW') {
                 setAnnouncements(prev => [...prev, data.payload]);
             }
         };
         return () => socket.close();
-    }, []);
+    }, [fetchData]);
 
     const removeAnnouncement = (id) => {
         setAnnouncements(prev => prev.filter(ann => ann.id !== id));
@@ -218,6 +220,7 @@ function PublicScoreboard() {
 
     if (loading) return <div>Cargando...</div>;
     if (error) return <div>Error: {error}</div>;
+
 
     return (
         <div style={styles.container}>
