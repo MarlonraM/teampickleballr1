@@ -63,6 +63,169 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
         </div>
     );
 };
+
+// --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
+const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
+    const [matches, setMatches] = useState(initialMatches);
+    const [filters, setFilters] = useState({ id: '', teams: '', category: '', status: '', court: '' });
+    const [editingScore, setEditingScore] = useState(null);
+
+    useEffect(() => {
+        setMatches(initialMatches);
+    }, [initialMatches]);
+
+    const handleFilterChange = (e) => {
+        const { name, value } = e.target;
+        setFilters(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleScoreChange = (matchId, team, value) => {
+        setEditingScore(prev => ({ ...prev, [team]: value }));
+    };
+
+    const handleScoreBlur = async (matchId) => {
+        const { team1_score, team2_score } = editingScore;
+        const score1 = parseInt(team1_score, 10);
+        const score2 = parseInt(team2_score, 10);
+
+        if (Math.abs(score1 - score2) < 2 && (score1 >= 11 || score2 >= 11)) {
+            alert('La diferencia de puntos debe ser de al menos 2 para finalizar el partido.');
+            setEditingScore(null); // Cancela la edición
+            return;
+        }
+
+        try {
+            await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ team1_score: score1, team2_score: score2 })
+            });
+            await refreshData();
+        } catch (error) {
+            console.error("Error al actualizar el marcador:", error);
+        } finally {
+            setEditingScore(null);
+        }
+    };
+    
+    const handleCourtChange = async (matchId, courtId) => {
+        try {
+            await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ court_id: courtId ? parseInt(courtId, 10) : null })
+            });
+            await refreshData();
+        } catch (error) {
+            console.error("Error al asignar cancha:", error);
+        }
+    };
+    
+    const calculateDuration = (start, end) => {
+        if (!start || !end) return '-';
+        const diffMs = new Date(end) - new Date(start);
+        const diffMins = Math.round(diffMs / 60000);
+        if (diffMins < 60) return `${diffMins}m`;
+        const hours = Math.floor(diffMins / 60);
+        const mins = diffMins % 60;
+        return `${hours}h ${mins.toString().padStart(2, '0')}m`;
+    };
+
+    const filteredMatches = useMemo(() => {
+        return matches.filter(match => 
+            (match.id.toString().includes(filters.id)) &&
+            (match.team1_name.toLowerCase().includes(filters.teams.toLowerCase()) || match.team2_name.toLowerCase().includes(filters.teams.toLowerCase())) &&
+            (match.category.toLowerCase().includes(filters.category.toLowerCase())) &&
+            (match.status.toLowerCase().includes(filters.status.toLowerCase())) &&
+            (filters.court === '' || match.court_id === parseInt(filters.court))
+        );
+    }, [matches, filters]);
+    
+    const getStatusTag = (status) => {
+        switch (status) {
+            case 'finalizado': return <Tag colorScheme="green">Finalizado</Tag>;
+            case 'en_vivo': return <Tag colorScheme="red">En Vivo</Tag>;
+            case 'asignado': return <Tag colorScheme="blue">Asignado</Tag>;
+            default: return <Tag colorScheme="gray">Pendiente</Tag>;
+        }
+    };
+
+    return (
+        <Card title="Lista Completa de Partidos" icon={ListOrdered}>
+            <TableContainer>
+                <Table variant="simple" size="sm">
+                    <Thead>
+                        <Tr>
+                            <Th>ID</Th><Th>Equipos</Th><Th>Categoría</Th><Th>Estado</Th><Th>Cancha</Th><Th>Marcador</Th><Th>Duración</Th><Th>Acciones</Th>
+                        </Tr>
+                        <Tr>
+                            <Th><Input size="xs" name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar ID..." /></Th>
+                            <Th><Input size="xs" name="teams" value={filters.teams} onChange={handleFilterChange} placeholder="Filtrar Equipo..." /></Th>
+                            <Th><Input size="xs" name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar Categoría..." /></Th>
+                            <Th><Input size="xs" name="status" value={filters.status} onChange={handleFilterChange} placeholder="Filtrar Estado..." /></Th>
+                            <Th>
+                                <Select size="xs" name="court" value={filters.court} onChange={handleFilterChange} placeholder="Todas">
+                                    {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                </Select>
+                            </Th>
+                            <Th></Th><Th></Th><Th></Th>
+                        </Tr>
+                    </Thead>
+                    <Tbody>
+                        {filteredMatches.map(match => (
+                            <Tr key={match.id}>
+                                <Td>{match.id}</Td>
+                                <Td>{match.team1_name} vs {match.team2_name}</Td>
+                                <Td>{match.category}</Td>
+                                <Td>{getStatusTag(match.status)}</Td>
+                                <Td>
+                                    <Select size="xs" value={match.court_id || ''} onChange={(e) => handleCourtChange(match.id, e.target.value)} placeholder="Sin Asignar">
+                                        {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                                    </Select>
+                                </Td>
+                                <Td>
+                                    {editingScore?.id === match.id ? (
+                                        <HStack>
+                                            <Input size="xs" w="12" type="number" value={editingScore.team1_score} onChange={(e) => handleScoreChange(match.id, 'team1_score', e.target.value)} />
+                                            <Input size="xs" w="12" type="number" value={editingScore.team2_score} onChange={(e) => handleScoreChange(match.id, 'team2_score', e.target.value)} onBlur={() => handleScoreBlur(match.id)} autoFocus />
+                                        </HStack>
+                                    ) : (
+                                        <Text onClick={() => setEditingScore({ id: match.id, team1_score: match.team1_score || 0, team2_score: match.team2_score || 0 })} cursor="pointer">
+                                            {match.team1_score ?? '-'} / {match.team2_score ?? '-'}
+                                        </Text>
+                                    )}
+                                </Td>
+                                <Td><HStack><Icon as={Clock} size="14" /><Text>{calculateDuration(match.start_time, match.end_time)}</Text></HStack></Td>
+                                <Td>
+                                    <Link to={`/match/${match.id}`} target="_blank">
+                                        <Button size="xs" variant="outline" colorScheme="cyan" leftIcon={<Icon as={ExternalLink} size="14"/>}>Scorekeeper</Button>
+                                    </Link>
+                                </Td>
+                            </Tr>
+                        ))}
+                    </Tbody>
+                </Table>
+            </TableContainer>
+        </Card>
+    )
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
 const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, onClose }) => {
     const [players, setPlayers] = useState(initialData.players || []);
@@ -700,18 +863,18 @@ export default function TournamentAdminPage() {
                 </div>
                 
                 <div className="flex border-b border-slate-700 overflow-x-auto">
+                     <TabButton tabName="partidos" label="Partidos" icon={BarChart2} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="gestion" label="Gestión de Torneo" icon={Gamepad2} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="standing" label="Standing" icon={ListOrdered} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="juegos" label="Juegos en Curso" icon={MonitorPlay} activeTab={activeTab} setActiveTab={setActiveTab} />
                 </div>
 
                 <div className="pt-8">
-                    {modalData && <MatchManagementModal matchData={modalData} courts={allData.courts} onClose={() => setModalData(null)} onSave={handleSaveMatch} isSaving={isSaving}/>}
-                    
                     {loading ? ( <div className="flex justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8" /></div> ) : 
                     error ? (<div className="text-red-400 text-center p-10">{error}</div>) : (
                         <>
-                           {activeTab === 'gestion' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} refreshData={fetchData} setModalData={setModalData} />}
+                           {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={fetchData} />}
+                           {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} refreshData={fetchData} />}
                            {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
                            {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
                         </>
