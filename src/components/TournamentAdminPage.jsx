@@ -31,7 +31,7 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         team1: match.team1_score || 0,
         team2: match.team2_score || 0
     });
-    // Nuevo estado para controlar el modo de edición
+    // Nuevo estado para controlar si se está en modo de edición
     const [isEditing, setIsEditing] = useState(match.status !== 'finalizado');
 
     // Sincroniza el estado si el partido cambia
@@ -62,12 +62,16 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         };
 
         // Si el partido estaba finalizado y la nueva puntuación ya no es válida para ganar,
-        // se revierte el estado del partido a 'en_vivo'.
+        // se revierte el estado del partido a 'en_vivo' Y se eliminan los puntos.
         if (match.status === 'finalizado' && (maxScore < 11 || (maxScore >= 11 && diff < 2))) {
+            alert("El marcador ya no es válido para un partido finalizado. El estado del partido ha sido revertido a 'en_vivo' y los puntos de torneo han sido anulados.");
             updatePayload.status = 'en_vivo';
-            updatePayload.winner_id = null; // Se limpia el ganador
-            updatePayload.end_time = null; // Se limpia la fecha de finalización
-            alert("El marcador ya no es válido para un partido finalizado. El estado ha sido revertido a 'en_vivo'.");
+            updatePayload.winner_id = null;
+            updatePayload.end_time = null;
+            // --- CORRECCIÓN CLAVE ---
+            // Se reinician los puntos de torneo para este partido.
+            updatePayload.team1_tournament_points = 0;
+            updatePayload.team2_tournament_points = 0;
         }
         
         onSave(match.id, updatePayload);
@@ -126,7 +130,6 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         </div>
     );
 };
-
 
 // --- MODAL PARA GESTIONAR PARTIDO ---
 const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) => {
