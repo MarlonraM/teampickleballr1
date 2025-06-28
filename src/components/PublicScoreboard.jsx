@@ -100,17 +100,22 @@ function PublicScoreboard() {
     const [error, setError] = useState(null);
     const [announcements, setAnnouncements] = useState([]);
     
-    const fetchData = useCallback(async () => {
-        try {
+    const fetchData = useCallback(async (isInitialLoad = false) => {
+        if (isInitialLoad) {
             setLoading(true);
+        }
+        try {
             const response = await fetch(`${API_BASE_URL}/api/matches/scoreboard`);
             if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
             const data = await response.json();
             setMatches(data);
+            setError(null);
         } catch (err) {
             setError(err.message);
         } finally {
-            setLoading(false);
+            if (isInitialLoad) {
+                setLoading(false);
+            }
         }
     }, []);
 
