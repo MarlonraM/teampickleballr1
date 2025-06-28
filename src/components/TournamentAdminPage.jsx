@@ -1072,12 +1072,68 @@ export default function TournamentAdminPage() {
     const [editingMatch, setEditingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
-    const fetchData = useCallback(async () => { /* ... */ }, []);
-    useEffect(() => { /* ... */ }, [fetchData]);
+    const fetchData = useCallback(async () => {
+        setLoading(true); // Siempre inicia la carga
+        try {
+            const [matchesRes, courtsRes, teamsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/matches/scoreboard`),
+                fetch(`${API_BASE_URL}/api/courts`),
+                fetch(`${API_BASE_URL}/api/teams`)
+            ]);
+            if (!matchesRes.ok || !courtsRes.ok || !teamsRes.ok) throw new Error('No se pudieron cargar los datos.');
+            
+            const matchesData = await matchesRes.json();
+            const courtsData = await courtsRes.json();
+            const teamsData = await teamsRes.json();
+
+            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
+            setError(null);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false); // Termina la carga
+        }
+    }, []); // La dependencia vacía hace que la función sea estable y no se recree.
+
+    useEffect(() => {
+        fetchData();
+        const socket = new WebSocket(WS_URL);
+        socket.onopen = () => console.log('Panel de Control conectado al WebSocket.');
+        socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
+                fetchData();
+            }
+        };
+        socket.onclose = () => console.log('Panel de Control desconectado.');
+        return () => socket.close();
+    }, [fetchData]);
     
-    const handleGenerationComplete = () => { /* ... */ };
-    const handleSaveEditedMatch = async (matchId, updateData) => { /* ... */ };
+    const handleGenerationComplete = () => {
+        fetchData().then(() => setActiveTab('partidos'));
+        setIsConfigOpen(false);
+    };
     
+    const handleSaveEditedMatch = async (matchId, updateData) => {
+        setIsSaving(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(errorBody.msg || "Error al guardar el partido");
+            }
+            await fetchData();
+            setEditingMatch(null); 
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
     return (
         <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-screen-2xl mx-auto">
