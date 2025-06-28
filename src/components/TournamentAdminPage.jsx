@@ -669,7 +669,7 @@ export default function TournamentAdminPage() {
         } finally {
             setLoading(false);
         }
-    }, [loading]);
+    }, []);
 
     useEffect(() => {
         fetchData();
