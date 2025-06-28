@@ -56,18 +56,43 @@ const styles = {
 };
 
 // --- Componente para un solo Aviso ---
+setAnnouncements(prev => [
+  ...prev,
+  {
+    id: match.id,
+    court: court_name,
+    category,
+    team1: team1_name,
+    team2: team2_name,
+    player1_1: match.team1_player1_name,
+    player1_2: match.team1_player2_name,
+    player2_1: match.team2_player1_name,
+    player2_2: match.team2_player2_name
+  }
+]);
+
 const Announcement = ({ message, onExpire }) => {
     useEffect(() => {
-        const timer = setTimeout(() => {
-            onExpire();
-        }, 5000); // El aviso desaparece después de 5 segundos
-
+        const timer = setTimeout(() => onExpire(), 5000);
         return () => clearTimeout(timer);
     }, [onExpire]);
 
     return (
         <div style={styles.announcementBar}>
-            {message}
+            <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}> Cancha {message.court}</div>
+                <div style={{ fontSize: '1em', margin: '4px 0' }}>
+                    {message.team1} vs {message.team2}
+                </div>
+                <div style={{ fontSize: '0.85em', fontStyle: 'italic', color: '#d1e9ff' }}>{message.category}</div>
+                <div style={{ fontSize: '0.9em', marginTop: '4px' }}>
+                    👥 {message.player1_1} / {message.player1_2}<br />
+                    👥 {message.player2_1} / {message.player2_2}
+                </div>
+                <div style={{ fontSize: '0.95em', fontStyle: 'italic', marginTop: '6px' }}>
+                    ⚠️ Favor presentarse en Cancha {message.court} ⚠️
+                </div>
+            </div>
         </div>
     );
 };
