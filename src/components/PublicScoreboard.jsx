@@ -54,42 +54,56 @@ const styles = {
         transition: 'opacity 0.5s ease-out',
     },
 };
-
-const MyScoreboard = () => {
-  const Announcement = ({ message, onExpire }) => {
+const Announcement = ({ message, onExpire }) => {
   useEffect(() => {
-    const timer = setTimeout(onExpire, 5000);
+    const timer = setTimeout(() => onExpire(), 5000);
     return () => clearTimeout(timer);
   }, [onExpire]);
-
-  const [
-    id,
-    category,
-    team1,
-    team2,
-    p1_1, p1_2,
-    p2_1, p2_2,
-    court
-  ] = message;
 
   return (
     <div style={styles.announcementBar}>
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: '1.2em', fontWeight: 'bold' }}>🏟️ {court}</div>
-        <div style={{ fontSize: '1em', margin: '4px 0' }}>{team1} vs {team2}</div>
-        <div style={{ fontSize: '0.85em', fontStyle: 'italic', color: '#d1e9ff' }}>{category}</div>
-        <div style={{ fontSize: '0.9em', marginTop: '4px' }}>
-          👥 {p1_1} / {p1_2}<br />
-          👥 {p2_1} / {p2_2}
+        <div style={{ fontSize: '1.3em', fontWeight: 'bold' }}>🏟️ {message.court}</div>
+        <div style={{ fontSize: '1.1em', margin: '6px 0' }}>
+          {message.team1} vs {message.team2}
         </div>
-        <div style={{ fontSize: '0.95em', fontStyle: 'italic', marginTop: '6px' }}>
-          ⚠️ Favor presentarse en {court} ⚠️
+        <div style={{ fontSize: '0.9em', fontStyle: 'italic', color: '#d1e9ff' }}>
+          {message.category}
+        </div>
+        <div style={{ fontSize: '0.95em', marginTop: '6px' }}>
+          👥 {message.player1_1} / {message.player1_2}<br />
+          👥 {message.player2_1} / {message.player2_2}
+        </div>
+        <div style={{ fontSize: '1em', fontStyle: 'italic', marginTop: '10px' }}>
+          ⚠️ Favor presentarse en {message.court}
         </div>
       </div>
     </div>
   );
 };
 
+const MyScoreboard = () => {
+  const [announcements, setAnnouncements] = useState([]);
+
+  const addAnnouncement = (match) => {
+    const message = {
+      id: match.id,
+      category: match.category,
+      team1: match.team1_name,
+      team2: match.team2_name,
+      player1_1: match.team1_player1_name,
+      player1_2: match.team1_player2_name,
+      player2_1: match.team2_player1_name,
+      player2_2: match.team2_player2_name,
+      court: match.court_name || `Cancha #${match.court_id}`,
+    };
+
+    setAnnouncements((prev) => [...prev, message]);
+  };
+
+  const removeAnnouncement = (id) => {
+    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+  };
 // --- Componente de Puntos de Servicio (sin cambios) ---
 const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => { /* ... */ };
 
