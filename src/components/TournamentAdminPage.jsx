@@ -982,11 +982,13 @@ const AvisosTab = ({ allData }) => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    category: match.category,
+                    match_id: match.id,
                     team1_name: match.team1_name,
                     team2_name: match.team2_name,
+                    team1Players: team1_players || [],
+                    team2Players: team2_players || [],
                     court_name: court?.name || `Cancha #${match.court_id}`,
-                    match_id: match.id
+                    category: match.category
                 })
             });
         } catch (err) {
