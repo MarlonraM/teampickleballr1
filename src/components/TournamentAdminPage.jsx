@@ -1054,7 +1054,6 @@ const handleSaveEditedMatch = async (matchId, updateData) => {
                            {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
                            {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
                         </>
-                        </>
                     )}
                 </div>
 
