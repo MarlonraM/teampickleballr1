@@ -1,13 +1,12 @@
-import React, { useState, useEffect } from 'react';
-import { Megaphone } from 'lucide-react'; // Asegúrate de que lucide-react esté disponible
+import React, { useState, useEffect, useCallback } from 'react';
+import { Megaphone } from 'lucide-react'; 
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 
 // --- Estilos para el tablero y los nuevos avisos ---
 const styles = {
-    // ... (tus estilos existentes para el tablero) ...
-    container: { padding: '20px', backgroundColor: '#1a1a1a', color: 'white', fontFamily: "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif", minHeight: '100vh', position: 'relative' },
+    container: { padding: '80px 20px 20px 20px', backgroundColor: '#1a1a1a', color: 'white', fontFamily: "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif", minHeight: '100vh', position: 'relative' },
     title: { textAlign: 'center', color: '#61DAFB', marginBottom: '40px', fontWeight: '300', fontSize: '2.5em' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px' },
     noMatches: { textAlign: 'center', color: '#888', fontSize: '1.2em', marginTop: '50px' },
@@ -26,110 +25,31 @@ const styles = {
     serviceDotActive: { backgroundColor: 'yellow', boxShadow: '0 0 8px yellow' },
     divider: { height: '1px', backgroundColor: '#444', border: 'none', margin: '12px 0' },
     verticalDivider: { width: '2px', height: '35px', backgroundColor: '#444' },
-    
-    // --- NUEVOS ESTILOS PARA LA BARRA DE AVISOS ---
-    announcementsContainer: {
-        position: 'fixed',
-        top: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        zIndex: 1000,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '10px',
-        width: '90%',
-        maxWidth: '800px',
-    },
-    announcementBarGeneral: {
-        width: '100%',
-        backgroundColor: '#0d6efd', // Un azul vibrante
-        color: 'white',
-        padding: '12px 20px',
-        borderRadius: '8px',
-        textAlign: 'center',
-        fontSize: '1em',
-        fontWeight: 'bold',
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-    },
-    announcementBarGame: {
-        backgroundColor: '#282c34', // Un gris oscuro como el matchCard
-        color: 'white',
-        padding: '16px',
-        borderRadius: '12px',
-        border: '2px solid #0d6efd', // Borde azul para destacar
-        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-        width: '100%',
-        maxWidth: '450px',
-    },
-    announcementHeader: {
-        display: 'flex',
-        alignItems: 'center',
-        borderBottom: '1px solid #444',
-        paddingBottom: '8px',
-        marginBottom: '12px',
-    },
-    announcementTitle: {
-        fontSize: '1.3em',
-        fontWeight: 'bold',
-        marginLeft: '10px',
-        color: '#61DAFB'
-    },
-    announcementBody: {
-        textAlign: 'center',
-    },
-    announcementTeams: {
-        fontSize: '1.5em',
-        fontWeight: 'bold',
-        margin: '6px 0',
-    },
-    announcementCategory: {
-        fontSize: '0.9em',
-        fontStyle: 'italic',
-        color: '#ccc',
-    },
-    announcementPlayers: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '16px',
-        marginTop: '12px',
-        fontSize: '0.95em',
-        textAlign: 'left',
-    },
-    announcementPlayersTeam: {
-        fontWeight: 'bold',
-        color: '#FF8A80' // Color para nombres de equipo
-    },
-    announcementPlayersList: {
-        color: '#eee' // Color para nombres de jugadores
-    },
-    announcementFooter: {
-        fontSize: '1em',
-        fontStyle: 'italic',
-        marginTop: '12px',
-        color: '#80CBC4' // Color para el mensaje final
-    }
+    announcementsContainer: { position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '90%', maxWidth: '800px' },
+    announcementBarGeneral: { width: '100%', backgroundColor: '#0d6efd', color: 'white', padding: '12px 20px', borderRadius: '8px', textAlign: 'center', fontSize: '1em', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
+    announcementBarGame: { backgroundColor: '#282c34', color: 'white', padding: '16px', borderRadius: '12px', border: '2px solid #0d6efd', boxShadow: '0 4px 12px rgba(0,0,0,0.3)', width: '100%', maxWidth: '450px' },
+    announcementHeader: { display: 'flex', alignItems: 'center', borderBottom: '1px solid #444', paddingBottom: '8px', marginBottom: '12px' },
+    announcementTitle: { fontSize: '1.3em', fontWeight: 'bold', marginLeft: '10px', color: '#61DAFB' },
+    announcementBody: { textAlign: 'center' },
+    announcementTeams: { fontSize: '1.5em', fontWeight: 'bold', margin: '6px 0' },
+    announcementCategory: { fontSize: '0.9em', fontStyle: 'italic', color: '#ccc' },
+    announcementPlayers: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px', fontSize: '0.95em', textAlign: 'left' },
+    announcementPlayersTeam: { fontWeight: 'bold', color: '#FF8A80' },
+    announcementPlayersList: { color: '#eee' },
+    announcementFooter: { fontSize: '1em', fontStyle: 'italic', marginTop: '12px', color: '#80CBC4' }
 };
 
 const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
-    // Doble punto: se activan según el número de servidor y si ya hubo side out
-    const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
-    const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
+    const firstDotActive = isServingTeam;
+    const secondDotActive = isServingTeam && !isFirstServeOfGame && serverNum === 1;
 
     return (
         <div style={styles.serviceDotsContainer}>
-            <div style={{ 
-                ...styles.serviceDot,
-                ...(firstDotActive ? styles.serviceDotActive : {}) 
-            }}></div>
-            <div style={{ 
-                ...styles.serviceDot,
-                ...(secondDotActive ? styles.serviceDotActive : {}) 
-            }}></div>
+            <div style={{ ...styles.serviceDot, ...(firstDotActive ? styles.serviceDotActive : {}) }}></div>
+            <div style={{ ...styles.serviceDot, ...(secondDotActive ? styles.serviceDotActive : {}) }}></div>
         </div>
     );
 };
-
 
 const Announcement = ({ announcement, onExpire }) => {
     useEffect(() => {
@@ -221,7 +141,6 @@ function PublicScoreboard() {
     if (loading) return <div>Cargando...</div>;
     if (error) return <div>Error: {error}</div>;
 
-
     return (
         <div style={styles.container}>
             <div style={styles.announcementsContainer}>
@@ -233,54 +152,53 @@ function PublicScoreboard() {
                     />
                 ))}
             </div>
-      <h1 style={styles.title}>Tablero de Puntuaciones en Vivo</h1>
-      {liveMatches.length > 0 ? (
-        <div style={styles.grid}>
-          {liveMatches.map((match) => {
-            const isFirstServeOfGame = !match.first_side_out_done;
-            const isTeam1Serving = match.server_team_id === match.team1_id;
-            const isTeam2Serving = match.server_team_id === match.team2_id;
-
-            return (
-              <div key={match.id} style={styles.matchCard}>
-                <div style={styles.cardHeader}>CANCHA {match.court_id || 'N/A'}</div>
-                <div style={styles.cardBody}>
-                  <div style={styles.teamRow}>
-                    <div style={styles.teamDetails}>
-                      <div style={styles.playersName}>{match.team1_player1_name} / {match.team1_player2_name}</div>
-                      <div style={styles.teamName}>{match.team1_name}</div>
-                    </div>
-                    <div style={styles.rightSection}>
-                      <ServiceDots isServingTeam={isTeam1Serving} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
-                      <div style={styles.verticalDivider}></div>
-                      <div style={styles.score}>{match.team1_score}</div>
-                    </div>
-                  </div>
-                  <hr style={styles.divider} />
-                  <div style={styles.teamRow}>
-                    <div style={styles.teamDetails}>
-                      <div style={styles.playersName}>{match.team2_player1_name} / {match.team2_player2_name}</div>
-                      <div style={styles.teamName}>{match.team2_name}</div>
-                    </div>
-                    <div style={styles.rightSection}>
-                      <ServiceDots isServingTeam={isTeam2Serving} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
-                      <div style={styles.verticalDivider}></div>
-                      <div style={styles.score}>{match.team2_score}</div>
-                    </div>
-                  </div>
-                  <div style={styles.cardFooter}>
-                    GRUPO {match.group || 'N/A'} - {match.category}
-                  </div>
+            <h1 style={styles.title}>Tablero de Puntuaciones en Vivo</h1>
+            {liveMatches.length > 0 ? (
+                <div style={styles.grid}>
+                    {liveMatches.map((match) => {
+                        const isFirstServeOfGame = !match.first_side_out_done;
+                        const isTeam1Serving = match.server_team_id === match.team1_id;
+                        const isTeam2Serving = match.server_team_id === match.team2_id;
+                        return (
+                            <div key={match.id} style={styles.matchCard}>
+                                <div style={styles.cardHeader}>CANCHA {match.court_id || 'N/A'}</div>
+                                <div style={styles.cardBody}>
+                                    <div style={styles.teamRow}>
+                                        <div style={styles.teamDetails}>
+                                            <div style={styles.playersName}>{match.team1_player1_name || 'Jugador 1'} / {match.team1_player2_name || 'Jugador 2'}</div>
+                                            <div style={styles.teamName}>{match.team1_name || 'Equipo 1'}</div>
+                                        </div>
+                                        <div style={styles.rightSection}>
+                                            <ServiceDots isServingTeam={isTeam1Serving} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
+                                            <div style={styles.verticalDivider}></div>
+                                            <div style={styles.score}>{match.team1_score}</div>
+                                        </div>
+                                    </div>
+                                    <hr style={styles.divider} />
+                                    <div style={styles.teamRow}>
+                                        <div style={styles.teamDetails}>
+                                            <div style={styles.playersName}>{match.team2_player1_name || 'Jugador 1'} / {match.team2_player2_name || 'Jugador 2'}</div>
+                                            <div style={styles.teamName}>{match.team2_name || 'Equipo 2'}</div>
+                                        </div>
+                                        <div style={styles.rightSection}>
+                                            <ServiceDots isServingTeam={isTeam2Serving} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
+                                            <div style={styles.verticalDivider}></div>
+                                            <div style={styles.score}>{match.team2_score}</div>
+                                        </div>
+                                    </div>
+                                    <div style={styles.cardFooter}>
+                                        GRUPO {match.group_id ? String.fromCharCode(64 + match.group_id) : 'N/A'} - {match.category}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
                 </div>
-              </div>
-            );
-          })}
+            ) : (
+                <p style={styles.noMatches}>No hay partidos en vivo en este momento.</p>
+            )}
         </div>
-      ) : (
-        <p style={styles.noMatches}>No hay partidos en vivo en este momento.</p>
-      )}
-    </div>
-  );
+    );
 }
 
 export default PublicScoreboard;
