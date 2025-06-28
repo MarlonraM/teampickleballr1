@@ -533,9 +533,15 @@ const JuegosEnCursoTab = () => {
         );
     };
 
+
+
+
+
+    
     // --- Componente MatchCard (Tarjeta de Partido) ---
     const MatchCard = ({ match }) => {
         const winner = match.winner_id ? (match.winner_id === match.team1_id ? 'team1' : 'team2') : null;
+        const isFirstServeOfGame = !match.first_side_out_done;
         return (
             <div className={`bg-slate-800 p-2.5 rounded-lg border border-slate-700`}>
                 <div className="text-center text-xs font-bold text-cyan-400 mb-2">{match.category}</div>
