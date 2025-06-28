@@ -585,7 +585,9 @@ const JuegosEnCursoTab = () => {
                         <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3>
                         <div className="space-y-4">
                             <Section title="En Vivo">
-                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 h-20 flex items-center justify-center rounded-lg text-slate-500 text-sm">VACIA</div>}
+                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 p-2.5 rounded-lg border border-slate-700 min-h-[106px] flex items-center justify-center text-slate-500 text-sm">
+  VACIA
+</div>}
                             </Section>
                             <Section title="Próximos">
                                 {data.upcoming.length > 0 ? data.upcoming.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos próximos.</p>}
