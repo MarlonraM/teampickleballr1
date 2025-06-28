@@ -130,6 +130,7 @@ const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
     );
 };
 
+
 const Announcement = ({ announcement, onExpire }) => {
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -138,12 +139,10 @@ const Announcement = ({ announcement, onExpire }) => {
         return () => clearTimeout(timer);
     }, [onExpire]);
 
-    // Renderizado para un aviso de partido
     if (announcement.type === 'game') {
         return (
             <div style={styles.announcementBarGame}>
                 <div style={styles.announcementHeader}>
-                    {/* Usamos el componente Megaphone directamente */}
                     <Megaphone color="#61DAFB" size={28}/>
                     <h3 style={styles.announcementTitle}>{announcement.courtName}</h3>
                 </div>
@@ -168,7 +167,6 @@ const Announcement = ({ announcement, onExpire }) => {
         );
     }
 
-    // Renderizado para un aviso general
     return (
         <div style={styles.announcementBarGeneral}>
             {announcement.text}
@@ -198,19 +196,19 @@ function PublicScoreboard() {
 
         fetchData();
 
-        const socket = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
+        const socket = new WebSocket(WS_URL);
         socket.onopen = () => console.log("Tablero público conectado al WebSocket.");
         socket.onmessage = (event) => {
-            const updatedData = JSON.parse(event.data);
-            if (updatedData.type === 'SCORE_UPDATE') {
-                setMatches(prevMatches =>
-                    prevMatches.map(m => m.id === parseInt(updatedData.matchId, 10) ? { ...m, ...updatedData.payload } : m)
-                );
+            const data = JSON.parse(event.data);
+            if (data.type === 'SCORE_UPDATE') {
+                setMatches(prev => prev.map(m => m.id === parseInt(data.matchId, 10) ? { ...m, ...data.payload } : m));
+            }
+            if (data.type === 'ANNOUNCEMENT_NEW') {
+                setAnnouncements(prev => [...prev, data.payload]);
             }
         };
         return () => socket.close();
     }, []);
-
 
     const removeAnnouncement = (id) => {
         setAnnouncements(prev => prev.filter(ann => ann.id !== id));
