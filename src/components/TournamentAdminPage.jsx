@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, ArrowRight, Trophy, Swords, MonitorPlay, ListOrdered } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import.meta.env.VITE_API_URL;
+import React, { useState } from 'react';
 
 // --- Componentes de UI Reutilizables ---
 const Card = ({ children, title, icon: Icon, titleClassName = 'text-cyan-400', extraHeaderContent }) => (
@@ -589,9 +590,7 @@ const JuegosEnCursoTab = () => {
                             <div className={`text-sm font-semibold ${winner === 'team2' ? 'text-amber-400' : ''}`}>
                                 {winner === 'team2' && '� '}{match.team2_name}
                             </div>
-                            <div className="text-xs text-slate-400 truncate">
-                                {match.team2_player1_name} / {match.team2_player2_name}
-                            </div>
+                            <div className="text-xs text-slate-400 truncate">{match.team2_player1_name} / {match.team2_player2_name} </div>
                         </div>
                         <div className="flex items-center justify-end gap-1 flex-shrink-0">
                             <ServiceDots isServingTeam={match.server_team_id === match.team2_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
