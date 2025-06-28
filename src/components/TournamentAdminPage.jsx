@@ -923,6 +923,7 @@ export default function TournamentAdminPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [modalData, setModalData] = useState(null);
+    const [editingMatch, setEditingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
     const [isConfigOpen, setIsConfigOpen] = useState(false);
