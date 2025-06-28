@@ -136,7 +136,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
 };
 
 // --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
-const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
+const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingMatch }) => {
     const [matches, setMatches] = useState(initialMatches);
     const [filters, setFilters] = useState({ id: '', teams: '', players: '', category: '', status: '', court: '' });
     const [sortConfig, setSortConfig] = useState({ key: 'status', direction: 'ascending' });
