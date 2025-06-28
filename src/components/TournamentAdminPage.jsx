@@ -67,7 +67,8 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
 // --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
 const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
     const [matches, setMatches] = useState(initialMatches);
-    const [filters, setFilters] = useState({ id: '', teams: '', category: '', status: '', court: '' });
+    const [filters, setFilters] = useState({ id: '', teams: '', players: '', category: '', status: '', court: '' });
+    const [sortConfig, setSortConfig] = useState({ key: 'status', direction: 'ascending' });
     const [editingScore, setEditingScore] = useState(null);
 
     useEffect(() => {
@@ -77,6 +78,65 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
     const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
+    };
+    
+    const requestSort = (key) => {
+        let direction = 'ascending';
+        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
+            direction = 'descending';
+        }
+        setSortConfig({ key, direction });
+    };
+    
+    const sortedAndFilteredMatches = useMemo(() => {
+        let sortableItems = [...initialMatches];
+
+        // Filtrado
+        sortableItems = sortableItems.filter(match => {
+            const playerFilter = filters.players.toLowerCase();
+            const playersString = [match.team1_player1_name, match.team1_player2_name, match.team2_player1_name, match.team2_player2_name]
+                .filter(Boolean).join(' ').toLowerCase();
+
+            return (
+                match.id.toString().includes(filters.id) &&
+                ((match.team1_name || '').toLowerCase().includes(filters.teams.toLowerCase()) || (match.team2_name || '').toLowerCase().includes(filters.teams.toLowerCase())) &&
+                (playersString.includes(playerFilter)) &&
+                ((match.category || '').toLowerCase().includes(filters.category.toLowerCase())) &&
+                ((match.status || '').toLowerCase().includes(filters.status.toLowerCase())) &&
+                (filters.court === '' || match.court_id === parseInt(filters.court))
+            );
+        });
+
+        // Ordenación
+        if (sortConfig.key !== null) {
+            const statusOrder = { 'en_vivo': 1, 'asignado': 2, 'pendiente': 3, 'finalizado': 4 };
+            
+            sortableItems.sort((a, b) => {
+                let aValue = a[sortConfig.key];
+                let bValue = b[sortConfig.key];
+                
+                if (sortConfig.key === 'status') {
+                    aValue = statusOrder[a.status];
+                    bValue = statusOrder[b.status];
+                }
+                
+                if (aValue < bValue) { return sortConfig.direction === 'ascending' ? -1 : 1; }
+                if (aValue > bValue) { return sortConfig.direction === 'ascending' ? 1 : -1; }
+                return 0;
+            });
+        }
+        return sortableItems;
+    }, [initialMatches, filters, sortConfig]);
+
+
+    const SortableHeader = ({ sortKey, children }) => {
+        const isSorted = sortConfig.key === sortKey;
+        const icon = isSorted ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : '';
+        return (
+            <th className="p-3 cursor-pointer" onClick={() => requestSort(sortKey)}>
+                {children} <span className="text-cyan-400">{icon}</span>
+            </th>
+        );
     };
 
     const handleScoreChange = (matchId, team, value) => {
@@ -154,6 +214,8 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
         }
     };
 
+
+    
     return (
         <Card title="Lista Completa de Partidos" icon={ListOrdered}>
             <div className="overflow-x-auto">
