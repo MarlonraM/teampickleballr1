@@ -120,15 +120,13 @@ function PublicScoreboard() {
     }, []);
 
     useEffect(() => {
-        fetchData();
+        fetchData(true); // Carga inicial con indicador de carga
         const socket = new WebSocket(WS_URL);
         socket.onopen = () => console.log("Tablero público conectado al WebSocket.");
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
-            // --- CORRECCIÓN ---
-            // Si llega una actualización de partido o un anuncio, recargamos los datos.
             if (data.type === 'SCORE_UPDATE' || data.type === 'MATCH_UPDATE') {
-                fetchData();
+                fetchData(false); // Actualización silenciosa, sin indicador de carga
             }
             if (data.type === 'ANNOUNCEMENT_NEW') {
                 setAnnouncements(prev => [...prev, data.payload]);
@@ -136,7 +134,7 @@ function PublicScoreboard() {
         };
         return () => socket.close();
     }, [fetchData]);
-
+    
     const removeAnnouncement = (id) => {
         setAnnouncements(prev => prev.filter(ann => ann.id !== id));
     };
