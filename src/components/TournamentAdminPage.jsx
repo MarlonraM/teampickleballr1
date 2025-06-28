@@ -25,6 +25,77 @@ const TabButton = ({ tabName, label, icon: Icon, activeTab, setActiveTab }) => (
     </button>
 );
 
+// --- MODAL PARA EDITAR PUNTUACIÓN Y ESTADO ---
+const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
+    const [scores, setScores] = useState({
+        team1: match.team1_score || 0,
+        team2: match.team2_score || 0
+    });
+
+    if (!match) return null;
+
+    const handleScoreChange = (team, value) => {
+        setScores(prev => ({ ...prev, [team]: parseInt(value, 10) || 0 }));
+    };
+
+    const handleSave = () => {
+        onSave(match.id, {
+            team1_score: scores.team1,
+            team2_score: scores.team2,
+        });
+    };
+
+    const handleFinalize = () => {
+        const score1 = scores.team1;
+        const score2 = scores.team2;
+        const maxScore = Math.max(score1, score2);
+        const diff = Math.abs(score1 - score2);
+
+        // --- VALIDACIÓN DE REGLA DE PUNTUACIÓN ---
+        if (maxScore < 11 || (maxScore >= 11 && diff < 2)) {
+            alert('Puntuación inválida para finalizar. El ganador debe tener al menos 11 puntos y una ventaja de 2.');
+            return;
+        }
+        
+        if (window.confirm("¿Deseas marcar este partido como Finalizado? Esta acción es definitiva.")) {
+            onSave(match.id, {
+                team1_score: scores.team1,
+                team2_score: scores.team2,
+                status: 'finalizado'
+            });
+        }
+    };
+    
+    return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-lg relative">
+                <button onClick={onClose} className="absolute top-3 right-3 text-slate-400 hover:text-white"><X size={20}/></button>
+                <h2 className="text-xl font-bold text-cyan-400 mb-4">Editar Partido #{match.id}</h2>
+                
+                <div className="bg-slate-900/50 p-4 rounded-lg space-y-3">
+                    <p className="text-center font-semibold">{match.team1_name} vs {match.team2_name}</p>
+                    <div className="flex items-center justify-center gap-4">
+                        <input type="number" value={scores.team1} onChange={(e) => handleScoreChange('team1', e.target.value)} className="w-24 p-2 text-center text-4xl font-bold bg-slate-700 rounded-md border-slate-600 border" disabled={match.status === 'finalizado'} />
+                        <span className="text-3xl font-bold text-slate-500">-</span>
+                        <input type="number" value={scores.team2} onChange={(e) => handleScoreChange('team2', e.target.value)} className="w-24 p-2 text-center text-4xl font-bold bg-slate-700 rounded-md border-slate-600 border" disabled={match.status === 'finalizado'} />
+                    </div>
+                     <p className="text-center text-sm">Estado Actual: <span className="font-bold">{match.status}</span></p>
+                </div>
+
+                {match.status === 'finalizado' ? (
+                    <div className="mt-4 text-center text-amber-400 font-bold text-lg">
+                        🏆 Ganador: {match.winner_id === match.team1_id ? match.team1_name : match.team2_name}
+                    </div>
+                ) : (
+                    <div className="mt-6 flex justify-end gap-4">
+                        <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-semibold" disabled={isSaving}>Guardar Cambios</button>
+                        <button onClick={handleFinalize} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md text-sm font-semibold" disabled={isSaving}>Marcar como Finalizado</button>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
 // --- MODAL PARA GESTIONAR PARTIDO ---
 const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) => {
     const [courtId, setCourtId] = useState(matchData.court_id || '');
@@ -215,7 +286,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
     };
 
 
-   return (
+  return (
         <Card title="Lista Completa de Partidos" icon={ListOrdered}>
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
@@ -258,22 +329,18 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
                                 <td className="p-3">{match.category}</td>
                                 <td className="p-3">{getStatusTag(match.status)}</td>
                                 <td className="p-3">
-                                    <select value={match.court_id || ''} onChange={(e) => handleCourtChange(match.id, e.target.value)} className="w-full bg-slate-700 p-1 rounded-md border border-slate-600 text-xs">
+                                    <select value={match.court_id || ''} className="w-full bg-slate-700 p-1 rounded-md border border-slate-600 text-xs">
                                         <option value="">Sin Asignar</option>
                                         {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
                                 </td>
                                 <td className="p-3">
-                                    {editingScore?.id === match.id ? (
-                                        <div className="flex gap-1">
-                                            <input className="w-12 bg-slate-700 p-1 rounded-md text-center" type="number" value={editingScore.team1_score} onChange={(e) => handleScoreChange(match.id, 'team1_score', e.target.value)} />
-                                            <input className="w-12 bg-slate-700 p-1 rounded-md text-center" type="number" value={editingScore.team2_score} onChange={(e) => handleScoreChange(match.id, 'team2_score', e.target.value)} onBlur={() => handleScoreBlur(match.id)} autoFocus />
-                                        </div>
-                                    ) : (
-                                        <div onClick={() => setEditingScore({ id: match.id, team1_score: match.team1_score || 0, team2_score: match.team2_score || 0 })} className="cursor-pointer font-mono p-1">
-                                            {match.team1_score ?? '-'} / {match.team2_score ?? '-'}
-                                        </div>
-                                    )}
+                                    <div className="flex items-center gap-2 font-mono">
+                                        <span>{match.team1_score ?? '-'} / {match.team2_score ?? '-'}</span>
+                                        <button onClick={() => setEditingMatch(match)} className="text-slate-400 hover:text-white">
+                                            <Pencil size={14} />
+                                        </button>
+                                    </div>
                                 </td>
                                 <td className="p-3"><div className="flex items-center gap-2"><Clock size={14} /><p>{calculateDuration(match.start_time, match.end_time)}</p></div></td>
                                 <td className="p-3">
@@ -289,7 +356,6 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
         </Card>
     );
 };
-
 
 
 
