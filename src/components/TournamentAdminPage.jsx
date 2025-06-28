@@ -645,13 +645,16 @@ export default function TournamentAdminPage() {
     const [allData, setAllData] = useState({ matches: [], teams: [], courts: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const fetchData = async () => {
-        setLoading(true);
+    const [modalData, setModalData] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    
+    const fetchData = useCallback(async () => {
+        if (!loading) setLoading(true);
         try {
             const [matchesRes, courtsRes, teamsRes] = await Promise.all([
-                fetch(`${import.meta.env.VITE_API_URL}/api/matches/scoreboard`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/courts`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/teams`)
+                fetch(`${API_BASE_URL}/api/matches/scoreboard`),
+                fetch(`${API_BASE_URL}/api/courts`),
+                fetch(`${API_BASE_URL}/api/teams`)
             ]);
             if (!matchesRes.ok || !courtsRes.ok || !teamsRes.ok) throw new Error('No se pudieron cargar los datos.');
             
@@ -659,33 +662,49 @@ export default function TournamentAdminPage() {
             const courtsData = await courtsRes.json();
             const teamsData = await teamsRes.json();
 
-             setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
+            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
             setError(null);
         } catch (err) {
             setError(err.message);
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [loading]);
 
-useEffect(() => {
+    useEffect(() => {
         fetchData();
         const socket = new WebSocket(WS_URL);
-        socket.onopen = () => console.log('Panel de Control conectado al WebSocket.');
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
             if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
-                console.log('Actualización recibida, recargando todos los datos...');
                 fetchData();
             }
         };
-        socket.onclose = () => console.log('Panel de Control desconectado.');
         return () => socket.close();
     }, [fetchData]);
     
     const handleGenerationComplete = () => {
-        fetchData(); // Recarga todos los datos después de generar partidos
-        setActiveTab('gestion');
+        fetchData().then(() => setActiveTab('gestion'));
+    };
+    
+    const handleSaveMatch = async (matchId, updateData) => {
+        setIsSaving(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(errorBody.msg || "Error al guardar el partido");
+            }
+            setModalData(null); 
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
     };
     
     return (
