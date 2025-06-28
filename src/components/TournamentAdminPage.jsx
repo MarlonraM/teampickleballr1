@@ -990,6 +990,7 @@ export default function TournamentAdminPage() {
                 const errorBody = await response.json();
                 throw new Error(errorBody.msg || "Error al guardar el partido");
             }
+            await refreshData(); 
             setEditingMatch(null); 
         } catch (err) {
             alert(err.message);
