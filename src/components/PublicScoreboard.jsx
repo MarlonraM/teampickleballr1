@@ -143,6 +143,7 @@ const Announcement = ({ announcement, onExpire }) => {
         return (
             <div style={styles.announcementBarGame}>
                 <div style={styles.announcementHeader}>
+                    {/* Usamos el componente Megaphone directamente */}
                     <Megaphone color="#61DAFB" size={28}/>
                     <h3 style={styles.announcementTitle}>{announcement.courtName}</h3>
                 </div>
