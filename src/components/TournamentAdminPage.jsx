@@ -978,19 +978,21 @@ const AvisosTab = ({ allData }) => {
     const handleAnnounceGame = async (match) => {
         try {
             const court = allData.courts.find(c => c.id === match.court_id);
-            await fetch(`${API_BASE_URL}/api/announcements/game`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-        match_id: match.id, // o el identificador que tengas para el partido
-        category: match.category,
-        team1_name: match.team1_name,
-        team2_name: match.team2_name,
-        court_name: court.name,
-        team1_players: match.team1_players || [],
-        team2_players: match.team2_players || [],
-    })
-});
+            const response = await fetch(`${API_BASE_URL}/api/announcements/game`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    match_id: match.id,
+                    category: match.category,
+                    team1_name: match.team1_name,
+                    team2_name: match.team2_name,
+                    court_name: court?.name || `Cancha #${match.court_id}`,
+                    team1_players: [match.team1_player1_name, match.team1_player2_name].filter(Boolean),
+                    team2_players: [match.team2_player1_name, match.team2_player2_name].filter(Boolean)
+                })
+            });
+            if (!response.ok) throw new Error("Error del servidor al anunciar el partido.");
+            setSentAnnouncements(prev => ({...prev, [match.id]: true}));
         } catch (err) {
             alert('Error al anunciar el partido.');
         }
