@@ -541,15 +541,14 @@ const JuegosEnCursoTab = () => {
                 <div className="text-center text-xs font-bold text-cyan-400 mb-2">{match.category}</div>
                 <div className="space-y-1.5">
                      <div className={`flex items-center rounded-md ${winner === 'team1' ? 'bg-green-800/30' : ''}`}>
-                        <div className="flex-grow min-w-0"> 
+                        <div className="flex-grow min-w-0">
                             <div className={`text-sm font-semibold ${winner === 'team1' ? 'text-amber-400' : ''}`}>
                                 {winner === 'team1' && '🏆 '}{match.team1_name}
                             </div>
                             <div className="text-xs text-slate-400 truncate">{match.team1_player1_name} / {match.team1_player2_name}</div>
                         </div>
-                          <div className="flex items-center justify-end gap-1 flex-shrink-0"> {/* justify-end para alinear a la derecha, gap reducido */}
-                            <ServiceDots isServingTeam={match.server_team_id === match.team1_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
-                           <div className="w-px h-5 bg-slate-600 mx-0.5"></div> 
+                        <div className="flex items-center justify-end gap-1 flex-shrink-0">
+                           <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
                            <span className="font-mono font-bold text-base w-6 text-right">{match.team1_score ?? '-'}</span>
                         </div>
                     </div>
@@ -561,8 +560,6 @@ const JuegosEnCursoTab = () => {
                            <div className="text-xs text-slate-400 truncate">{match.team2_player1_name} / {match.team2_player2_name}</div>
                         </div>
                         <div className="flex items-center justify-end gap-1 flex-shrink-0">
-                            <ServiceDots isServingTeam={match.server_team_id === match.team2_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
-                        <div className="flex items-center justify-end gap-1 flex-shrink-0">
                            <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
                            <span className="font-mono font-bold text-base w-6 text-right">{match.team2_score ?? '-'}</span>
                         </div>
@@ -572,48 +569,38 @@ const JuegosEnCursoTab = () => {
         );
     };
     
-const Section = ({ title, children }) => (
-  <div>
-    <h4 className="font-bold text-slate-400 text-xs mb-1.5 uppercase tracking-wider">{title}</h4>
-    <div className="space-y-1.5">{children}</div>
-  </div>
-);
-return (
-  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
-    {allData.courts.map(court => {
-      const data = (allData.matches || []).filter(m => m.court_id === court.id)
-        .reduce((acc, m) => {
-          if (m.status === 'live') acc.live.push(m);
-          else if (m.status === 'upcoming') acc.upcoming.push(m);
-          else if (m.status === 'played') acc.played.push(m);
-          return acc;
-        }, { live: [], upcoming: [], played: [] });
-
-      return (
-        <div key={court.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 flex flex-col space-y-4">
-          <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3>
-          <div className="space-y-4">
-            <Section title="En Vivo">
-              {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : (
-                <div className="bg-slate-800 h-[106px] flex items-center justify-center rounded-lg text-slate-500 text-sm">VACIA</div>
-              )}
-            </Section>
-            <Section title="Próximos">
-              {data.upcoming.length > 0 ? data.upcoming.map(m => <MatchCard key={m.id} match={m} />) : (
-                <p className="text-xs text-slate-500 text-center">No hay juegos próximos.</p>
-              )}
-            </Section>
-            <Section title="Jugados Recientemente">
-              {data.played.length > 0 ? data.played.map(m => <MatchCard key={m.id} match={m} />) : (
-                <p className="text-xs text-slate-500 text-center">No hay juegos recientes.</p>
-              )}
-            </Section>
-          </div>
+    const Section = ({ title, children }) => (
+        <div>
+            <h4 className="font-bold text-slate-400 text-xs mb-1.5 uppercase tracking-wider">{title}</h4>
+            <div className="space-y-1.5">{children}</div>
         </div>
-      );
-    })}
-  </div>
-);
+    );
+
+    return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+            {courts.map(court => {
+                const data = matchesByCourt[court.id] || { live: [], upcoming: [], played: [] };
+                return (
+                    <div key={court.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 flex flex-col space-y-4">
+                        <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3>
+                        <div className="space-y-4">
+                            <Section title="En Vivo">
+                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 h-20 flex items-center justify-center rounded-lg text-slate-500 text-sm">VACIA</div>}
+                            </Section>
+                            <Section title="Próximos">
+                                {data.upcoming.length > 0 ? data.upcoming.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos próximos.</p>}
+                            </Section>
+                            <Section title="Jugados Recientemente">
+                               {data.played.length > 0 ? data.played.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos recientes.</p>}
+                            </Section>
+                        </div>
+                    </div>
+                )
+            })}
+        </div>
+    );
+};
+
                 
 export default function TournamentAdminPage() {
     const [activeTab, setActiveTab] = useState('configuracion');
@@ -663,6 +650,7 @@ export default function TournamentAdminPage() {
     const handleGenerationComplete = () => {
         fetchData(); // Recarga todos los datos después de generar partidos
         setActiveTab('gestion');
+        setIsConfigOpen(false);
     };
         
      const handleSaveMatch = async (matchId, updateData) => {
