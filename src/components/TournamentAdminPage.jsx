@@ -39,26 +39,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
             status: matchData.status === 'pendiente' ? 'asignado' : matchData.status
         });
     };
-
-    if (matchData.status === 'finalizado') {
-        return (
-             <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-                <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-md relative">
-                    <button onClick={onClose} className="absolute top-2 right-2 text-slate-400 hover:text-white"><X size={20} /></button>
-                    <h2 className="text-xl font-bold text-cyan-400 mb-4">Resumen del Partido #{matchData.id}</h2>
-                    <div className="bg-slate-900/50 p-4 rounded-lg space-y-3">
-                        <div className="text-center"><span className="font-bold text-lg">{matchData.team1_name}</span><span className="font-bold text-2xl mx-2">{matchData.team1_score}</span><span className="text-slate-400">vs</span><span className="font-bold text-2xl mx-2">{matchData.team2_score}</span><span className="font-bold text-lg">{matchData.team2_name}</span></div>
-                        <div className="text-center">
-                            {matchData.winner_id === matchData.team1_id && <span className="text-amber-400 font-bold">🏆 Ganador: {matchData.team1_name}</span>}
-                            {matchData.winner_id === matchData.team2_id && <span className="text-amber-400 font-bold">🏆 Ganador: {matchData.team2_name}</span>}
-                        </div>
-                        <p className="text-sm text-slate-300"><strong>Categoría:</strong> {matchData.category}</p><p className="text-sm text-slate-300"><strong>Cancha:</strong> {courts.find(c => c.id === matchData.court_id)?.name || 'N/A'}</p><p className="text-sm text-slate-300"><strong>Inicio:</strong> {matchData.start_time ? new Date(matchData.start_time).toLocaleTimeString() : 'N/A'}</p><p className="text-sm text-slate-300"><strong>Fin:</strong> {matchData.end_time ? new Date(matchData.end_time).toLocaleTimeString() : 'N/A'}</p>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
+    
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-md relative">
@@ -82,10 +63,6 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
         </div>
     );
 };
-
-// --- PANEL DE CONFIGURACIÓN (AHORA DENTRO DE UN MODAL) ---
-// (Removed duplicate ConfiguracionPanel definition to fix syntax error)
-
 // --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
 const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, onClose }) => {
     const [players, setPlayers] = useState(initialData.players || []);
