@@ -996,66 +996,69 @@ const AvisosTab = ({ allData }) => {
     const handleSendWhatsApp = (player, match) => {
         const court = allData.courts.find(c => c.id === match.court_id);
         const message = `El juego No. ${match.id} entre ${match.team1_name} y ${match.team2_name} va a comenzar en la ${court?.name || `Cancha #${match.court_id}`}, favor presentarte.`;
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; // Sin número para que el usuario elija
         window.open(whatsappUrl, '_blank');
-        setSentWhatsApp(prev => ({...prev, [`${match.id}-${player.id}`]: true}));
+        setSentWhatsApp(prev => ({...prev, [`${match.id}-${player.name}`]: true}));
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 space-y-8">
-                <Card title="Aviso General" icon={Megaphone}>
-                    <div className="space-y-3">
-                        <textarea value={manualMessage} onChange={(e) => setManualMessage(e.target.value)} placeholder="Escribe tu mensaje aquí..." className="w-full bg-slate-700 p-2 rounded-md border border-slate-600 min-h-[100px]"></textarea>
-                        <button onClick={handleSendGeneral} disabled={isSending} className="w-full flex items-center justify-center p-3 bg-blue-600 hover:bg-blue-700 rounded-md font-semibold">
-                            <Send className="mr-2 h-4 w-4" /> Enviar Aviso
-                        </button>
-                    </div>
-                </Card>
-            </div>
+        <div className="space-y-8">
+            <Card title="Aviso General" icon={Megaphone}>
+                <div className="space-y-3">
+                    <textarea value={manualMessage} onChange={(e) => setManualMessage(e.target.value)} placeholder="Escribe un mensaje para mostrar en el tablero público..." className="w-full bg-slate-700 p-2 rounded-md border border-slate-600 min-h-[80px]"></textarea>
+                    <button onClick={handleSendGeneral} disabled={isSending} className="w-full flex items-center justify-center p-2 bg-blue-600 hover:bg-blue-700 rounded-md font-semibold text-sm">
+                        <Send className="mr-2 h-4 w-4" /> Enviar Aviso
+                    </button>
+                </div>
+            </Card>
 
-            <div className="lg:col-span-2 space-y-8">
-                <Card title="Avisos de Partidos Asignados" icon={Bell}>
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                        {assignedMatches.length > 0 ? assignedMatches.map(match => (
-                            <div key={match.id} className="bg-slate-800/50 p-3 rounded-lg flex justify-between items-center">
+            <Card title="Anunciar Partidos Asignados" icon={Bell}>
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {assignedMatches.length > 0 ? assignedMatches.map(match => {
+                        const wasAnnounced = sentAnnouncements[match.id];
+                        return (
+                            <div key={match.id} className="bg-slate-800/50 p-2 rounded-lg flex justify-between items-center">
                                 <div>
-                                    <p className="font-semibold">{match.team1_name} vs {match.team2_name}</p>
+                                    <p className="font-semibold text-sm">{match.team1_name} vs {match.team2_name}</p>
                                     <p className="text-xs text-slate-400">Categoría: {match.category} - Cancha: {match.court_id}</p>
                                 </div>
-                                <button onClick={() => handleAnnounceGame(match)} className="px-3 py-1 text-sm bg-cyan-600 hover:bg-cyan-700 rounded-md flex items-center"><Bell className="mr-2 h-4 w-4"/> Anunciar</button>
+                                <button onClick={() => handleAnnounceGame(match)} className={`px-3 py-1 text-xs rounded-md flex items-center ${wasAnnounced ? 'bg-green-700' : 'bg-cyan-600 hover:bg-cyan-700'}`}>
+                                    {wasAnnounced ? <Check className="mr-2 h-4 w-4"/> : <Bell className="mr-2 h-4 w-4"/>}
+                                    {wasAnnounced ? 'Anunciado' : 'Anunciar'}
+                                </button>
                             </div>
-                        )) : <p className="text-slate-400 text-center">No hay partidos asignados para anunciar.</p>}
-                    </div>
-                </Card>
-                <Card title="Notificar Jugadores vía WhatsApp" icon={Users}>
-                    <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                         {assignedMatches.length > 0 ? assignedMatches.map(match => (
-                            <div key={`wa-${match.id}`} className="bg-slate-800/50 p-3 rounded-lg">
-                               <p className="font-semibold mb-2">{match.team1_name} vs {match.team2_name}</p>
-                               <div className="grid grid-cols-2 gap-2 text-sm">
-                                   <div className="space-y-2">
-                                       <p className="font-bold">{match.team1_name}</p>
-                                       {[match.team1_player1_name, match.team1_player2_name].map(name => {
-                                           const player = {id: name, name: name}; // Simulación
-                                           const wasSent = sentWhatsApp[`${match.id}-${player.id}`];
-                                           return <button key={name} onClick={() => handleSendWhatsApp(player, match)} className={`w-full text-left px-2 py-1 rounded flex items-center justify-between ${wasSent ? 'bg-green-700' : 'bg-slate-700 hover:bg-slate-600'}`}>{name} {wasSent && <Check size={16}/>}</button>
-                                       })}
-                                   </div>
-                                   <div className="space-y-2">
-                                       <p className="font-bold">{match.team2_name}</p>
-                                        {[match.team2_player1_name, match.team2_player2_name].map(name => {
-                                           const player = {id: name, name: name}; // Simulación
-                                           const wasSent = sentWhatsApp[`${match.id}-${player.id}`];
-                                           return <button key={name} onClick={() => handleSendWhatsApp(player, match)} className={`w-full text-left px-2 py-1 rounded flex items-center justify-between ${wasSent ? 'bg-green-700' : 'bg-slate-600 hover:bg-slate-500'}`}>{name} {wasSent && <Check size={16}/>}</button>
-                                       })}
-                                   </div>
+                        )
+                    }) : <p className="text-slate-400 text-center text-sm">No hay partidos asignados para anunciar.</p>}
+                </div>
+            </Card>
+
+            <Card title="Notificar Jugadores vía WhatsApp" icon={Users}>
+                <div className="space-y-4 max-h-[400px] overflow-y-auto">
+                     {assignedMatches.length > 0 ? assignedMatches.map(match => (
+                        <div key={`wa-${match.id}`} className="bg-slate-800/50 p-3 rounded-lg">
+                           <p className="font-semibold mb-2 text-sm">{match.team1_name} vs {match.team2_name}</p>
+                           <div className="grid grid-cols-2 gap-2 text-sm">
+                               <div className="space-y-2">
+                                   <p className="font-bold">{match.team1_name}</p>
+                                   {[match.team1_player1_name, match.team1_player2_name].map(name => {
+                                       if (!name) return null;
+                                       const wasSent = sentWhatsApp[`${match.id}-${name}`];
+                                       return <button key={name} onClick={() => handleSendWhatsApp({name}, match)} className={`w-full text-left px-2 py-1 rounded flex items-center justify-between text-xs ${wasSent ? 'bg-green-800/70' : 'bg-slate-700 hover:bg-slate-600'}`}>{name} {wasSent ? <Check size={14}/> : <Send size={14}/>}</button>
+                                   })}
                                </div>
-                            </div>
-                         )) : <p className="text-slate-400 text-center">No hay partidos asignados.</p>}
-                    </div>
-                </Card>
-            </div>
+                               <div className="space-y-2">
+                                   <p className="font-bold">{match.team2_name}</p>
+                                    {[match.team2_player1_name, match.team2_player2_name].map(name => {
+                                       if (!name) return null;
+                                       const wasSent = sentWhatsApp[`${match.id}-${name}`];
+                                       return <button key={name} onClick={() => handleSendWhatsApp({name}, match)} className={`w-full text-left px-2 py-1 rounded flex items-center justify-between text-xs ${wasSent ? 'bg-green-800/70' : 'bg-slate-700 hover:bg-slate-600'}`}>{name} {wasSent ? <Check size={14}/> : <Send size={14}/>}</button>
+                                   })}
+                               </div>
+                           </div>
+                        </div>
+                     )) : <p className="text-slate-400 text-center text-sm">No hay partidos asignados para notificar.</p>}
+                </div>
+            </Card>
         </div>
     );
 };
