@@ -65,7 +65,6 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
 };
 
 // --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
-// --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
 const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
     const [matches, setMatches] = useState(initialMatches);
     const [filters, setFilters] = useState({ id: '', teams: '', category: '', status: '', court: '' });
@@ -164,12 +163,12 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
                             <th className="p-3">ID</th><th className="p-3">Equipos</th><th className="p-3">Categoría</th><th className="p-3">Estado</th><th className="p-3">Cancha</th><th className="p-3">Marcador</th><th className="p-3">Duración</th><th className="p-3">Acciones</th>
                         </tr>
                         <tr>
-                            <th className="p-2"><input size="xs" name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2"><input size="xs" name="teams" value={filters.teams} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2"><input size="xs" name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2"><input size="xs" name="status" value={filters.status} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2"><input name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2"><input name="teams" value={filters.teams} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2"><input name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2"><input name="status" value={filters.status} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
                             <th className="p-2">
-                                <select size="xs" name="court" value={filters.court} onChange={handleFilterChange} className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs">
+                                <select name="court" value={filters.court} onChange={handleFilterChange} className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs">
                                     <option value="">Todas</option>
                                     {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                 </select>
@@ -185,7 +184,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
                                 <td className="p-3">{match.category}</td>
                                 <td className="p-3">{getStatusTag(match.status)}</td>
                                 <td className="p-3">
-                                    <select size="xs" value={match.court_id || ''} onChange={(e) => handleCourtChange(match.id, e.target.value)} className="w-full bg-slate-700 p-1 rounded-md border border-slate-600 text-xs">
+                                    <select value={match.court_id || ''} onChange={(e) => handleCourtChange(match.id, e.target.value)} className="w-full bg-slate-700 p-1 rounded-md border border-slate-600 text-xs">
                                         <option value="">Sin Asignar</option>
                                         {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
