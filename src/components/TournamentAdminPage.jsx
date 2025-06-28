@@ -585,7 +585,8 @@ const JuegosEnCursoTab = () => {
     );
 
     return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+        //<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
+          <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
             {courts.map(court => {
                 const data = matchesByCourt[court.id] || { live: [], upcoming: [], played: [] };
                 return (
