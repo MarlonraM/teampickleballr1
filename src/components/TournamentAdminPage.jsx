@@ -146,7 +146,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
 };
 
 // --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
-const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingMatch }) => {
+    const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingMatch }) => {
     const [matches, setMatches] = useState(initialMatches);
     const [filters, setFilters] = useState({ id: '', teams: '', players: '', category: '', status: '', court: '' });
     const [sortConfig, setSortConfig] = useState({ key: 'status', direction: 'ascending' });
@@ -1053,6 +1053,7 @@ const handleSaveEditedMatch = async (matchId, updateData) => {
                            {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} refreshData={fetchData} />}
                            {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
                            {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
+                        </>
                         </>
                     )}
                 </div>
