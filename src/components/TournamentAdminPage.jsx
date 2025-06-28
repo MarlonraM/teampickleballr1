@@ -978,7 +978,7 @@ export default function TournamentAdminPage() {
         setIsConfigOpen(false);
     };
 
-const handleSaveEditedMatch = async (matchId, updateData) => {
+    const handleSaveEditedMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
@@ -990,8 +990,6 @@ const handleSaveEditedMatch = async (matchId, updateData) => {
                 const errorBody = await response.json();
                 throw new Error(errorBody.msg || "Error al guardar el partido");
             }
-            // CORRECCIÓN: Se llama a refreshData para actualizar la UI inmediatamente
-            await refreshData();
             setEditingMatch(null); 
         } catch (err) {
             alert(err.message);
