@@ -579,7 +579,7 @@ const JuegosEnCursoTab = () => {
     
     const Section = ({ title, children }) => (
         <div>
-            <h4 className="font-bold text-slate-400 text-xs mb-1.5 uppercase tracking-wider">{title}</h4>
+            <h4 className="font-bold text-slate-400 text-base mb-1.5 uppercase tracking-wider">{title}</h4>
             <div className="space-y-1.5">{children}</div>
         </div>
     );
