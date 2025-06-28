@@ -966,7 +966,28 @@ export default function TournamentAdminPage() {
         setActiveTab('gestion');
         setIsConfigOpen(false);
     };
-        
+
+const handleSaveEditedMatch = async (matchId, updateData) => {
+        setIsSaving(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(errorBody.msg || "Error al guardar el partido");
+            }
+            setEditingMatch(null); 
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    
      const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
@@ -992,7 +1013,7 @@ export default function TournamentAdminPage() {
         }
     };
  
-    return (
+ return (
         <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-screen-2xl mx-auto">
                 <div className="flex justify-between items-center mb-6">
@@ -1003,17 +1024,19 @@ export default function TournamentAdminPage() {
                 </div>
                 
                 <div className="flex border-b border-slate-700 overflow-x-auto">
-                     <TabButton tabName="partidos" label="Partidos" icon={BarChart2} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <TabButton tabName="gestion" label="Gestión de Torneo" icon={Gamepad2} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <TabButton tabName="partidos" label="Partidos" icon={BarChart2} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <TabButton tabName="grupos" label="Grupos" icon={Users} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="standing" label="Standing" icon={ListOrdered} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <TabButton tabName="juegos" label="Juegos en Curso" icon={MonitorPlay} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <TabButton tabName="juegos" label="En Vivo" icon={MonitorPlay} activeTab={activeTab} setActiveTab={setActiveTab} />
                 </div>
 
                 <div className="pt-8">
+                    {editingMatch && <EditScoreModal match={editingMatch} onClose={() => setEditingMatch(null)} onSave={handleSaveEditedMatch} isSaving={isSaving} courts={allData.courts} />}
+                    
                     {loading ? ( <div className="flex justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8" /></div> ) : 
                     error ? (<div className="text-red-400 text-center p-10">{error}</div>) : (
                         <>
-                           {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={fetchData} />}
+                           {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={fetchData} setEditingMatch={setEditingMatch} />}
                            {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} refreshData={fetchData} />}
                            {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
                            {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
@@ -1021,7 +1044,6 @@ export default function TournamentAdminPage() {
                     )}
                 </div>
 
-                {/* MODAL DE CONFIGURACIÓN */}
                 {isConfigOpen && (
                     <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 pt-20">
                         <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] flex flex-col">
@@ -1030,12 +1052,12 @@ export default function TournamentAdminPage() {
                                 <button onClick={() => setIsConfigOpen(false)} className="text-slate-400 hover:text-white"><X /></button>
                             </header>
                             <main className="p-6 overflow-y-auto">
-                                {loading ? <Spinner /> : <ConfiguracionPanel 
+                                <ConfiguracionPanel 
                                     onGenerationComplete={handleGenerationComplete} 
                                     initialData={allData}
                                     refreshData={fetchData}
                                     onClose={() => setIsConfigOpen(false)}
-                                />}
+                                />
                             </main>
                         </div>
                     </div>
