@@ -84,18 +84,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
 };
 
 // --- PANEL DE CONFIGURACIÓN (AHORA DENTRO DE UN MODAL) ---
-const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, onClose }) => {
-    const [players, setPlayers] = useState(initialData.players || []);
-    const [teams, setTeams] = useState(initialData.teams || []);
-    const [isSaving, setIsSaving] = useState(false);
-    const [newPlayer, setNewPlayer] = useState({ fullName: '', email: '', category: 'Intermedio' });
-    const [newTeamName, setNewTeamName] = useState('');
-    const [numberOfGroups, setNumberOfGroups] = useState(2);
-
-    useEffect(() => {
-        setPlayers(initialData.players);
-        setTeams(initialData.teams);
-    }, [initialData]);
+// (Removed duplicate ConfiguracionPanel definition to fix syntax error)
 
 // --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
 const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, onClose }) => {
@@ -657,6 +646,7 @@ export default function TournamentAdminPage() {
     const [allData, setAllData] = useState({ matches: [], teams: [], courts: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isConfigOpen, setIsConfigOpen] = useState(false);
     const fetchData = async () => {
         setLoading(true);
         try {
@@ -773,6 +763,4 @@ export default function TournamentAdminPage() {
             </div>
         </div>
     );
-}
-
 }
