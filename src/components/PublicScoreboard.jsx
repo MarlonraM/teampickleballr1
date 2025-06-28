@@ -138,7 +138,7 @@ function PublicScoreboard() {
 
     const liveMatches = matches.filter(m => m && m.status === 'en_vivo');
 
-    if (loading) return <div>Cargando...</div>;
+    //if (loading) return <div>Cargando...</div>;
     if (error) return <div>Error: {error}</div>;
 
     return (
