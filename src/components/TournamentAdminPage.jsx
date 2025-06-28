@@ -996,7 +996,17 @@ const AvisosTab = ({ allData }) => {
 
     const handleSendWhatsApp = (player, match) => {
         const court = allData.courts.find(c => c.id === match.court_id);
-        const message = `El juego No. ${match.id} entre ${match.team1_name} y ${match.team2_name} va a comenzar en la ${court?.name || `Cancha #${match.court_id}`}, favor presentarte.`;
+        const message = `
+📢 AVISO
+Cancha ${match.court_id}
+${match.team1_name} vs ${match.team2_name}
+Categoría: ${match.category}
+
+👥 ${match.team1_player1_name} / ${match.team1_player2_name}
+👥 ${match.team2_player1_name} / ${match.team2_player2_name}
+
+⚠️ Por favor, aproximarse a Cancha ${match.court_id} ⚠️
+`;
         const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; // Sin número para que el usuario elija
         window.open(whatsappUrl, '_blank');
         setSentWhatsApp(prev => ({...prev, [`${match.id}-${player.name}`]: true}));
