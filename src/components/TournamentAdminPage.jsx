@@ -623,6 +623,9 @@ export default function TournamentAdminPage() {
     const [allData, setAllData] = useState({ matches: [], teams: [], courts: [] });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [modalData, setModalData] = useState(null);
+    const [isSaving, setIsSaving] = useState(false);
+    
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const fetchData = async () => {
         setLoading(true);
