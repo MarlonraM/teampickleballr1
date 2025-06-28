@@ -97,6 +97,52 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
         setTeams(initialData.teams);
     }, [initialData]);
 
+// --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
+const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, onClose }) => {
+    const [players, setPlayers] = useState(initialData.players || []);
+    const [teams, setTeams] = useState(initialData.teams || []);
+    const [isSaving, setIsSaving] = useState(false);
+    const [newPlayer, setNewPlayer] = useState({ fullName: '', email: '', category: 'Intermedio' });
+    const [newTeamName, setNewTeamName] = useState('');
+    const [numberOfGroups, setNumberOfGroups] = useState(2);
+    
+     
+    const [loading, setLoading] = useState(true); 
+    const [error, setError] = useState(null); 
+     
+    
+        useEffect(() => { 
+            const fetchData = async () => { 
+                try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
+    const handleAddPlayer = async (e) => { e.preventDefault(); if (!newPlayer.fullName || !newPlayer.email) return; try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/players`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name: newPlayer.fullName, email: newPlayer.email, category: newPlayer.category, }), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.msg || 'Error al registrar jugador.'); } const addedPlayer = await response.json(); setPlayers([...players, addedPlayer]); setNewPlayer({ fullName: '', email: '', category: 'Intermedio' }); } catch (err) { console.error(err); alert(err.message); } };
+    const handleAddTeam = async (e) => { e.preventDefault(); if (!newTeamName) return; try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newTeamName, tournament_id: 1 }), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.msg || 'Error al registrar equipo.'); } const addedTeam = await response.json(); setTeams([...teams, addedTeam]); setNewTeamName(''); } catch (err) { console.error(err); alert(err.message); } };
+    const handleSaveGroups = async () => { const groupAssignments = teams.map(team => ({ id: team.id, group_id: team.groupId })); try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams/assign-groups`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(groupAssignments) }); if (!response.ok) throw new Error('Error al guardar los grupos.'); alert('Grupos guardados exitosamente!'); } catch (err) { console.error(err); alert(err.message); } };
+    const handleAssignTeamToPlayer = (playerId, teamId) => { setPlayers(players.map(p => p.id === playerId ? { ...p, teamId: teamId ? parseInt(teamId, 10) : null } : p)); };
+    const handleAssignGroupToTeam = (teamId, groupId) => { setTeams(teams.map(t => t.id === teamId ? { ...t, groupId: groupId ? parseInt(groupId, 10) : null } : t)); };
+    const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
+    const groupOptions = useMemo(() => Array.from({ length: numberOfGroups }, (_, i) => i + 1), [numberOfGroups]);
+    const idealTeamsPerGroup = useMemo(() => numberOfGroups > 0 ? Math.ceil(teams.length / numberOfGroups) : 0, [teams.length, numberOfGroups]);
+    const groupSummary = useMemo(() => { const summary = {}; groupOptions.forEach(groupNum => { const groupLetter = getGroupLetter(groupNum); if (groupLetter) { summary[groupLetter] = teams.filter(t => t.groupId === groupNum).map(t => t.name); }}); return summary; }, [teams, groupOptions]);
+    const teamsPerGroup = useMemo(() => { const counts = {}; groupOptions.forEach(groupNum => { counts[groupNum] = teams.filter(t => t.groupId === groupNum).length; }); return counts; }, [teams, groupOptions]);
+    const categoryValidation = useMemo(() => { const validation = {}; teams.forEach(team => { const teamPlayers = players.filter(p => p.teamId === team.id); const categoryCount = teamPlayers.reduce((acc, player) => { acc[player.category] = (acc[player.category] || 0) + 1; return acc; }, {}); validation[team.id] = { isValid: Object.values(categoryCount).every(count => count <= 2), counts: categoryCount }; }); return validation; }, [players, teams]);
+   
+    
+    
+    const handleSaveAndGenerateMatches = async () => { try { setLoading(true); await handleSaveGroups(); const playerAssignments = players.map(player => ({ player_id: player.id, team_id: player.teamId })); await fetch(`${import.meta.env.VITE_API_URL}/api/players/assign-teams`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(playerAssignments) }); const generateResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/generate-round-robin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tournament_id: 1 }) }); if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.'); alert('¡Asignaciones guardadas y partidos generados exitosamente!'); onGenerationComplete(); } catch (err) { console.error(err); alert(err.message); } finally { setLoading(false); } };
+    if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando datos...</span></div>;
+    if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
+    return ( 
+        <div className="space-y-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <Card title="Registrar Jugador" icon={UserPlus}>
+                    <form onSubmit={handleAddPlayer} className="space-y-4">
+                        <input required type="text" placeholder="Nombre Completo" value={newPlayer.fullName} onChange={(e) => setNewPlayer({...newPlayer, fullName: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
+                        <input required type="email" placeholder="Email del Jugador" value={newPlayer.email} onChange={(e) => setNewPlayer({...newPlayer, email: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
+                        <select value={newPlayer.category} onChange={(e) => setNewPlayer({...newPlayer, category: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none"><option>Intermedio</option><option>Intermedio Fuerte</option><option>Avanzado</option></select><button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">Registrar</button></form></Card><Card title="Registrar Equipo" icon={ShieldPlus}><form onSubmit={handleAddTeam} className="space-y-4"><input required type="text" placeholder="Nombre del Equipo" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" /><button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">Registrar</button></form></Card></div><Card title="Asignación de Grupos (Round Robin)" icon={Users}><div className="bg-slate-900/50 p-4 rounded-md mb-4 flex flex-wrap items-center justify-between gap-4 text-sm text-slate-300"><p><strong>{teams.length}</strong> equipos registrados.</p><div className="flex items-center gap-2"><label>Crear</label><input type="number" min="1" max="10" value={numberOfGroups} onChange={(e) => setNumberOfGroups(parseInt(e.target.value))} className="w-16 bg-slate-700 p-2 rounded text-center border border-slate-600"/><label>grupos.</label></div><p>Equipos por grupo (ideal): <strong>{idealTeamsPerGroup > 0 ? `~${idealTeamsPerGroup.toFixed(1)}` : 'N/A'}</strong></p></div><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-700/50"><tr className="border-b border-slate-600"><th className="p-3 text-sm font-semibold text-slate-300">Equipo</th><th className="p-3 text-sm font-semibold text-slate-300">Grupo Asignado</th><th className="p-3 text-sm font-semibold text-slate-300">Estado</th></tr></thead><tbody>{teams.map(team => (<tr key={team.id} className="border-b border-slate-700 hover:bg-slate-800 transition-colors"><td className="p-3">{team.name}</td><td className="p-3"><select value={team.groupId || ''} onChange={(e) => handleAssignGroupToTeam(team.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"><option value="">Sin Grupo</option>{groupOptions.map(gNum => <option key={gNum} value={gNum}>Grupo {getGroupLetter(gNum)}</option>)}</select></td><td className="p-3">{team.groupId && teamsPerGroup[team.groupId] > idealTeamsPerGroup && (<span className="text-yellow-400 flex items-center text-xs"><AlertTriangle size={14} className="mr-1" /> Sobrecargado</span>)}</td></tr>))}</tbody></table></div><div className="mt-6 flex justify-end"><button onClick={handleSaveGroups} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors"><Save className="mr-2 h-5 w-5" /> Guardar Grupos</button></div></Card><Card title="Asignación de Jugadores a Equipos" icon={UserPlus}><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-700/50"><tr className="border-b border-slate-600"><th className="p-3 text-sm font-semibold text-slate-300">Jugador</th><th className="p-3 text-sm font-semibold text-slate-300">Categoría</th><th className="p-3 text-sm font-semibold text-slate-300">Email</th><th className="p-3 text-sm font-semibold text-slate-300">Asignar Equipo</th><th className="p-3 text-sm font-semibold text-slate-300">Grupo</th><th className="p-3 text-sm font-semibold text-slate-300">Validación</th></tr></thead><tbody>{players.map(player => { const assignedTeam = teams.find(t => t.id === player.teamId); const validationInfo = assignedTeam ? categoryValidation[assignedTeam.id] : null; const isInvalid = validationInfo && !validationInfo.isValid; return (<tr key={player.id} className={`border-b border-slate-700 hover:bg-slate-800 transition-colors ${isInvalid ? 'bg-red-900/20' : ''}`}><td className="p-3">{player.fullName}</td><td className="p-3">{player.category}</td><td className="p-3">{player.email}</td><td className="p-3"><select value={player.teamId || ''} onChange={(e) => handleAssignTeamToPlayer(player.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"><option value="">Sin Equipo</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></td><td className="p-3 font-mono">{assignedTeam?.groupId ? `Grupo ${getGroupLetter(assignedTeam.groupId)}` : '—'}</td><td className="p-3">{isInvalid && (<span className="text-red-400 flex items-center text-xs"><AlertTriangle size={14} className="mr-1" /> Límite excedido</span>)}</td></tr>)})}</tbody></table></div><div className="mt-6 flex justify-end"><button onClick={handleSaveAndGenerateMatches} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors"><Save className="mr-2 h-5 w-5" /> Guardar Asignaciones y Generar Partidos</button></div></Card>
+        </div>);
+};
+
+    
 // --- PESTAÑA 2: GESTIÓN DE TORNEO ---
 const GestionTorneoTab = () => {
     const [matches, setMatches] = useState([]);
@@ -178,32 +224,7 @@ const GestionTorneoTab = () => {
         return () => socket.close();
     }, []);
     
-        const handleSaveMatch = async (matchId, updateData) => {
-        setIsSaving(true);
-        try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/${matchId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
-            });
-            if (!response.ok) {
-                const errorBody = await response.json();
-                throw new Error(errorBody.msg || "Error al guardar el partido");
-            }
-            const updatedMatchFromServer = await response.json();
-            setMatches(prevMatches =>
-                prevMatches.map(m => m.id === matchId ? { ...m, ...updatedMatchFromServer } : m)
-            );
-            setModalData(prevModalData => ({ ...prevModalData, ...updatedMatchFromServer }));
-        } catch (err) {
-            console.error("Error al guardar el partido:", err);
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const handleGenerateTiebreakers = async (tiedTeams, category) => {
+     const handleGenerateTiebreakers = async (tiedTeams, category) => {
         const team_ids = tiedTeams.map(t => t.id);
         setIsSaving(true);
         try {
@@ -381,36 +402,7 @@ const GestionTorneoTab = () => {
         </div>
     );
 };
-
-
-// --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
-const ConfiguracionTab = ({ onGenerationComplete }) => {
-    // ... Código de la pestaña de configuración (se omite por brevedad) ...
-    const [players, setPlayers] = useState([]); const [teams, setTeams] = useState([]); const [loading, setLoading] = useState(true); const [error, setError] = useState(null); const [newPlayer, setNewPlayer] = useState({ fullName: '', email: '', category: 'Intermedio' }); const [newTeamName, setNewTeamName] = useState(''); const [numberOfGroups, setNumberOfGroups] = useState(2);
-    useEffect(() => { const fetchData = async () => { try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
-    const handleAddPlayer = async (e) => { e.preventDefault(); if (!newPlayer.fullName || !newPlayer.email) return; try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/players`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name: newPlayer.fullName, email: newPlayer.email, category: newPlayer.category, }), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.msg || 'Error al registrar jugador.'); } const addedPlayer = await response.json(); setPlayers([...players, addedPlayer]); setNewPlayer({ fullName: '', email: '', category: 'Intermedio' }); } catch (err) { console.error(err); alert(err.message); } };
-    const handleAddTeam = async (e) => { e.preventDefault(); if (!newTeamName) return; try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newTeamName, tournament_id: 1 }), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.msg || 'Error al registrar equipo.'); } const addedTeam = await response.json(); setTeams([...teams, addedTeam]); setNewTeamName(''); } catch (err) { console.error(err); alert(err.message); } };
-    const handleSaveGroups = async () => { const groupAssignments = teams.map(team => ({ id: team.id, group_id: team.groupId })); try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams/assign-groups`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(groupAssignments) }); if (!response.ok) throw new Error('Error al guardar los grupos.'); alert('Grupos guardados exitosamente!'); } catch (err) { console.error(err); alert(err.message); } };
-    const handleAssignTeamToPlayer = (playerId, teamId) => { setPlayers(players.map(p => p.id === playerId ? { ...p, teamId: teamId ? parseInt(teamId, 10) : null } : p)); };
-    const handleAssignGroupToTeam = (teamId, groupId) => { setTeams(teams.map(t => t.id === teamId ? { ...t, groupId: groupId ? parseInt(groupId, 10) : null } : t)); };
-    const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
-    const groupOptions = useMemo(() => Array.from({ length: numberOfGroups }, (_, i) => i + 1), [numberOfGroups]);
-    const idealTeamsPerGroup = useMemo(() => numberOfGroups > 0 ? Math.ceil(teams.length / numberOfGroups) : 0, [teams.length, numberOfGroups]);
-    const groupSummary = useMemo(() => { const summary = {}; groupOptions.forEach(groupNum => { const groupLetter = getGroupLetter(groupNum); if (groupLetter) { summary[groupLetter] = teams.filter(t => t.groupId === groupNum).map(t => t.name); }}); return summary; }, [teams, groupOptions]);
-    const teamsPerGroup = useMemo(() => { const counts = {}; groupOptions.forEach(groupNum => { counts[groupNum] = teams.filter(t => t.groupId === groupNum).length; }); return counts; }, [teams, groupOptions]);
-    const categoryValidation = useMemo(() => { const validation = {}; teams.forEach(team => { const teamPlayers = players.filter(p => p.teamId === team.id); const categoryCount = teamPlayers.reduce((acc, player) => { acc[player.category] = (acc[player.category] || 0) + 1; return acc; }, {}); validation[team.id] = { isValid: Object.values(categoryCount).every(count => count <= 2), counts: categoryCount }; }); return validation; }, [players, teams]);
-    const handleSaveAndGenerateMatches = async () => { try { setLoading(true); await handleSaveGroups(); const playerAssignments = players.map(player => ({ player_id: player.id, team_id: player.teamId })); await fetch(`${import.meta.env.VITE_API_URL}/api/players/assign-teams`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(playerAssignments) }); const generateResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/generate-round-robin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tournament_id: 1 }) }); if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.'); alert('¡Asignaciones guardadas y partidos generados exitosamente!'); onGenerationComplete(); } catch (err) { console.error(err); alert(err.message); } finally { setLoading(false); } };
-    if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando datos...</span></div>;
-    if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
-    return ( <div className="space-y-8"><div className="grid grid-cols-1 lg:grid-cols-2 gap-8"><Card title="Registrar Jugador" icon={UserPlus}><form onSubmit={handleAddPlayer} className="space-y-4"><input required type="text" placeholder="Nombre Completo" value={newPlayer.fullName} onChange={(e) => setNewPlayer({...newPlayer, fullName: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" /><input required type="email" placeholder="Email del Jugador" value={newPlayer.email} onChange={(e) => setNewPlayer({...newPlayer, email: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" /><select value={newPlayer.category} onChange={(e) => setNewPlayer({...newPlayer, category: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none"><option>Intermedio</option><option>Intermedio Fuerte</option><option>Avanzado</option></select><button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">Registrar</button></form></Card><Card title="Registrar Equipo" icon={ShieldPlus}><form onSubmit={handleAddTeam} className="space-y-4"><input required type="text" placeholder="Nombre del Equipo" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" /><button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">Registrar</button></form></Card></div><Card title="Asignación de Grupos (Round Robin)" icon={Users}><div className="bg-slate-900/50 p-4 rounded-md mb-4 flex flex-wrap items-center justify-between gap-4 text-sm text-slate-300"><p><strong>{teams.length}</strong> equipos registrados.</p><div className="flex items-center gap-2"><label>Crear</label><input type="number" min="1" max="10" value={numberOfGroups} onChange={(e) => setNumberOfGroups(parseInt(e.target.value))} className="w-16 bg-slate-700 p-2 rounded text-center border border-slate-600"/><label>grupos.</label></div><p>Equipos por grupo (ideal): <strong>{idealTeamsPerGroup > 0 ? `~${idealTeamsPerGroup.toFixed(1)}` : 'N/A'}</strong></p></div><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-700/50"><tr className="border-b border-slate-600"><th className="p-3 text-sm font-semibold text-slate-300">Equipo</th><th className="p-3 text-sm font-semibold text-slate-300">Grupo Asignado</th><th className="p-3 text-sm font-semibold text-slate-300">Estado</th></tr></thead><tbody>{teams.map(team => (<tr key={team.id} className="border-b border-slate-700 hover:bg-slate-800 transition-colors"><td className="p-3">{team.name}</td><td className="p-3"><select value={team.groupId || ''} onChange={(e) => handleAssignGroupToTeam(team.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"><option value="">Sin Grupo</option>{groupOptions.map(gNum => <option key={gNum} value={gNum}>Grupo {getGroupLetter(gNum)}</option>)}</select></td><td className="p-3">{team.groupId && teamsPerGroup[team.groupId] > idealTeamsPerGroup && (<span className="text-yellow-400 flex items-center text-xs"><AlertTriangle size={14} className="mr-1" /> Sobrecargado</span>)}</td></tr>))}</tbody></table></div><div className="mt-6 flex justify-end"><button onClick={handleSaveGroups} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors"><Save className="mr-2 h-5 w-5" /> Guardar Grupos</button></div></Card><Card title="Asignación de Jugadores a Equipos" icon={UserPlus}><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-700/50"><tr className="border-b border-slate-600"><th className="p-3 text-sm font-semibold text-slate-300">Jugador</th><th className="p-3 text-sm font-semibold text-slate-300">Categoría</th><th className="p-3 text-sm font-semibold text-slate-300">Email</th><th className="p-3 text-sm font-semibold text-slate-300">Asignar Equipo</th><th className="p-3 text-sm font-semibold text-slate-300">Grupo</th><th className="p-3 text-sm font-semibold text-slate-300">Validación</th></tr></thead><tbody>{players.map(player => { const assignedTeam = teams.find(t => t.id === player.teamId); const validationInfo = assignedTeam ? categoryValidation[assignedTeam.id] : null; const isInvalid = validationInfo && !validationInfo.isValid; return (<tr key={player.id} className={`border-b border-slate-700 hover:bg-slate-800 transition-colors ${isInvalid ? 'bg-red-900/20' : ''}`}><td className="p-3">{player.fullName}</td><td className="p-3">{player.category}</td><td className="p-3">{player.email}</td><td className="p-3"><select value={player.teamId || ''} onChange={(e) => handleAssignTeamToPlayer(player.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"><option value="">Sin Equipo</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></td><td className="p-3 font-mono">{assignedTeam?.groupId ? `Grupo ${getGroupLetter(assignedTeam.groupId)}` : '—'}</td><td className="p-3">{isInvalid && (<span className="text-red-400 flex items-center text-xs"><AlertTriangle size={14} className="mr-1" /> Límite excedido</span>)}</td></tr>)})}</tbody></table></div><div className="mt-6 flex justify-end"><button onClick={handleSaveAndGenerateMatches} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors"><Save className="mr-2 h-5 w-5" /> Guardar Asignaciones y Generar Partidos</button></div></Card>
-        </div>);
-};
-
-
-
-
-
-    
+ 
 // --- PESTAÑA 4: STANDING ---
 const StandingTab = ({ teams, matches, eliminationCount }) => {
     const calculateStats = (teamMatches, teamId) => {
@@ -699,12 +691,37 @@ export default function TournamentAdminPage() {
         };
         return () => socket.close();
     }, []);
-    
+
     const handleGenerationComplete = () => {
         fetchData(); // Recarga todos los datos después de generar partidos
         setActiveTab('gestion');
     };
-    
+        
+     const handleSaveMatch = async (matchId, updateData) => {
+        setIsSaving(true);
+        try {
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(errorBody.msg || "Error al guardar el partido");
+            }
+            const updatedMatchFromServer = await response.json();
+            setMatches(prevMatches =>
+                prevMatches.map(m => m.id === matchId ? { ...m, ...updatedMatchFromServer } : m)
+            );
+            setModalData(prevModalData => ({ ...prevModalData, ...updatedMatchFromServer }));
+        } catch (err) {
+            console.error("Error al guardar el partido:", err);
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+ 
     return (
         <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-screen-2xl mx-auto">
