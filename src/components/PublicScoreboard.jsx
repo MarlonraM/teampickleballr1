@@ -55,21 +55,60 @@ const styles = {
     },
 };
 
-// --- Componente para un solo Aviso ---
-setAnnouncements(prev => [
-  ...prev,
-  {
-    id: match.id,
-    court: court_name,
-    category,
-    team1: team1_name,
-    team2: team2_name,
-    player1_1: match.team1_player1_name,
-    player1_2: match.team1_player2_name,
-    player2_1: match.team2_player1_name,
-    player2_2: match.team2_player2_name
-  }
-]);
+const MyScoreboard = () => {
+  const [announcements, setAnnouncements] = useState([]);
+
+  const addAnnouncement = (match) => {
+    const newAnnouncement = {
+      id: match.id,
+      jsx: (
+        <>
+          <div className="text-lg font-bold">Cancha {match.court_name}</div>
+          <div className="text-md">{match.team1_name} vs {match.team2_name}</div>
+          <div className="text-sm italic text-blue-200">{match.category}</div>
+          <div className="text-sm">{match.team1_player1_name} / {match.team1_player2_name}</div>
+          <div className="text-sm">{match.team2_player1_name} / {match.team2_player2_name}</div>
+          <div className="mt-2 italic">¡Favor presentarse en cancha {match.court_name}!</div>
+        </>
+      )
+    };
+
+    setAnnouncements(prev => [...prev, newAnnouncement]);
+  };
+
+  const removeAnnouncement = (id) => {
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
+  };
+
+  return (
+    <div>
+      <div style={styles.announcementsContainer}>
+        {announcements.map((a) => (
+          <Announcement
+            key={a.id}
+            message={a}
+            onExpire={() => removeAnnouncement(a.id)}
+          />
+        ))}
+      </div>
+
+      {/* Simulación de agregar aviso (prueba) */}
+      <button onClick={() => addAnnouncement({
+        id: 1,
+        court_name: '2',
+        category: 'Mixta A',
+        team1_name: 'Titanes',
+        team2_name: 'Furias',
+        team1_player1_name: 'Ana',
+        team1_player2_name: 'Luis',
+        team2_player1_name: 'Carlos',
+        team2_player2_name: 'Marta',
+      })}>
+        Lanzar aviso de prueba
+      </button>
+    </div>
+  );
+};
 
 const Announcement = ({ message, onExpire }) => {
     useEffect(() => {
