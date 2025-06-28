@@ -572,39 +572,49 @@ const JuegosEnCursoTab = () => {
         );
     };
     
-    const Section = ({ title, children }) => (
-        <div>
-            <h4 className="font-bold text-slate-400 text-xs mb-1.5 uppercase tracking-wider">{title}</h4>
-            <div className="space-y-1.5">{children}</div>
-        </div>
-    );
+const Section = ({ title, children }) => (
+  <div>
+    <h4 className="font-bold text-slate-400 text-xs mb-1.5 uppercase tracking-wider">{title}</h4>
+    <div className="space-y-1.5">{children}</div>
+  </div>
+);
+return (
+  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
+    {allData.courts.map(court => {
+      const data = (allData.matches || []).filter(m => m.court_id === court.id)
+        .reduce((acc, m) => {
+          if (m.status === 'live') acc.live.push(m);
+          else if (m.status === 'upcoming') acc.upcoming.push(m);
+          else if (m.status === 'played') acc.played.push(m);
+          return acc;
+        }, { live: [], upcoming: [], played: [] });
 
-    return (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-6">
-            {courts.map(court => {
-                const data = matchesByCourt[court.id] || { live: [], upcoming: [], played: [] };
-                return (
-                    <div key={court.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 flex flex-col space-y-4">
-                        <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3>
-                        <div className="space-y-4">
-                            <Section title="En Vivo">
-                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 h-20 flex items-center justify-center rounded-lg text-slate-500 text-sm">VACIA</div>}
-                            </Section>
-                            <Section title="Próximos">
-                                {data.upcoming.length > 0 ? data.upcoming.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos próximos.</p>}
-                            </Section>
-                            <Section title="Jugados Recientemente">
-                               {data.played.length > 0 ? data.played.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos recientes.</p>}
-                            </Section>
-                        </div>
-                    </div>
-                )
-            })}
+      return (
+        <div key={court.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 flex flex-col space-y-4">
+          <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3>
+          <div className="space-y-4">
+            <Section title="En Vivo">
+              {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : (
+                <div className="bg-slate-800 h-[106px] flex items-center justify-center rounded-lg text-slate-500 text-sm">VACIA</div>
+              )}
+            </Section>
+            <Section title="Próximos">
+              {data.upcoming.length > 0 ? data.upcoming.map(m => <MatchCard key={m.id} match={m} />) : (
+                <p className="text-xs text-slate-500 text-center">No hay juegos próximos.</p>
+              )}
+            </Section>
+            <Section title="Jugados Recientemente">
+              {data.played.length > 0 ? data.played.map(m => <MatchCard key={m.id} match={m} />) : (
+                <p className="text-xs text-slate-500 text-center">No hay juegos recientes.</p>
+              )}
+            </Section>
+          </div>
         </div>
-    );
-};
-
-// --- COMPONENTE PRINCIPAL ---
+      );
+    })}
+  </div>
+);
+                
 export default function TournamentAdminPage() {
     const [activeTab, setActiveTab] = useState('configuracion');
     const [eliminationCount, setEliminationCount] = useState({});
