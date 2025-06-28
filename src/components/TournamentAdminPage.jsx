@@ -65,6 +65,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
 };
 
 // --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
+// --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
 const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
     const [matches, setMatches] = useState(initialMatches);
     const [filters, setFilters] = useState({ id: '', teams: '', category: '', status: '', court: '' });
@@ -88,6 +89,11 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
         const score1 = parseInt(team1_score, 10);
         const score2 = parseInt(team2_score, 10);
 
+        if (isNaN(score1) || isNaN(score2)) {
+            setEditingScore(null);
+            return;
+        }
+        
         if (Math.abs(score1 - score2) < 2 && (score1 >= 11 || score2 >= 11)) {
             alert('La diferencia de puntos debe ser de al menos 2 para finalizar el partido.');
             setEditingScore(null); // Cancela la edición
@@ -132,80 +138,83 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData }) => {
     const filteredMatches = useMemo(() => {
         return matches.filter(match => 
             (match.id.toString().includes(filters.id)) &&
-            (match.team1_name.toLowerCase().includes(filters.teams.toLowerCase()) || match.team2_name.toLowerCase().includes(filters.teams.toLowerCase())) &&
-            (match.category.toLowerCase().includes(filters.category.toLowerCase())) &&
-            (match.status.toLowerCase().includes(filters.status.toLowerCase())) &&
+            ((match.team1_name || '').toLowerCase().includes(filters.teams.toLowerCase()) || (match.team2_name || '').toLowerCase().includes(filters.teams.toLowerCase())) &&
+            ((match.category || '').toLowerCase().includes(filters.category.toLowerCase())) &&
+            ((match.status || '').toLowerCase().includes(filters.status.toLowerCase())) &&
             (filters.court === '' || match.court_id === parseInt(filters.court))
         );
     }, [matches, filters]);
     
     const getStatusTag = (status) => {
+        const baseClasses = "px-2 py-1 text-xs font-semibold rounded-full";
         switch (status) {
-            case 'finalizado': return <Tag colorScheme="green">Finalizado</Tag>;
-            case 'en_vivo': return <Tag colorScheme="red">En Vivo</Tag>;
-            case 'asignado': return <Tag colorScheme="blue">Asignado</Tag>;
-            default: return <Tag colorScheme="gray">Pendiente</Tag>;
+            case 'finalizado': return <span className={`${baseClasses} bg-green-500/20 text-green-300`}>Finalizado</span>;
+            case 'en_vivo': return <span className={`${baseClasses} bg-red-500/20 text-red-300`}>En Vivo</span>;
+            case 'asignado': return <span className={`${baseClasses} bg-blue-500/20 text-blue-300`}>Asignado</span>;
+            default: return <span className={`${baseClasses} bg-slate-600/50 text-slate-300`}>Pendiente</span>;
         }
     };
 
     return (
         <Card title="Lista Completa de Partidos" icon={ListOrdered}>
-            <TableContainer>
-                <Table variant="simple" size="sm">
-                    <Thead>
-                        <Tr>
-                            <Th>ID</Th><Th>Equipos</Th><Th>Categoría</Th><Th>Estado</Th><Th>Cancha</Th><Th>Marcador</Th><Th>Duración</Th><Th>Acciones</Th>
-                        </Tr>
-                        <Tr>
-                            <Th><Input size="xs" name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar ID..." /></Th>
-                            <Th><Input size="xs" name="teams" value={filters.teams} onChange={handleFilterChange} placeholder="Filtrar Equipo..." /></Th>
-                            <Th><Input size="xs" name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar Categoría..." /></Th>
-                            <Th><Input size="xs" name="status" value={filters.status} onChange={handleFilterChange} placeholder="Filtrar Estado..." /></Th>
-                            <Th>
-                                <Select size="xs" name="court" value={filters.court} onChange={handleFilterChange} placeholder="Todas">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                    <thead className="bg-slate-700/50">
+                        <tr>
+                            <th className="p-3">ID</th><th className="p-3">Equipos</th><th className="p-3">Categoría</th><th className="p-3">Estado</th><th className="p-3">Cancha</th><th className="p-3">Marcador</th><th className="p-3">Duración</th><th className="p-3">Acciones</th>
+                        </tr>
+                        <tr>
+                            <th className="p-2"><input size="xs" name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2"><input size="xs" name="teams" value={filters.teams} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2"><input size="xs" name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2"><input size="xs" name="status" value={filters.status} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2">
+                                <select size="xs" name="court" value={filters.court} onChange={handleFilterChange} className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs">
+                                    <option value="">Todas</option>
                                     {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </Select>
-                            </Th>
-                            <Th></Th><Th></Th><Th></Th>
-                        </Tr>
-                    </Thead>
-                    <Tbody>
+                                </select>
+                            </th>
+                            <th className="p-2"></th><th className="p-2"></th><th className="p-2"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
                         {filteredMatches.map(match => (
-                            <Tr key={match.id}>
-                                <Td>{match.id}</Td>
-                                <Td>{match.team1_name} vs {match.team2_name}</Td>
-                                <Td>{match.category}</Td>
-                                <Td>{getStatusTag(match.status)}</Td>
-                                <Td>
-                                    <Select size="xs" value={match.court_id || ''} onChange={(e) => handleCourtChange(match.id, e.target.value)} placeholder="Sin Asignar">
+                            <tr key={match.id} className="border-b border-slate-700 hover:bg-slate-800/50">
+                                <td className="p-3">{match.id}</td>
+                                <td className="p-3">{match.team1_name} vs {match.team2_name}</td>
+                                <td className="p-3">{match.category}</td>
+                                <td className="p-3">{getStatusTag(match.status)}</td>
+                                <td className="p-3">
+                                    <select size="xs" value={match.court_id || ''} onChange={(e) => handleCourtChange(match.id, e.target.value)} className="w-full bg-slate-700 p-1 rounded-md border border-slate-600 text-xs">
+                                        <option value="">Sin Asignar</option>
                                         {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </Select>
-                                </Td>
-                                <Td>
+                                    </select>
+                                </td>
+                                <td className="p-3">
                                     {editingScore?.id === match.id ? (
-                                        <HStack>
-                                            <Input size="xs" w="12" type="number" value={editingScore.team1_score} onChange={(e) => handleScoreChange(match.id, 'team1_score', e.target.value)} />
-                                            <Input size="xs" w="12" type="number" value={editingScore.team2_score} onChange={(e) => handleScoreChange(match.id, 'team2_score', e.target.value)} onBlur={() => handleScoreBlur(match.id)} autoFocus />
-                                        </HStack>
+                                        <div className="flex gap-1">
+                                            <input className="w-12 bg-slate-700 p-1 rounded-md text-center" type="number" value={editingScore.team1_score} onChange={(e) => handleScoreChange(match.id, 'team1_score', e.target.value)} />
+                                            <input className="w-12 bg-slate-700 p-1 rounded-md text-center" type="number" value={editingScore.team2_score} onChange={(e) => handleScoreChange(match.id, 'team2_score', e.target.value)} onBlur={() => handleScoreBlur(match.id)} autoFocus />
+                                        </div>
                                     ) : (
-                                        <Text onClick={() => setEditingScore({ id: match.id, team1_score: match.team1_score || 0, team2_score: match.team2_score || 0 })} cursor="pointer">
+                                        <div onClick={() => setEditingScore({ id: match.id, team1_score: match.team1_score || 0, team2_score: match.team2_score || 0 })} className="cursor-pointer font-mono p-1">
                                             {match.team1_score ?? '-'} / {match.team2_score ?? '-'}
-                                        </Text>
+                                        </div>
                                     )}
-                                </Td>
-                                <Td><HStack><Icon as={Clock} size="14" /><Text>{calculateDuration(match.start_time, match.end_time)}</Text></HStack></Td>
-                                <Td>
+                                </td>
+                                <td className="p-3"><div className="flex items-center gap-2"><Clock size={14} /><p>{calculateDuration(match.start_time, match.end_time)}</p></div></td>
+                                <td className="p-3">
                                     <Link to={`/match/${match.id}`} target="_blank">
-                                        <Button size="xs" variant="outline" colorScheme="cyan" leftIcon={<Icon as={ExternalLink} size="14"/>}>Scorekeeper</Button>
+                                        <button className="px-2 py-1 text-xs bg-cyan-600 hover:bg-cyan-700 rounded-md flex items-center gap-1"><ExternalLink size={14}/> Scorekeeper</button>
                                     </Link>
-                                </Td>
-                            </Tr>
+                                </td>
+                            </tr>
                         ))}
                     </Tbody>
-                </Table>
-            </TableContainer>
+                </table>
+            </div>
         </Card>
-    )
+    );
 };
 
 
