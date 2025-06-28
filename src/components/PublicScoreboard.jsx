@@ -175,7 +175,6 @@ const Announcement = ({ announcement, onExpire }) => {
     );
 };
 
-
 function PublicScoreboard() {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
