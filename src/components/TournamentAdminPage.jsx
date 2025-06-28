@@ -536,45 +536,32 @@ const JuegosEnCursoTab = () => {
     // --- Componente MatchCard (Tarjeta de Partido) ---
     const MatchCard = ({ match }) => {
         const winner = match.winner_id ? (match.winner_id === match.team1_id ? 'team1' : 'team2') : null;
-        const isFirstServeOfGame = !match.first_side_out_done;
         return (
-            <div className={`bg-slate-800 p-2.5 rounded-lg border border-slate-700`}> {/* Padding ligeramente reducido */}
+            <div className={`bg-slate-800 p-2.5 rounded-lg border border-slate-700`}>
                 <div className="text-center text-xs font-bold text-cyan-400 mb-2">{match.category}</div>
-                <div className="space-y-1.5"> {/* Espaciado vertical más compacto */}
-                    {/* Fila del Equipo 1 */}
-                    <div className={`flex items-center rounded-md ${winner === 'team1' ? 'bg-green-800/30' : ''}`}>
-                        {/* Contenedor del nombre del equipo y jugadores - flex-grow para ocupar espacio, min-w-0 para permitir truncar */}
-                        <div className="flex-grow min-w-0"> 
+                <div className="space-y-1.5">
+                     <div className={`flex items-center rounded-md ${winner === 'team1' ? 'bg-green-800/30' : ''}`}>
+                        <div className="flex-grow min-w-0"> 
                             <div className={`text-sm font-semibold ${winner === 'team1' ? 'text-amber-400' : ''}`}>
                                 {winner === 'team1' && '🏆 '}{match.team1_name}
                             </div>
-                            <div className="text-xs text-slate-400 truncate">
-                                {match.team1_player1_name} / {match.team1_player2_name}
-                            </div>
-                        </div>
-                        {/* Contenedor para puntos de servicio, divisor y score - flex-shrink-0 para evitar que se encoja */}
-                        <div className="flex items-center justify-end gap-1 flex-shrink-0"> {/* justify-end para alinear a la derecha, gap reducido */}
-                            <ServiceDots isServingTeam={match.server_team_id === match.team1_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
-                            {/* Divisor más corto y con margen horizontal mínimo */}
-                            <div className="w-px h-5 bg-slate-600 mx-0.5"></div> 
-                            {/* Score más pequeño y con ancho fijo para mantener alineación */}
-                            <span className="font-mono font-bold text-base w-6 text-right">{match.team1_score ?? '-'}</span>
-                        </div>
-                    </div>
-                    {/* Fila del Equipo 2 - Se aplican los mismos ajustes */}
-                    <div className={`flex items-center rounded-md ${winner === 'team2' ? 'bg-green-800/30' : ''}`}>
-                        <div className="flex-grow min-w-0">
-                            <div className={`text-sm font-semibold ${winner === 'team2' ? 'text-amber-400' : ''}`}>
-                                {winner === 'team2' && '� '}{match.team2_name}
-                            </div>
-                            <div className="text-xs text-slate-400 truncate">
-                                {match.team2_player1_name} / {match.team2_player2_name}
-                            </div>
+                            <div className="text-xs text-slate-400 truncate">{match.team1_player1_name} / {match.team1_player2_name}</div>
                         </div>
                         <div className="flex items-center justify-end gap-1 flex-shrink-0">
-                            <ServiceDots isServingTeam={match.server_team_id === match.team2_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
-                            <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
-                            <span className="font-mono font-bold text-base w-6 text-right">{match.team2_score ?? '-'}</span>
+                           <div className="w-px h-5 bg-slate-600 mx-0.5"></div> 
+                           <span className="font-mono font-bold text-base w-6 text-right">{match.team1_score ?? '-'}</span>
+                        </div>
+                    </div>
+                    <div className={`flex items-center rounded-md ${winner === 'team2' ? 'bg-green-800/30' : ''}`}>
+                        <div className="flex-grow min-w-0">
+                           <div className={`text-sm font-semibold ${winner === 'team2' ? 'text-amber-400' : ''}`}>
+                               {winner === 'team2' && '🏆 '}{match.team2_name}
+                           </div>
+                           <div className="text-xs text-slate-400 truncate">{match.team2_player1_name} / {match.team2_player2_name}</div>
+                        </div>
+                        <div className="flex items-center justify-end gap-1 flex-shrink-0">
+                           <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
+                           <span className="font-mono font-bold text-base w-6 text-right">{match.team2_score ?? '-'}</span>
                         </div>
                     </div>
                 </div>
@@ -582,25 +569,23 @@ const JuegosEnCursoTab = () => {
         );
     };
     
-    // --- Componente Section (Contenedor de Secciones dentro de la columna de cancha) ---
     const Section = ({ title, children }) => (
         <div>
-            <h4 className="font-bold text-slate-400 text-xs mb-1.5 uppercase tracking-wider">{title}</h4> {/* mb reducido */}
-            <div className="space-y-1.5">{children}</div> {/* space-y reducido */}
+            <h4 className="font-bold text-slate-400 text-xs mb-1.5 uppercase tracking-wider">{title}</h4>
+            <div className="space-y-1.5">{children}</div>
         </div>
     );
 
     return (
-        // Contenedor principal de las canchas - w-72 para hacer las columnas ligeramente más estrechas
-        <div className="flex overflow-x-auto space-x-4 pb-4"> {/* space-x reducido */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
             {courts.map(court => {
                 const data = matchesByCourt[court.id] || { live: [], upcoming: [], played: [] };
                 return (
-                    <div key={court.id} className="w-72 flex-shrink-0 bg-slate-900/50 p-3 rounded-lg border border-slate-700"> {/* p y w reducidos */}
-                        <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3> {/* mb reducido */}
-                        <div className="space-y-4"> {/* space-y reducido */}
+                    <div key={court.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 flex flex-col space-y-4">
+                        <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3>
+                        <div className="space-y-4">
                             <Section title="En Vivo">
-                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 h-20 flex items-center justify-center rounded-lg text-slate-500 text-sm">VACIA</div>} {/* h reducido, texto más pequeño */}
+                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 h-20 flex items-center justify-center rounded-lg text-slate-500 text-sm">VACIA</div>}
                             </Section>
                             <Section title="Próximos">
                                 {data.upcoming.length > 0 ? data.upcoming.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos próximos.</p>}
