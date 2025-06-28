@@ -954,6 +954,7 @@ const AvisosTab = ({ allData }) => {
     const [manualMessage, setManualMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [sentWhatsApp, setSentWhatsApp] = useState({});
+    const [sentAnnouncements, setSentAnnouncements] = useState({});
 
     const assignedMatches = useMemo(() => allData.matches.filter(m => m.status === 'asignado'), [allData.matches]);
     
