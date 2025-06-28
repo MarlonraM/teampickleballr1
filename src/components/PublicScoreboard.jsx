@@ -198,19 +198,19 @@ function PublicScoreboard() {
 
         fetchData();
 
-        const socket = new WebSocket(WS_URL);
+        const socket = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
         socket.onopen = () => console.log("Tablero público conectado al WebSocket.");
         socket.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            if (data.type === 'SCORE_UPDATE') {
-                setMatches(prev => prev.map(m => m.id === parseInt(data.matchId, 10) ? { ...m, ...data.payload } : m));
-            }
-            if (data.type === 'ANNOUNCEMENT_NEW') {
-                setAnnouncements(prev => [...prev, data.payload]);
+            const updatedData = JSON.parse(event.data);
+            if (updatedData.type === 'SCORE_UPDATE') {
+                setMatches(prevMatches =>
+                    prevMatches.map(m => m.id === parseInt(updatedData.matchId, 10) ? { ...m, ...updatedData.payload } : m)
+                );
             }
         };
         return () => socket.close();
     }, []);
+
 
     const removeAnnouncement = (id) => {
         setAnnouncements(prev => prev.filter(ann => ann.id !== id));
