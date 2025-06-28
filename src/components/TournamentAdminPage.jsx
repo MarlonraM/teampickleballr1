@@ -1000,27 +1000,26 @@ export default function TournamentAdminPage() {
         setIsConfigOpen(false);
     };
 
-    const handleSaveEditedMatch = async (matchId, updateData) => {
-        setIsSaving(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
-            });
-            if (!response.ok) {
-                const errorBody = await response.json();
-                throw new Error(errorBody.msg || "Error al guardar el partido");
-            }
-            await refreshData(); 
-            setEditingMatch(null); 
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
+const handleSaveEditedMatch = async (matchId, updateData) => {
+    setIsSaving(true);
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(updateData)
+        });
+        if (!response.ok) {
+            const errorBody = await response.json();
+            throw new Error(errorBody.msg || "Error al guardar el partido");
         }
-    };
-
+        await fetchData(); // <--- ¡CORRECCIÓN!
+        setEditingMatch(null); 
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        setIsSaving(false);
+    }
+};
     
      const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
