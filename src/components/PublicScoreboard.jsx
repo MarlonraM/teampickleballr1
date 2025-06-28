@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Megaphone } from 'lucide-react'; // Asumiendo que usas lucide-react
+import { Megaphone } from 'lucide-react'; // Asegúrate de que lucide-react esté disponible
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 
 // --- Estilos para el tablero y los nuevos avisos ---
 const styles = {
+    // ... (tus estilos existentes para el tablero) ...
     container: { padding: '20px', backgroundColor: '#1a1a1a', color: 'white', fontFamily: "'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif", minHeight: '100vh', position: 'relative' },
     title: { textAlign: 'center', color: '#61DAFB', marginBottom: '40px', fontWeight: '300', fontSize: '2.5em' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '30px' },
@@ -26,20 +27,108 @@ const styles = {
     divider: { height: '1px', backgroundColor: '#444', border: 'none', margin: '12px 0' },
     verticalDivider: { width: '2px', height: '35px', backgroundColor: '#444' },
     
-    announcementsContainer: { position: 'fixed', top: '20px', left: '50%', transform: 'translateX(-50%)', zIndex: 1000, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', width: '90%', maxWidth: '800px' },
-    announcementBarGeneral: { width: '100%', backgroundColor: '#0d6efd', color: 'white', padding: '12px 20px', borderRadius: '8px', textAlign: 'center', fontSize: '1em', fontWeight: 'bold', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
-    announcementBarGame: { width: '100%', maxWidth: '450px', backgroundColor: '#282c34', color: 'white', padding: '16px', borderRadius: '12px', border: '2px solid #0d6efd', boxShadow: '0 4px 12px rgba(0,0,0,0.3)' },
-    announcementHeader: { display: 'flex', alignItems: 'center', borderBottom: '1px solid #444', paddingBottom: '8px', marginBottom: '12px' },
-    announcementTitle: { fontSize: '1.3em', fontWeight: 'bold', marginLeft: '10px' },
-    announcementBody: { textAlign: 'center' },
-    announcementTeams: { fontSize: '1.5em', fontWeight: 'bold', margin: '6px 0' },
-    announcementCategory: { fontSize: '0.9em', color: '#aaa' },
-    announcementPlayers: { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '12px', fontSize: '0.9em', textAlign: 'left' },
-    announcementPlayersTeam: { fontWeight: 'bold' },
-    announcementPlayersList: { color: '#ccc' },
-    announcementFooter: { fontSize: '1em', fontStyle: 'italic', marginTop: '12px', color: '#0d6efd' }
+    // --- NUEVOS ESTILOS PARA LA BARRA DE AVISOS ---
+    announcementsContainer: {
+        position: 'fixed',
+        top: '20px',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '10px',
+        width: '90%',
+        maxWidth: '800px',
+    },
+    announcementBarGeneral: {
+        width: '100%',
+        backgroundColor: '#0d6efd', // Un azul vibrante
+        color: 'white',
+        padding: '12px 20px',
+        borderRadius: '8px',
+        textAlign: 'center',
+        fontSize: '1em',
+        fontWeight: 'bold',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    },
+    announcementBarGame: {
+        backgroundColor: '#282c34', // Un gris oscuro como el matchCard
+        color: 'white',
+        padding: '16px',
+        borderRadius: '12px',
+        border: '2px solid #0d6efd', // Borde azul para destacar
+        boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+        width: '100%',
+        maxWidth: '450px',
+    },
+    announcementHeader: {
+        display: 'flex',
+        alignItems: 'center',
+        borderBottom: '1px solid #444',
+        paddingBottom: '8px',
+        marginBottom: '12px',
+    },
+    announcementTitle: {
+        fontSize: '1.3em',
+        fontWeight: 'bold',
+        marginLeft: '10px',
+        color: '#61DAFB'
+    },
+    announcementBody: {
+        textAlign: 'center',
+    },
+    announcementTeams: {
+        fontSize: '1.5em',
+        fontWeight: 'bold',
+        margin: '6px 0',
+    },
+    announcementCategory: {
+        fontSize: '0.9em',
+        fontStyle: 'italic',
+        color: '#ccc',
+    },
+    announcementPlayers: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '16px',
+        marginTop: '12px',
+        fontSize: '0.95em',
+        textAlign: 'left',
+    },
+    announcementPlayersTeam: {
+        fontWeight: 'bold',
+        color: '#FF8A80' // Color para nombres de equipo
+    },
+    announcementPlayersList: {
+        color: '#eee' // Color para nombres de jugadores
+    },
+    announcementFooter: {
+        fontSize: '1em',
+        fontStyle: 'italic',
+        marginTop: '12px',
+        color: '#80CBC4' // Color para el mensaje final
+    }
 };
 
+const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
+    // Doble punto: se activan según el número de servidor y si ya hubo side out
+    const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
+    const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
+
+    return (
+        <div style={styles.serviceDotsContainer}>
+            <div style={{ 
+                ...styles.serviceDot,
+                ...(firstDotActive ? styles.serviceDotActive : {}) 
+            }}></div>
+            <div style={{ 
+                ...styles.serviceDot,
+                ...(secondDotActive ? styles.serviceDotActive : {}) 
+            }}></div>
+        </div>
+    );
+};
 
 const Announcement = ({ announcement, onExpire }) => {
     useEffect(() => {
@@ -49,6 +138,7 @@ const Announcement = ({ announcement, onExpire }) => {
         return () => clearTimeout(timer);
     }, [onExpire]);
 
+    // Renderizado para un aviso de partido
     if (announcement.type === 'game') {
         return (
             <div style={styles.announcementBarGame}>
@@ -70,17 +160,21 @@ const Announcement = ({ announcement, onExpire }) => {
                         </div>
                     </div>
                 </div>
-                 <p style={styles.announcementFooter}>Favor de aproximarse a la cancha.</p>
+                 <p style={styles.announcementFooter}>
+                    ⚠️ Favor de aproximarse a la cancha.
+                </p>
             </div>
         );
     }
 
+    // Renderizado para un aviso general
     return (
         <div style={styles.announcementBarGeneral}>
             {announcement.text}
         </div>
     );
 };
+
 
 function PublicScoreboard() {
     const [matches, setMatches] = useState([]);
@@ -95,7 +189,6 @@ function PublicScoreboard() {
                 if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
                 const data = await response.json();
                 setMatches(data);
-                setError(null);
             } catch (err) {
                 setError(err.message);
             } finally {
@@ -139,7 +232,6 @@ function PublicScoreboard() {
                     />
                 ))}
             </div>
-
       <h1 style={styles.title}>Tablero de Puntuaciones en Vivo</h1>
       {liveMatches.length > 0 ? (
         <div style={styles.grid}>
