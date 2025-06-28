@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
+
 const styles = {
+  // ... mismo contenido de styles (omitido aquí por brevedad) ...
   announcementsContainer: {
     position: 'fixed',
     top: '20px',
@@ -24,12 +28,14 @@ const styles = {
     fontSize: '1em',
     fontWeight: 'bold',
     boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+    opacity: 1,
+    transition: 'opacity 0.5s ease-out',
   },
 };
 
 const Announcement = ({ message, onExpire }) => {
   useEffect(() => {
-    const timer = setTimeout(() => onExpire(), 5000);
+    const timer = setTimeout(onExpire, 5000);
     return () => clearTimeout(timer);
   }, [onExpire]);
 
@@ -55,58 +61,138 @@ const Announcement = ({ message, onExpire }) => {
   );
 };
 
-const MyScoreboard = () => {
+const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
+  // ... tu implementación original aquí ...
+  return null; // o tu lógica completa si ya la tienes
+};
+
+function PublicScoreboard() {
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [announcements, setAnnouncements] = useState([]);
 
-  const addAnnouncement = (match) => {
-    const message = {
-      id: match.id,
-      category: match.category,
-      team1: match.team1_name,
-      team2: match.team2_name,
-      player1_1: match.team1_player1_name,
-      player1_2: match.team1_player2_name,
-      player2_1: match.team2_player1_name,
-      player2_2: match.team2_player2_name,
-      court: match.court_name || `Cancha #${match.court_id}`,
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch(`${API_BASE_URL}/api/matches/scoreboard`);
+        if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
+        const data = await response.json();
+        setMatches(data);
+        setError(null);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
     };
 
-    setAnnouncements((prev) => [...prev, message]);
-  };
+    fetchData();
+
+    const socket = new WebSocket(WS_URL);
+    socket.onopen = () => console.log("WebSocket conectado.");
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'SCORE_UPDATE') {
+        setMatches(prev =>
+          prev.map(m => m.id === parseInt(data.matchId, 10)
+            ? { ...m, ...data.payload }
+            : m
+          )
+        );
+      }
+
+      if (data.type === 'ANNOUNCEMENT_NEW') {
+        const match = data.payload;
+        const message = {
+          id: match.id,
+          category: match.category,
+          team1: match.team1_name,
+          team2: match.team2_name,
+          player1_1: match.team1_player1_name,
+          player1_2: match.team1_player2_name,
+          player2_1: match.team2_player1_name,
+          player2_2: match.team2_player2_name,
+          court: match.court_name || `Cancha #${match.court_id}`,
+        };
+
+        setAnnouncements(prev => [...prev, message]);
+      }
+    };
+
+    return () => socket.close();
+  }, []);
 
   const removeAnnouncement = (id) => {
-    setAnnouncements((prev) => prev.filter((a) => a.id !== id));
+    setAnnouncements(prev => prev.filter(a => a.id !== id));
   };
 
-  // Ejemplo para probar manualmente:
-  const lanzarAvisoDePrueba = () => {
-    addAnnouncement({
-      id: 1,
-      category: 'Mixta A',
-      team1_name: 'Titanes',
-      team2_name: 'Furias',
-      team1_player1_name: 'Ana',
-      team1_player2_name: 'Luis',
-      team2_player1_name: 'Carlos',
-      team2_player2_name: 'Marta',
-      court_name: 'Cancha #2',
-    });
-  };
+  const liveMatches = matches.filter(m => m && m.status === 'en_vivo');
+
+  if (loading) return <div>Cargando...</div>;
+  if (error) return <div>Error: {error}</div>;
 
   return (
-    <div>
+    <div style={styles.container}>
       <div style={styles.announcementsContainer}>
-        {announcements.map((a) => (
-          <Announcement key={a.id} message={a} onExpire={() => removeAnnouncement(a.id)} />
+        {announcements.map(ann => (
+          <Announcement
+            key={ann.id}
+            message={ann}
+            onExpire={() => removeAnnouncement(ann.id)}
+          />
         ))}
       </div>
 
-      {/* Botón para lanzar aviso de prueba */}
-      <button onClick={lanzarAvisoDePrueba} style={{ marginTop: '120px' }}>
-        Lanzar aviso de prueba
-      </button>
+      <h1 style={styles.title}>Tablero de Puntuaciones en Vivo</h1>
+      {liveMatches.length > 0 ? (
+        <div style={styles.grid}>
+          {liveMatches.map((match) => {
+            const isFirstServeOfGame = !match.first_side_out_done;
+            const isTeam1Serving = match.server_team_id === match.team1_id;
+            const isTeam2Serving = match.server_team_id === match.team2_id;
+
+            return (
+              <div key={match.id} style={styles.matchCard}>
+                <div style={styles.cardHeader}>CANCHA {match.court_id || 'N/A'}</div>
+                <div style={styles.cardBody}>
+                  <div style={styles.teamRow}>
+                    <div style={styles.teamDetails}>
+                      <div style={styles.playersName}>{match.team1_player1_name} / {match.team1_player2_name}</div>
+                      <div style={styles.teamName}>{match.team1_name}</div>
+                    </div>
+                    <div style={styles.rightSection}>
+                      <ServiceDots isServingTeam={isTeam1Serving} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
+                      <div style={styles.verticalDivider}></div>
+                      <div style={styles.score}>{match.team1_score}</div>
+                    </div>
+                  </div>
+                  <hr style={styles.divider} />
+                  <div style={styles.teamRow}>
+                    <div style={styles.teamDetails}>
+                      <div style={styles.playersName}>{match.team2_player1_name} / {match.team2_player2_name}</div>
+                      <div style={styles.teamName}>{match.team2_name}</div>
+                    </div>
+                    <div style={styles.rightSection}>
+                      <ServiceDots isServingTeam={isTeam2Serving} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
+                      <div style={styles.verticalDivider}></div>
+                      <div style={styles.score}>{match.team2_score}</div>
+                    </div>
+                  </div>
+                  <div style={styles.cardFooter}>
+                    GRUPO {match.group || 'N/A'} - {match.category}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <p style={styles.noMatches}>No hay partidos en vivo en este momento.</p>
+      )}
     </div>
   );
-};
+}
 
-export default MyScoreboard;
+export default PublicScoreboard;
