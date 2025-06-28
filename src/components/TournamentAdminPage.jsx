@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, ArrowRight, Trophy, Swords, MonitorPlay, ListOrdered } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import.meta.env.VITE_API_URL;
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 // --- Componentes de UI Reutilizables ---
@@ -81,6 +82,20 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
         </div>
     );
 };
+
+// --- PANEL DE CONFIGURACIÓN (AHORA DENTRO DE UN MODAL) ---
+const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, onClose }) => {
+    const [players, setPlayers] = useState(initialData.players || []);
+    const [teams, setTeams] = useState(initialData.teams || []);
+    const [isSaving, setIsSaving] = useState(false);
+    const [newPlayer, setNewPlayer] = useState({ fullName: '', email: '', category: 'Intermedio' });
+    const [newTeamName, setNewTeamName] = useState('');
+    const [numberOfGroups, setNumberOfGroups] = useState(2);
+
+    useEffect(() => {
+        setPlayers(initialData.players);
+        setTeams(initialData.teams);
+    }, [initialData]);
 
 // --- PESTAÑA 2: GESTIÓN DE TORNEO ---
 const GestionTorneoTab = () => {
@@ -391,6 +406,11 @@ const ConfiguracionTab = ({ onGenerationComplete }) => {
         </div>);
 };
 
+
+
+
+
+    
 // --- PESTAÑA 4: STANDING ---
 const StandingTab = ({ teams, matches, eliminationCount }) => {
     const calculateStats = (teamMatches, teamId) => {
@@ -687,21 +707,55 @@ export default function TournamentAdminPage() {
     
     return (
         <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
-            <div className="max-w-7xl mx-auto">
-                <h1 className="text-3xl font-bold mb-6 text-cyan-400">Panel de Control del Torneo</h1>
-                <div className="flex border-b border-slate-700">
-                    <TabButton tabName="configuracion" label="Configuración" icon={Settings} activeTab={activeTab} setActiveTab={setActiveTab} />
+            <div className="max-w-screen-2xl mx-auto">
+                <div className="flex justify-between items-center mb-6">
+                    <h1 className="text-3xl font-bold text-cyan-400">Panel de Control del Torneo</h1>
+                    <button onClick={() => setIsConfigOpen(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors" aria-label="Abrir Configuración">
+                        <Settings />
+                    </button>
+                </div>
+                
+                <div className="flex border-b border-slate-700 overflow-x-auto">
                     <TabButton tabName="gestion" label="Gestión de Torneo" icon={Gamepad2} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="standing" label="Standing" icon={ListOrdered} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="juegos" label="Juegos en Curso" icon={MonitorPlay} activeTab={activeTab} setActiveTab={setActiveTab} />
                 </div>
+
                 <div className="pt-8">
-                    {activeTab === 'configuracion' && <ConfiguracionTab onGenerationComplete={handleGenerationComplete} />}
-                    {activeTab === 'gestion' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} refreshData={fetchData} />}
-                    {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
-                    {activeTab === 'juegos' && <JuegosEnCursoTab />}
+                    {modalData && <MatchManagementModal matchData={modalData} courts={allData.courts} onClose={() => setModalData(null)} onSave={handleSaveMatch} isSaving={isSaving}/>}
+                    
+                    {loading ? ( <div className="flex justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8" /></div> ) : 
+                    error ? (<div className="text-red-400 text-center p-10">{error}</div>) : (
+                        <>
+                           {activeTab === 'gestion' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} refreshData={fetchData} setModalData={setModalData} />}
+                           {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
+                           {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
+                        </>
+                    )}
                 </div>
+
+                {/* MODAL DE CONFIGURACIÓN */}
+                {isConfigOpen && (
+                    <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 pt-20">
+                        <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] flex flex-col">
+                            <header className="p-4 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
+                                <h2 className="text-xl font-bold text-cyan-400 flex items-center"><Settings className="mr-3" />Configuración General del Torneo</h2>
+                                <button onClick={() => setIsConfigOpen(false)} className="text-slate-400 hover:text-white"><X /></button>
+                            </header>
+                            <main className="p-6 overflow-y-auto">
+                                {loading ? <Spinner /> : <ConfiguracionPanel 
+                                    onGenerationComplete={handleGenerationComplete} 
+                                    initialData={allData}
+                                    refreshData={fetchData}
+                                    onClose={() => setIsConfigOpen(false)}
+                                />}
+                            </main>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
+}
+
 }
