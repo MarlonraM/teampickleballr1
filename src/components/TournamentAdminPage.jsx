@@ -34,21 +34,43 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
     // Nuevo estado para controlar el modo de edición
     const [isEditing, setIsEditing] = useState(match.status !== 'finalizado');
 
+    // Sincroniza el estado si el partido cambia
+    useEffect(() => {
+        setScores({
+            team1: match.team1_score || 0,
+            team2: match.team2_score || 0
+        });
+        setIsEditing(match.status !== 'finalizado');
+    }, [match]);
+
     if (!match) return null;
 
     const handleScoreChange = (team, value) => {
         setScores(prev => ({ ...prev, [team]: parseInt(value, 10) || 0 }));
     };
 
+    // --- FUNCIÓN handleSave MEJORADA ---
     const handleSave = () => {
-        onSave(match.id, {
-            team1_score: scores.team1,
-            team2_score: scores.team2,
-            // Si el partido estaba finalizado, lo reabrimos a 'en_vivo' al corregir
-            status: match.status === 'finalizado' ? 'en_vivo' : match.status,
-            winner_id: null, // Limpiamos el ganador al corregir
-            end_time: null
-        });
+        const score1 = scores.team1;
+        const score2 = scores.team2;
+        const maxScore = Math.max(score1, score2);
+        const diff = Math.abs(score1 - score2);
+
+        let updatePayload = {
+            team1_score: score1,
+            team2_score: score2,
+        };
+
+        // Si el partido estaba finalizado y la nueva puntuación ya no es válida para ganar,
+        // se revierte el estado del partido a 'en_vivo'.
+        if (match.status === 'finalizado' && (maxScore < 11 || (maxScore >= 11 && diff < 2))) {
+            updatePayload.status = 'en_vivo';
+            updatePayload.winner_id = null; // Se limpia el ganador
+            updatePayload.end_time = null; // Se limpia la fecha de finalización
+            alert("El marcador ya no es válido para un partido finalizado. El estado ha sido revertido a 'en_vivo'.");
+        }
+        
+        onSave(match.id, updatePayload);
     };
 
     const handleFinalize = () => {
