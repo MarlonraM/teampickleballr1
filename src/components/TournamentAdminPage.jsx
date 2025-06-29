@@ -761,7 +761,7 @@ const GestionTorneoTab = () => {
     );
 };
  
-/ --- PESTAÑA 3: STANDING (CORREGIDA) ---
+// --- PESTAÑA 3: STANDING (CORREGIDA) ---
 const StandingTab = ({ teams, matches, eliminationCount }) => {
     const calculateStats = (teamMatches, teamId) => {
         return teamMatches.reduce((acc, match) => {
