@@ -6,7 +6,7 @@ const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 
 // --- Estilos Globales para la Página (Tema Claro Michelob) ---
 const pageStyles = {
-    fontFamily: "'Inter', sans-serif",
+    fontFamily: "'Inter', sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
     backgroundColor: '#FFFFFF', // Fondo blanco
     color: '#051638', // Azul oscuro de Michelob para el texto principal
     minHeight: '100vh',
@@ -16,7 +16,7 @@ const pageStyles = {
 // --- Componente de Anuncio Rediseñado (Tema Claro) ---
 const Announcement = ({ announcement, onExpire }) => {
     useEffect(() => {
-        const timer = setTimeout(onExpire, 6000); // Duración extendida para mejor lectura
+        const timer = setTimeout(onExpire, 6000); 
         return () => clearTimeout(timer);
     }, [onExpire]);
 
@@ -27,31 +27,31 @@ const Announcement = ({ announcement, onExpire }) => {
         borderRadius: '0.75rem',
         boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)',
         marginBottom: '1rem',
-        border: '1px solid rgba(255, 255, 255, 0.1)',
+        border: '1px solid rgba(0, 0, 0, 0.05)',
     };
 
     if (announcement.type === 'game') {
         return (
-            <div style={{...baseStyle, backgroundColor: '#051638', color: '#FFFFFF', border: `2px solid #E51937`}}>
-                <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.2)', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
-                    <Megaphone style={{ color: '#FFFFFF' }} size={24} />
+            <div style={{...baseStyle, backgroundColor: '#FFFFFF', color: '#051638', border: `2px solid #E51937`}}>
+                <div style={{ display: 'flex', alignItems: 'center', borderBottom: '1px solid #e0e0e0', paddingBottom: '0.75rem', marginBottom: '0.75rem' }}>
+                    <Megaphone style={{ color: '#051638' }} size={24} />
                     <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginLeft: '0.75rem' }}>{announcement.courtName}</h3>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                     <p style={{ fontSize: '1.75rem', fontWeight: 'bold' }}>{announcement.team1Name} vs {announcement.team2Name}</p>
-                    <p style={{ fontSize: '0.875rem', color: '#DDDDDD', marginTop: '-0.25rem' }}>{announcement.category}</p>
+                    <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '-0.25rem' }}>{announcement.category}</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem', fontSize: '0.875rem', textAlign: 'left' }}>
                         <div>
                             <p style={{ fontWeight: '600' }}>{announcement.team1Name}:</p>
-                            <p style={{ color: '#CCCCCC' }}>{(announcement.team1Players || []).join(' / ')}</p>
+                            <p style={{ color: '#333' }}>{(announcement.team1Players || []).join(' / ')}</p>
                         </div>
                         <div>
                             <p style={{ fontWeight: '600' }}>{announcement.team2Name}:</p>
-                            <p style={{ color: '#CCCCCC' }}>{(announcement.team2Players || []).join(' / ')}</p>
+                            <p style={{ color: '#333' }}>{(announcement.team2Players || []).join(' / ')}</p>
                         </div>
                     </div>
                 </div>
-                 <p style={{ textAlign: 'center', fontSize: '0.875rem', fontStyle: 'italic', marginTop: '1rem', color: '#FFFFFF' }}>
+                 <p style={{ textAlign: 'center', fontSize: '0.875rem', fontStyle: 'italic', marginTop: '1rem', color: '#051638' }}>
                     Favor de presentarse a la cancha.
                 </p>
             </div>
@@ -78,7 +78,7 @@ const ServiceDots = ({ isServing }) => {
         boxShadow: '0 0 8px #E51937',
     };
     const inactiveDotStyle = {
-        backgroundColor: 'rgba(255,255,255,0.3)', 
+        backgroundColor: '#d1d5db', 
     };
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center', alignItems: 'center' }}>
@@ -153,34 +153,34 @@ function PublicScoreboardMichelob() {
                             const isTeam2Serving = match.server_team_id === match.team2_id;
                             
                             return (
-                                <div key={match.id} style={{ backgroundColor: '#051638', color: 'white', borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 20px 40px -15px rgba(5, 22, 56, 0.4)' }}>
-                                    <div style={{ backgroundColor: '#E51937', color: 'white', padding: '0.5rem', textAlign: 'center' }}>
+                                <div key={match.id} style={{ backgroundColor: '#FFFFFF', color: '#051638', borderRadius: '1rem', overflow: 'hidden', boxShadow: '0 20px 40px -15px rgba(5, 22, 56, 0.2)' }}>
+                                    <div style={{ backgroundColor: '#051638', color: 'white', padding: '0.75rem', textAlign: 'center' }}>
                                         <h2 style={{ fontWeight: 'bold' }}>{match.court_name || `CANCHA #${match.court_id}`}</h2>
                                     </div>
                                     <div style={{ padding: '1.5rem' }}>
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                                             <div style={{ flex: 1, textAlign: 'left' }}>
                                                 <p style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>{match.team1_name}</p>
-                                                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>{match.team1_player1_name} / {match.team1_player2_name}</p>
+                                                <p style={{ fontSize: '0.8rem', color: '#666' }}>{match.team1_player1_name} / {match.team1_player2_name}</p>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                                                 <ServiceDots isServing={isTeam1Serving} />
-                                                <span style={{ fontSize: '4rem', fontWeight: 'bold', color: '#FFFFFF' }}>{match.team1_score}</span>
+                                                <span style={{ fontSize: '4rem', fontWeight: 'bold', color: '#E51937' }}>{match.team1_score}</span>
                                             </div>
                                         </div>
-                                        <hr style={{ border: 'none', height: '1px', backgroundColor: 'rgba(255,255,255,0.1)', margin: '1rem 0' }} />
+                                        <hr style={{ border: 'none', height: '1px', backgroundColor: '#e0e0e0', margin: '1rem 0' }} />
                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' }}>
                                             <div style={{ flex: 1, textAlign: 'left' }}>
                                                 <p style={{ fontWeight: 'bold', fontSize: '1.25rem' }}>{match.team2_name}</p>
-                                                <p style={{ fontSize: '0.8rem', color: 'rgba(255,255,255,0.7)' }}>{match.team2_player1_name} / {match.team2_player2_name}</p>
+                                                <p style={{ fontSize: '0.8rem', color: '#666' }}>{match.team2_player1_name} / {match.team2_player2_name}</p>
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                                                 <ServiceDots isServing={isTeam2Serving} />
-                                                <span style={{ fontSize: '4rem', fontWeight: 'bold', color: '#FFFFFF' }}>{match.team2_score}</span>
+                                                <span style={{ fontSize: '4rem', fontWeight: 'bold', color: '#E51937' }}>{match.team2_score}</span>
                                             </div>
                                         </div>
                                     </div>
-                                    <div style={{ backgroundColor: 'rgba(255,255,255,0.05)', color: 'rgba(255,255,255,0.7)', padding: '0.5rem 1.5rem', textAlign: 'center', fontSize: '0.8rem' }}>
+                                    <div style={{ backgroundColor: '#f0f0f0', color: '#666', padding: '0.5rem 1.5rem', textAlign: 'center', fontSize: '0.8rem' }}>
                                         GRUPO {match.group_id ? String.fromCharCode(64 + match.group_id) : 'N/A'} - {match.category}
                                     </div>
                                 </div>
@@ -200,3 +200,4 @@ function PublicScoreboardMichelob() {
 }
 
 export default PublicScoreboardMichelob;
+
