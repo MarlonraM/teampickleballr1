@@ -339,12 +339,12 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
                             <th className="p-3">Acciones</th>
                         </tr>
                         <tr>
-                            <th className="p-2 w-[100px] text-center"><div className="flex justify-center"><input name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></div></th>
+                            <th className="p-2 w-[100px] text-center"><input name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
                             <th className="p-2"><input name="teams" value={filters.teams} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
                             <th className="p-2"><input name="players" value={filters.players} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2 text-center"><div className="flex justify-center"><input name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></div></th>
-                            <th className="p-2 w-[140px] text-center"><div className="flex justify-center"><input name="status" value={filters.status} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></div></th>
-                            <th className="p-2">
+                            <th className="p-2 text-center"><input name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2 w-[140px] text-center"><input name="status" value={filters.status} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2"> 
                                 <select name="court" value={filters.court} onChange={handleFilterChange} className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs">
                                     <option value="">Todas</option>
                                     {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
