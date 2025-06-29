@@ -805,8 +805,8 @@ const JuegosEnCursoTab = ({ matches, courts }) => {
         return data;
     }, [matches, courts]);
   
-    if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando estado de las canchas...</span></div>;
-    if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
+   // if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando estado de las canchas...</span></div>;
+    // if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
 
     // --- Componente ServiceDots (Puntos de Servicio) ---
     const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
