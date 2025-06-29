@@ -199,11 +199,22 @@ function PublicScoreboardMichelob() {
                         <Announcement key={ann.id} announcement={ann} onExpire={() => removeAnnouncement(ann.id)} styles={styles} />
                     ))}
                 </div>
-                                <main style={styles.mainContent}>
-                                    <h1 style={styles.title}>MARCADOR EN VIVO</h1>
-                                    <div style={styles.footer}>Presentado por <img src="/emblem.png" alt="Michelob Ultra" style={styles.logo} /></div>
-                                    {matches.length > 0 ? (
-                                    <div style={styles.grid}>
+                                <main style={{ ...styles.mainContent, paddingTop: 16 }}> {/* sube el contenido */}
+  <h1 style={{ ...styles.title, marginBottom: 4 }}>MARCADOR EN VIVO</h1>
+
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,   // menos espacio hacia abajo
+    marginTop: 0        // menos espacio hacia arriba
+  }}>
+    Presentado por 
+    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 32, transform: 'scale(1.3)' }} />
+  </div>
                                         {matches.map(match => {
                                             const isTeam1Serving = match.server_team_id === match.team1_id;
                                             const isTeam2Serving = match.server_team_id === match.team2_id;
