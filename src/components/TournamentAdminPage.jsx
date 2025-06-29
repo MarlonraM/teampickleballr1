@@ -783,53 +783,11 @@ const StandingTab = ({ teams, matches, eliminationCount }) => {
     );
 };
 // --- PESTAÑA 3: JUEGOS EN CURSO (DISEÑO ACTUALIZADO) ---
-const JuegosEnCursoTab = () => {
-    const [matches, setMatches] = useState([]);
-    const [courts, setCourts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                const [matchesResponse, courtsResponse] = await Promise.all([
-                    fetch(`${import.meta.env.VITE_API_URL}/api/matches/scoreboard`),
-                    fetch(`${import.meta.env.VITE_API_URL}/api/courts`)
-                ]);
-                if (!matchesResponse.ok || !courtsResponse.ok) throw new Error('No se pudieron cargar los datos.');
-                
-                const matchesData = await matchesResponse.json();
-                const courtsData = await courtsResponse.json();
-                setMatches(matchesData);
-                setCourts(courtsData);
-                setError(null);
-            } catch (err) {
-                setError(err.message);
-            } finally {
-                setLoading(false);
-            }
-        };
-        fetchData();
-        const socket = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
-        socket.onmessage = (event) => {
-            try { // Añadir try-catch para manejar errores de parseo JSON del websocket
-                const updatedData = JSON.parse(event.data);
-                if (updatedData.type === 'SCORE_UPDATE') {
-                    setMatches(prevMatches =>
-                        prevMatches.map(m => m.id === parseInt(updatedData.matchId, 10) ? { ...m, ...updatedData.payload } : m)
-                    );
-                }
-            } catch (e) {
-                console.error("Error al procesar mensaje del WebSocket:", e);
-            }
-        };
-        return () => socket.close();
-    }, []);
-
+const JuegosEnCursoTab = ({ matches, courts }) => {
     const matchesByCourt = useMemo(() => {
         const data = {};
         if (!courts || !matches) return data;
+        
         courts.forEach(court => {
             const courtMatches = matches.filter(m => m.court_id === court.id);
             data[court.id] = {
@@ -838,13 +796,13 @@ const JuegosEnCursoTab = () => {
                 upcoming: courtMatches.filter(m => m.status === 'asignado'),
                 played: courtMatches
                     .filter(m => m.status === 'finalizado')
-                    .sort((a, b) => new Date(b.end_time) - new Date(a.end_time))
+                    .sort((a,b) => new Date(b.end_time) - new Date(a.end_time))
                     .slice(0, 3)
             };
         });
         return data;
     }, [matches, courts]);
-    
+  
     if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando estado de las canchas...</span></div>;
     if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
 
