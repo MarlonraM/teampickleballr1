@@ -71,14 +71,15 @@ function PublicScoreboardMichelob() {
         hamburgerLine: { width: '100%', height: '3px', backgroundColor: '#E51937', borderRadius: '2px' },
         announcementsContainer: { position: 'absolute', top: '90px', left: '50%', transform: 'translateX(-50%)', zIndex: 50, width: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center' },
         mainContent: {
-    padding: isMobile ? '1rem' : '1rem 2rem 4rem 2rem'
+    padding: isMobile ? '0.5rem' : '1rem 2rem',
+    fontSize: isMobile ? '0.85rem' : '1rem'
 },
         title: {
     textAlign: 'center',
-    fontSize: isMobile ? '1.5rem' : '2rem',
+    fontSize: isMobile ? '1.25rem' : '1.75rem',
     fontWeight: '900',
     color: '#051638',
-    marginBottom: '2rem',
+    marginBottom: '0.5rem',
     textTransform: 'uppercase',
     letterSpacing: '1px'
 },
@@ -199,11 +200,12 @@ function PublicScoreboardMichelob() {
                     ))}
                 </div>
 
-                <main style={styles.mainContent}>
-                    <h1 style={styles.title}>MARCADOR EN VIVO</h1>
-                    {matches.length > 0 ? (
-                        <div style={styles.grid}>
-                            {matches.map(match => {
+               <main style={styles.mainContent}>
+  <h1 style={styles.title}>MARCADOR EN VIVO</h1>
+  <div style={styles.footer}>
+    Presentado por <img src="/logo.png" alt="Michelob Ultra" style={styles.logo} />
+  </div>
+  {matches.length > 0 ? (
                                 const isTeam1Serving = match.server_team_id === match.team1_id;
                                 const isTeam2Serving = match.server_team_id === match.team2_id;
                                 
@@ -250,7 +252,7 @@ function PublicScoreboardMichelob() {
                 </main>
 
                 <footer style={styles.footer}>
-                    Presentado por <img src="/logo.png" alt="Michelob Ultra" style={styles.logo} />
+                    El consumo excesivo de alcohol es perjudicial para la salud ley 42-01.
                 </footer>
             </div>
         </div>
