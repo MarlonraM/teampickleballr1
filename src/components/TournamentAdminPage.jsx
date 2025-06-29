@@ -502,10 +502,9 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
 
     
 // --- PESTAÑA 2: GESTIÓN DE TORNEO ---
-const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount, setModalData }) => {
-    const { teams, matches, courts } = allData;
+const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount, setModalData, refreshData }) => {
+    const { teams, matches } = allData;
     const [expandedRows, setExpandedRows] = useState({});
-    // Se eliminan los useState duplicados
     const [showTiebreakers, setShowTiebreakers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     // Función para cargar todos los datos
@@ -573,17 +572,21 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
     
     return (
         <div className="space-y-8">
-            {modalData && <MatchManagementModal matchData={modalData} courts={courts} onClose={() => setModalData(null)} onSave={handleSaveMatch} isSaving={isSaving}/>}
             {Object.keys(matchesByGroup).length > 0 ? (
                 Object.entries(matchesByGroup).map(([groupId, groupMatches]) => {
                     const groupTeams = [...new Map(groupMatches.flatMap(m => [[m.team1_id, {id: m.team1_id, name: m.team1_name}], [m.team2_id, {id: m.team2_id, name: m.team2_name}]])).values()].sort((a,b) => a.id - b.id);
-                    const groupStandings = groupTeams.map(team => { const teamData = teams.find(t => t.id === team.id) || {}; const teamStats = calculateStats(groupMatches, team.id); return { ...team, stats: teamStats, tournament_points: teamData.tournament_points || 0 }; }).sort((a,b) => b.tournament_points - a.tournament_points || (b.stats.GF - b.stats.GC) - (a.stats.GF - a.stats.GC));
+                    const groupStandings = groupTeams.map(team => {
+                        const teamMatches = groupMatches.filter(m => m.team1_id === team.id || m.team2_id === team.id);
+                        const stats = calculateStats(teamMatches, team.id);
+                        return { ...team, stats, tournament_points: stats.TournamentPoints, diff: stats.GF - stats.GC };
+                    }).sort((a,b) => b.tournament_points - a.tournament_points || b.diff - a.diff);
+
                     const numToEliminate = eliminationCount[groupId] || 0;
                     const eliminatedTeamIds = (numToEliminate > 0) ? groupStandings.slice(-numToEliminate).map(t => t.id) : [];
                     const groupLetter = String.fromCharCode(64 + parseInt(groupId));
 
                     return (
-                        <Card key={groupId} title={`Round Robin - Grupo ${groupLetter}`} icon={BarChart2}
+                       <Card key={groupId} title={`Round Robin - Grupo ${groupLetter}`} icon={BarChart2}
                             extraHeaderContent={<div className="flex items-center gap-2 text-sm"><label htmlFor={`elim-${groupId}`} className="text-slate-400">Eliminar últimos:</label><input id={`elim-${groupId}`} type="number" min="0" max={groupTeams.length -1} value={eliminationCount[groupId] || 0} onChange={(e) => onEliminationCountChange({...eliminationCount, [groupId]: parseInt(e.target.value, 10) || 0})} className="w-16 bg-slate-700 p-1 rounded text-center border border-slate-600"/></div>}
                         >
                             <div className="overflow-x-auto">
