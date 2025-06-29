@@ -954,11 +954,12 @@ const AvisosTab = ({ allData }) => {
     const [manualMessage, setManualMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
     const [sentWhatsApp, setSentWhatsApp] = useState({});
-    const [sentAnnouncements, setSentAnnouncements] = useState({});
 
-    const assignedMatches = useMemo(() => allData.matches.filter(m => m.status === 'asignado'), [allData.matches]);
+    const assignedMatches = useMemo(() => 
+        allData.matches.filter(m => m.status === 'asignado'), 
+    [allData.matches]);
     
-   const handleSendGeneral = async () => {
+    const handleSendGeneral = async () => {
         if (!manualMessage.trim()) return;
         setIsSending(true);
         try {
@@ -975,57 +976,26 @@ const AvisosTab = ({ allData }) => {
         }
     };
     
-    const handleAnnounceGame = async (match) => {
-            try {
-            // Llama a la nueva ruta del backend que se encarga de todo
+    // --- FUNCIÓN CORREGIDA ---
+    // Ahora solo envía el ID del partido al endpoint correcto.
+    const handleAnnounceGame = async (matchId) => {
+        try {
             await fetch(`${API_BASE_URL}/api/matches/${matchId}/announce`, {
                 method: 'POST',
             });
-            // El estado del botón se actualizará automáticamente vía WebSocket
+            // El backend se encarga de todo. El WebSocket actualizará el estado del botón.
         } catch (err) {
             alert('Error al anunciar el partido.');
             console.error(err);
         }
     };
 
-       // try {
-       //     const court = allData.courts.find(c => c.id === match.court_id);
-       //     const response = await fetch(`${API_BASE_URL}/api/announcements/game`, {
-       //         method: 'POST',
-       //         headers: { 'Content-Type': 'application/json' },
-       //         body: JSON.stringify({
-       //             match_id: match.id,
-       //             category: match.category,
-        //            team1_name: match.team1_name,
-       //             team2_name: match.team2_name,
-      //            court_name: court?.name || `Cancha #${match.court_id}`,
-      ///              team1_players: [match.team1_player1_name, match.team1_player2_name].filter(Boolean),
-       ///             team2_players: [match.team2_player1_name, match.team2_player2_name].filter(Boolean)
-        //        })
-        //    }); 
-         //   if (!response.ok) throw new Error("Error del servidor al anunciar el partido.");
-         //   setSentAnnouncements(prev => ({...prev, [match.id]: true}));
-       // } catch (err) {
-       //     alert('Error al anunciar el partido.');
-       // }
-   // };
-
-    const handleSendWhatsApp = (player, match) => {
+    const handleSendWhatsApp = (playerName, match) => {
         const court = allData.courts.find(c => c.id === match.court_id);
-        const message = `
-📢 AVISO
-Cancha ${match.court_id}
-${match.team1_name} vs ${match.team2_name}
-Categoría: ${match.category}
-
-👥 ${match.team1_player1_name} / ${match.team1_player2_name}
-👥 ${match.team2_player1_name} / ${match.team2_player2_name}
-
-⚠️ Por favor, aproximarse a Cancha ${match.court_id} ⚠️
-`;
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`; // Sin número para que el usuario elija
+        const message = `El juego No. ${match.id} entre ${match.team1_name} y ${match.team2_name} va a comenzar en la ${court?.name || `Cancha #${match.court_id}`}, favor presentarte.`;
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
         window.open(whatsappUrl, '_blank');
-        setSentWhatsApp(prev => ({...prev, [`${match.id}-${player.name}`]: true}));
+        setSentWhatsApp(prev => ({...prev, [`${match.id}-${playerName}`]: true}));
     };
 
     return (
@@ -1092,8 +1062,6 @@ Categoría: ${match.category}
         </div>
     );
 };
-
-
 // --- COMPONENTE PRINCIPAL ---
 export default function TournamentAdminPage() {
     const [activeTab, setActiveTab] = useState('partidos');
