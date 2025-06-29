@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, ArrowRight, Trophy, Swords, MonitorPlay, ListOrdered, Clock, ExternalLink, Pencil, Megaphone, Send, Bell, Check } from 'lucide-react';
+import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, Trophy, Swords, MonitorPlay, ListOrdered, Clock, ExternalLink, Pencil, Megaphone, Send, Bell, Check, PlusCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import.meta.env.VITE_API_URL;
 
@@ -24,6 +24,59 @@ const TabButton = ({ tabName, label, icon: Icon, activeTab, setActiveTab }) => (
         <Icon className="mr-2 h-5 w-5" />{label}
     </button>
 );
+
+// --- MODAL PARA CREAR NUEVA FASE ---
+const CreatePhaseModal = ({ isOpen, onClose, allTeams, onCreate }) => {
+    const [phaseName, setPhaseName] = useState("");
+    const [selectedTeams, setSelectedTeams] = useState([]);
+    const [carryPoints, setCarryPoints] = useState(false);
+
+    const handleTeamToggle = (teamId) => {
+        setSelectedTeams(prev => 
+            prev.includes(teamId) ? prev.filter(id => id !== teamId) : [...prev, teamId]
+        );
+    };
+
+    const handleCreate = () => {
+        if (!phaseName || selectedTeams.length === 0) {
+            alert("Por favor, introduce un nombre para la fase y selecciona al menos un equipo.");
+            return;
+        }
+        onCreate({
+            name: phaseName,
+            teams: selectedTeams.map(id => allTeams.find(t => t.id === id)),
+            carry_points: carryPoints
+        });
+    };
+
+    return (
+        <div className={`fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4 ${isOpen ? '' : 'hidden'}`}>
+            <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-2xl">
+                <h2 className="text-xl font-bold text-cyan-400 mb-4">Crear Nueva Fase del Torneo</h2>
+                <div className="space-y-4">
+                    <input type="text" value={phaseName} onChange={(e) => setPhaseName(e.target.value)} placeholder="Nombre de la fase (ej. Semifinal)" className="w-full bg-slate-700 p-2 rounded-md" />
+                    <div className="max-h-60 overflow-y-auto border border-slate-600 p-2 rounded-md">
+                        <p className="font-semibold mb-2">Seleccionar Equipos que Avanzan:</p>
+                        {allTeams.map(team => (
+                            <div key={team.id} className="flex items-center">
+                                <input type="checkbox" id={`team-${team.id}`} checked={selectedTeams.includes(team.id)} onChange={() => handleTeamToggle(team.id)} className="mr-2" />
+                                <label htmlFor={`team-${team.id}`}>{team.name}</label>
+                            </div>
+                        ))}
+                    </div>
+                    <div className="flex items-center">
+                        <input type="checkbox" id="carry-points" checked={carryPoints} onChange={(e) => setCarryPoints(e.target.checked)} className="mr-2" />
+                        <label htmlFor="carry-points">Arrastrar puntos de la fase anterior</label>
+                    </div>
+                </div>
+                <div className="mt-6 flex justify-end gap-4">
+                    <button onClick={onClose} className="px-4 py-2 bg-slate-600 rounded-md">Cancelar</button>
+                    <button onClick={handleCreate} className="px-4 py-2 bg-green-600 rounded-md">Crear Fase</button>
+                </div>
+            </div>
+        </div>
+    );
+};
 
 // --- MODAL PARA EDITAR PUNTUACIÓN Y ESTADO ---
 const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
@@ -1065,11 +1118,15 @@ const AvisosTab = ({ allData }) => {
 // --- COMPONENTE PRINCIPAL ---
 export default function TournamentAdminPage() {
     const [activeTab, setActiveTab] = useState('partidos');
+    const [tournaments, setTournaments] = useState([]);
+    const [activeTournamentId, setActiveTournamentId] = useState(null);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [allData, setAllData] = useState({ matches: [], teams: [], courts: [] });
+    const [allTeamsForSelection, setAllTeamsForSelection] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
+    const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
@@ -1109,8 +1166,67 @@ export default function TournamentAdminPage() {
         socket.onclose = () => console.log('Panel de Control desconectado.');
         return () => socket.close();
     }, [fetchData]);
-    
-    const handleGenerationComplete = () => {
+
+    const fetchTournaments = useCallback(async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/tournaments`);
+            const data = await res.json();
+            setTournaments(data);
+            if (data.length > 0 && !activeTournamentId) {
+                setActiveTournamentId(data[0].id);
+            }
+        } catch (err) { console.error("Error fetching tournaments", err); }
+    }, [activeTournamentId]);
+
+    const fetchDataForTournament = useCallback(async (tournamentId) => {
+        if (!tournamentId) return;
+        setLoading(true);
+        try {
+            const [matchesRes, teamsRes, courtsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/courts`)
+            ]);
+            // ... (manejo de datos)
+            const matchesData = await matchesRes.json();
+            const teamsData = await teamsRes.json();
+            const courtsData = await courtsRes.json();
+            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchTournaments();
+        // Fetch all teams once for the "Create Phase" modal
+        fetch(`${API_BASE_URL}/api/teams`).then(res => res.json()).then(setAllTeamsForSelection);
+    }, [fetchTournaments]);
+
+    useEffect(() => {
+        fetchDataForTournament(activeTournamentId);
+    }, [activeTournamentId, fetchDataForTournament]);
+
+    const handleCreatePhase = async (phaseData) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/tournaments/create_phase`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(phaseData)
+            });
+            const newTournament = await response.json();
+            setTournaments(prev => [newTournament, ...prev]);
+            setActiveTournamentId(newTournament.id);
+            setIsCreatePhaseOpen(false);
+        } catch (err) {
+            console.error("Error creating new phase:", err);
+            alert("Error al crear la nueva fase.");
+        }
+    };
+
+        const handleGenerationComplete = () => {
         fetchData().then(() => setActiveTab('partidos'));
         setIsConfigOpen(false);
     };
@@ -1139,10 +1255,22 @@ export default function TournamentAdminPage() {
         <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-screen-2xl mx-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold text-cyan-400">Panel de Control del Torneo</h1>
-                    <button onClick={() => setIsConfigOpen(true)} className="p-2 rounded-full hover:bg-slate-700 transition-colors" aria-label="Abrir Configuración">
-                        <Settings />
-                    </button>
+                    <h1 className="text-3xl font-bold text-cyan-400">Panel de Control</h1>
+                    <div className="flex items-center gap-4">
+                        <select
+                            value={activeTournamentId || ''}
+                            onChange={(e) => setActiveTournamentId(e.target.value)}
+                            className="bg-slate-700 border border-slate-600 rounded-md p-2"
+                        >
+                            {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                        </select>
+                        <button onClick={() => setIsCreatePhaseOpen(true)} className="p-2 rounded-full hover:bg-slate-700" title="Crear Nueva Fase">
+                            <PlusCircle />
+                        </button>
+                        <button onClick={() => setIsConfigOpen(true)} className="p-2 rounded-full hover:bg-slate-700" title="Configuración General">
+                            <Settings />
+                        </button>
+                    </div>
                 </div>
                 
                 <div className="flex border-b border-slate-700 overflow-x-auto">
@@ -1167,7 +1295,12 @@ export default function TournamentAdminPage() {
                         </>
                     )}
                 </div>
-
+                <CreatePhaseModal 
+                    isOpen={isCreatePhaseOpen} 
+                    onClose={() => setIsCreatePhaseOpen(false)} 
+                    allTeams={allTeamsForSelection} 
+                    onCreate={handleCreatePhase} 
+                />
                 {isConfigOpen && (
                     <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 pt-20">
                         <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] flex flex-col">
