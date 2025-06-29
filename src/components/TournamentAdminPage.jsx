@@ -1126,7 +1126,7 @@ export default function TournamentAdminPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
-    const [isConfigOpen, setIsConfigOpen] = useState(false);
+ 
     const [editingMatch, setEditingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
