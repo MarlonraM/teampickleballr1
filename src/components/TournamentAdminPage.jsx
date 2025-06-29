@@ -1071,51 +1071,17 @@ export default function TournamentAdminPage() {
     const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    
-    const fetchData = useCallback(async () => {
-        setLoading(true); // Siempre inicia la carga
-        try {
-            const [matchesRes, courtsRes, teamsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/matches/scoreboard`),
-                fetch(`${API_BASE_URL}/api/courts`),
-                fetch(`${API_BASE_URL}/api/teams`)
-            ]);
-            if (!matchesRes.ok || !courtsRes.ok || !teamsRes.ok) throw new Error('No se pudieron cargar los datos.');
-            
-            const matchesData = await matchesRes.json();
-            const courtsData = await courtsRes.json();
-            const teamsData = await teamsRes.json();
-
-            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
-            setError(null);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false); // Termina la carga
-        }
-    }, []); // La dependencia vacía hace que la función sea estable y no se recree.
-
-    useEffect(() => {
-        fetchData();
-        const socket = new WebSocket(WS_URL);
-        socket.onopen = () => console.log('Panel de Control conectado al WebSocket.');
-        socket.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
-                fetchData();
-            }
-        };
-        socket.onclose = () => console.log('Panel de Control desconectado.');
-        return () => socket.close();
-    }, [fetchData]);
-    
+         
     const fetchDataForTournament = useCallback(async (tournamentId) => {
-        if (!tournamentId) return;
+        if (!tournamentId) {
+            setLoading(false);
+            return;
+        }
         setLoading(true);
         try {
             const [matchesRes, teamsRes, courtsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`), // Usa la ruta específica del torneo
-                fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),             // Usa la ruta específica del torneo
+                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/courts`)
             ]);
             if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos para este torneo.');
@@ -1128,11 +1094,62 @@ export default function TournamentAdminPage() {
             setError(null);
         } catch (err) {
             setError(err.message);
+            console.error(err);
         } finally {
             setLoading(false);
         }
     }, []);
 
+
+
+    const fetchInitialData = useCallback(async () => {
+        try {
+            const [tournamentsRes, allTeamsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/tournaments`),
+                fetch(`${API_BASE_URL}/api/teams`)
+            ]);
+            const tournamentsData = await tournamentsRes.json();
+            const allTeamsData = await allTeamsRes.json();
+
+            setTournaments(tournamentsData);
+            setAllTeamsForSelection(allTeamsData);
+
+            if (tournamentsData.length > 0) {
+                setActiveTournamentId(tournamentsData[0].id);
+            } else {
+                setLoading(false);
+            }
+        } catch (err) {
+            console.error("Error fetching initial data", err);
+            setError("Error al cargar datos iniciales.");
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchInitialData();
+    }, [fetchInitialData]);
+
+    useEffect(() => {
+        if (activeTournamentId) {
+            fetchDataForTournament(activeTournamentId);
+        }
+    }, [activeTournamentId, fetchDataForTournament]);
+
+    useEffect(() => {
+        const socket = new WebSocket(WS_URL);
+        socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
+                if (message.payload.tournament_id === parseInt(activeTournamentId, 10)) {
+                    fetchDataForTournament(activeTournamentId);
+                }
+            }
+        };
+        return () => socket.close();
+    }, [activeTournamentId, fetchDataForTournament]);
+
+    
    const fetchTournaments = useCallback(async () => {
         try {
             const res = await fetch(`${API_BASE_URL}/api/tournaments`);
