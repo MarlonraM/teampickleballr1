@@ -5,6 +5,7 @@ import './App.css';
 import MatchList from './components/MatchList';
 import ScorekeeperPage from './components/ScorekeeperPage';
 import PublicScoreboard from './components/PublicScoreboard';
+import PublicScoreboardMichelob from './components/PublicScoreboardMichelob'; // O la ruta donde lo hayas guardado
 // --- 1. IMPORTA EL NUEVO PANEL DE ADMINISTRACIÓN ---
 import TournamentAdminPage from './components/TournamentAdminPage';
 
@@ -18,6 +19,9 @@ function AdminDashboard() {
         <Link to="/scoreboard" style={{ color: '#61DAFB', fontSize: '1.2em' }}>
           VER TABLERO PÚBLICO
         </Link>
+        <Link to="/scoreboard/michelob" style={{ color: '#61DAFB', fontSize: '1.2em' }}>
+          VER TABLERO PÚBLICO
+        </Link>    
         <Link to="/admin" style={{ color: '#81C784', fontSize: '1.2em', fontWeight: 'bold' }}>
           IR A PANEL DE CONFIGURACIÓN
         </Link>
@@ -37,6 +41,7 @@ function App() {
         {/* He ajustado la ruta a como la tienes tú: /match/:matchId */}
         <Route path="/match/:matchId" element={<ScorekeeperPage />} />
         <Route path="/scoreboard" element={<PublicScoreboard />} />
+        <Route path="/scoreboard/michelob" element={<PublicScoreboardMichelob />} />
 
         {/* --- 2. AÑADE LA RUTA PARA EL NUEVO PANEL --- */}
         <Route path="/admin" element={<TournamentAdminPage />} />
