@@ -120,7 +120,7 @@ function PublicScoreboardMichelob() {
     color: '#E51937',
     minWidth: '50px',
     textAlign: 'right'
-}
+},
 
         cardFooter: { backgroundColor: 'rgba(5, 22, 56, 0.05)', color: '#666', padding: '0.5rem 1.5rem', textAlign: 'center', fontSize: '0.8rem' },
         
