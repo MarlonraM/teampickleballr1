@@ -199,7 +199,7 @@ function PublicScoreboardMichelob() {
                         <Announcement key={ann.id} announcement={ann} onExpire={() => removeAnnouncement(ann.id)} styles={styles} />
                     ))}
                 </div>
-  <main style={{ ...styles.mainContent, paddingTop: 16 }}>
+  <main style={{ ...styles.mainContent, paddingTop: 4 }}>
   <h1 style={{ ...styles.title, marginBottom: 4 }}>MARCADOR EN VIVO</h1>
 
   <div style={{
@@ -209,11 +209,11 @@ function PublicScoreboardMichelob() {
     gap: 8,
     fontSize: 14,
     color: '#666',
-    marginBottom: 12,
+    marginBottom: 4,
     marginTop: 0
   }}>
     Presentado por
-    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 32, transform: 'scale(1.3)' }} />
+    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 40, transform: 'scale(1.3)' }} />
   </div>
 
   {matches.length > 0 ? (
