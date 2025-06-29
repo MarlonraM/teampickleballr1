@@ -82,7 +82,13 @@ function PublicScoreboardMichelob() {
     textTransform: 'uppercase',
     letterSpacing: '1px'
 },
-        grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '1.5rem' },
+        grid: {
+    display: 'grid',
+    gridTemplateColumns: isMobile
+        ? 'repeat(auto-fit, minmax(300px, 1fr))'
+        : 'repeat(auto-fit, minmax(500px, 1fr))',
+    gap: '1.5rem'
+},
         
         matchCard: { backgroundColor: '#FFFFFF', color: '#051638', borderRadius: '1rem', border: '1px solid #e0e0e0', overflow: 'hidden', boxShadow: '0 10px 30px -15px rgba(5, 22, 56, 0.3)' },
         
