@@ -199,56 +199,78 @@ function PublicScoreboardMichelob() {
                         <Announcement key={ann.id} announcement={ann} onExpire={() => removeAnnouncement(ann.id)} styles={styles} />
                     ))}
                 </div>
-  <main style={{ ...styles.mainContent, paddingTop: 16 }}> {/* sube el contenido */}
+  <main style={{ ...styles.mainContent, paddingTop: 16 }}>
   <h1 style={{ ...styles.title, marginBottom: 4 }}>MARCADOR EN VIVO</h1>
-  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 14, color: '#666', marginBottom: 12,   // menos espacio hacia abajo
-    marginTop: 0}}>Presentado por <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 32, transform: 'scale(1.3)' }} />
+
+  <div style={{
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 12,
+    marginTop: 0
+  }}>
+    Presentado por
+    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 32, transform: 'scale(1.3)' }} />
   </div>
-                                        {matches.map(match => {
-                                            const isTeam1Serving = match.server_team_id === match.team1_id;
-                                            const isTeam2Serving = match.server_team_id === match.team2_id;
-                                
-                                return (
-                                    <div key={match.id} style={styles.matchCard}>
-                                        <div style={styles.cardHeader}>
-                                            <h2 style={styles.cardHeaderTitle}>{match.court_name || `CANCHA #${match.court_id}`}</h2>
-                                        </div>
-                                        <div style={styles.cardBody}>
-                                            <div style={styles.teamRow}>
-                                                <div style={styles.teamDetails}>
-                                                    <p style={styles.playersName}>{match.team1_player1_name} / {match.team1_player2_name}</p>
-                                                    <p style={styles.teamName}>{match.team1_name}</p>
-                                                </div>
-                                                <div style={styles.rightSection}>
-                                                    <ServiceDots isServing={isTeam1Serving} styles={styles} />
-                                                    <div style={styles.verticalDivider}></div>
-                                                    <span style={styles.score}>{match.team1_score}</span>
-                                                </div>
-                                            </div>
-                                            <hr style={styles.divider} />
-                                            <div style={styles.teamRow}>
-                                                <div style={styles.teamDetails}>
-                                                    <p style={styles.playersName}>{match.team2_player1_name} / {match.team2_player2_name}</p>
-                                                    <p style={styles.teamName}>{match.team2_name}</p>
-                                                </div>
-                                                <div style={styles.rightSection}>
-                                                    <ServiceDots isServing={isTeam2Serving} styles={styles} />
-                                                    <div style={styles.verticalDivider}></div>
-                                                    <span style={styles.score}>{match.team2_score}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style={styles.cardFooter}>
-                                            GRUPO {match.group_id ? String.fromCharCode(64 + match.group_id) : 'N/A'} - {match.category}
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    ) : (
-                        <p style={{ textAlign: 'center', color: '#051638', fontStyle: 'italic' }}>No hay partidos en vivo en este momento.</p>
-                    )}
-                </main>
+
+  {matches.length > 0 ? (
+    <div style={styles.grid}>
+      {matches.map(match => {
+        const isTeam1Serving = match.server_team_id === match.team1_id;
+        const isTeam2Serving = match.server_team_id === match.team2_id;
+
+        return (
+          <div key={match.id} style={styles.matchCard}>
+            <div style={styles.cardHeader}>
+              <h2 style={styles.cardHeaderTitle}>{match.court_name || `CANCHA #${match.court_id}`}</h2>
+            </div>
+            <div style={styles.cardBody}>
+              <div style={styles.teamRow}>
+                <div style={styles.teamDetails}>
+                  <p style={styles.playersName}>{match.team1_player1_name} / {match.team1_player2_name}</p>
+                  <p style={styles.teamName}>{match.team1_name}</p>
+                </div>
+                <div style={styles.rightSection}>
+                  <ServiceDots isServing={isTeam1Serving} styles={styles} />
+                  <div style={styles.verticalDivider}></div>
+                  <span style={styles.score}>{match.team1_score}</span>
+                </div>
+              </div>
+
+              <hr style={styles.divider} />
+
+              <div style={styles.teamRow}>
+                <div style={styles.teamDetails}>
+                  <p style={styles.playersName}>{match.team2_player1_name} / {match.team2_player2_name}</p>
+                  <p style={styles.teamName}>{match.team2_name}</p>
+                </div>
+                <div style={styles.rightSection}>
+                  <ServiceDots isServing={isTeam2Serving} styles={styles} />
+                  <div style={styles.verticalDivider}></div>
+                  <span style={styles.score}>{match.team2_score}</span>
+                </div>
+              </div>
+            </div>
+            <div style={styles.cardFooter}>
+              GRUPO {match.group_id ? String.fromCharCode(64 + match.group_id) : 'N/A'} - {match.category}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  ) : (
+    <p style={{
+      textAlign: 'center',
+      color: '#051638',
+      fontStyle: 'italic'
+    }}>
+      No hay partidos en vivo en este momento.
+    </p>
+  )}
+</main>
 
                 <footer style={styles.footer}>
                     El consumo excesivo de alcohol es perjudicial para la salud ley 42-01.
