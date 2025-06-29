@@ -328,7 +328,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
                 <table className="w-full text-left text-sm">
                     <thead className="bg-slate-700/50">
                         <tr>
-                            <SortableHeader sortKey="id">ID</SortableHeader>
+                            <th className="p-2 w-[60px]"><SortableHeader sortKey="id">ID</SortableHeader></th>
                             <th className="p-3">Equipos</th>
                             <th className="p-3">Jugadores</th>
                             <th className="p-3">Categoría</th>
@@ -339,7 +339,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
                             <th className="p-3">Acciones</th>
                         </tr>
                         <tr>
-                            <th className="p-2"><input name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
+                            <th className="p-2 w-[60px]"><input name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
                             <th className="p-2"><input name="teams" value={filters.teams} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
                             <th className="p-2"><input name="players" value={filters.players} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
                             <th className="p-2"><input name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
