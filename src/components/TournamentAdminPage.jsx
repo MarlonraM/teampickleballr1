@@ -1027,12 +1027,13 @@ export default function TournamentAdminPage() {
     const [editingMatch, setEditingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
          
-    const fetchDataForTournament = useCallback(async (tournamentId) => {
-        if (!tournamentId) {
-            setLoading(false);
-            return;
+    const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
+        if (!tournamentId) return;
+        
+        // Solo muestra el spinner en la carga inicial, no en las actualizaciones silenciosas
+        if (!isSilent) {
+            setLoading(true);
         }
-        setLoading(true);
         try {
             const [matchesRes, teamsRes, courtsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
@@ -1057,7 +1058,7 @@ export default function TournamentAdminPage() {
 
 
 
-    const fetchInitialData = useCallback(async () => {
+       const fetchInitialData = useCallback(async () => {
         try {
             const [tournamentsRes, allTeamsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
@@ -1069,7 +1070,7 @@ export default function TournamentAdminPage() {
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
 
-            if (tournamentsData.length > 0) {
+            if (tournamentsData.length > 0 && !activeTournamentId) {
                 setActiveTournamentId(tournamentsData[0].id);
             } else {
                 setLoading(false);
@@ -1079,25 +1080,28 @@ export default function TournamentAdminPage() {
             setError("Error al cargar datos iniciales.");
             setLoading(false);
         }
-    }, []);
+    }, [activeTournamentId]);
 
     useEffect(() => {
         fetchInitialData();
     }, [fetchInitialData]);
-
+    
     useEffect(() => {
         if (activeTournamentId) {
-            fetchDataForTournament(activeTournamentId);
+            fetchDataForTournament(activeTournamentId, false); // Carga inicial del torneo con spinner
         }
     }, [activeTournamentId, fetchDataForTournament]);
 
     useEffect(() => {
+        if (!activeTournamentId) return;
+
         const socket = new WebSocket(WS_URL);
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
             if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
                 if (message.payload.tournament_id === parseInt(activeTournamentId, 10)) {
-                    fetchDataForTournament(activeTournamentId);
+                    // Actualización silenciosa, sin spinner
+                    fetchDataForTournament(activeTournamentId, true);
                 }
             }
         };
