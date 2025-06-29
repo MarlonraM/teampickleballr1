@@ -41,7 +41,7 @@ const styles = {
 
 const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
     const firstDotActive = isServingTeam;
-    const secondDotActive = isServingTeam && !isFirstServeOfGame && serverNum === 1;
+    const secondDotActive = isServingTeam && !isFirstServeOfGame || isServingTeam && serverNum === 2;
 
     return (
         <div style={styles.serviceDotsContainer}>
