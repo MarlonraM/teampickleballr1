@@ -761,38 +761,44 @@ const GestionTorneoTab = () => {
     );
 };
  
-// --- PESTAÑA 4: STANDING ---
+/ --- PESTAÑA 3: STANDING (CORREGIDA) ---
 const StandingTab = ({ teams, matches, eliminationCount }) => {
     const calculateStats = (teamMatches, teamId) => {
         return teamMatches.reduce((acc, match) => {
-            if (match.status !== 'finalizado') return acc;
+            if (match.status !== 'finalizado' || match.is_tiebreaker) return acc;
+            
             const isTeam1 = match.team1_id === teamId;
-            const myScore = isTeam1 ? match.team1_score : match.team2_score;
-            const opponentScore = isTeam1 ? match.team2_score : match.team1_score;
-            if (myScore > opponentScore) acc.G += 1; else acc.P += 1;
-            acc.GF += myScore; acc.GC += opponentScore;
+            if (isTeam1) {
+                acc.GF += match.team1_score;
+                acc.GC += match.team2_score;
+                acc.TournamentPoints += match.team1_tournament_points || 0;
+            } else {
+                acc.GF += match.team2_score;
+                acc.GC += match.team1_score;
+                acc.TournamentPoints += match.team2_tournament_points || 0;
+            }
+            if (match.winner_id === teamId) acc.G += 1; else acc.P += 1;
             return acc;
-        }, { G: 0, P: 0, GF: 0, GC: 0 });
+        }, { G: 0, P: 0, GF: 0, GC: 0, TournamentPoints: 0 });
     };
 
     const standingsByGroup = useMemo(() => {
+        if (!teams || !matches) return [];
+        
         const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
-        const groups = {};
-        const teamsWithData = teams.map(team => {
-            const teamMatches = matches.filter(m => !m.is_tiebreaker && (m.team1_id === team.id || m.team2_id === team.id));
-            const stats = calculateStats(teamMatches, team.id);
-            return { ...team, stats, tournament_points: team.tournament_points || 0, diff: stats.GF - stats.GC };
-        });
-
-        teamsWithData.forEach(team => {
+        
+        const groups = teams.reduce((acc, team) => {
             const groupKey = team.groupId;
             if (groupKey) {
-                if (!groups[groupKey]) {
-                    groups[groupKey] = { name: `Grupo ${getGroupLetter(groupKey)}`, teams: [] };
+                if (!acc[groupKey]) {
+                    acc[groupKey] = { name: `Grupo ${getGroupLetter(groupKey)}`, id: groupKey, teams: [] };
                 }
-                groups[groupKey].teams.push(team);
+                const teamMatches = matches.filter(m => !m.is_tiebreaker && (m.team1_id === team.id || m.team2_id === team.id));
+                const stats = calculateStats(teamMatches, team.id);
+                acc[groupKey].teams.push({ ...team, stats, diff: stats.GF - stats.GC, tournament_points: stats.TournamentPoints });
             }
-        });
+            return acc;
+        }, {});
 
         for(const groupKey in groups) {
             groups[groupKey].teams.sort((a, b) => {
@@ -806,8 +812,9 @@ const StandingTab = ({ teams, matches, eliminationCount }) => {
 
     return (
         <div className="space-y-8">
-            {standingsByGroup.map(group => {
-                const numToEliminate = eliminationCount[group.teams[0].groupId] || 0;
+            {standingsByGroup.length > 0 ? standingsByGroup.map(group => {
+                if (!group.teams || group.teams.length === 0) return null;
+                const numToEliminate = eliminationCount[group.id] || 0;
                 return (
                     <Card key={group.name} title={`Clasificación - ${group.name}`} icon={ListOrdered}>
                         <div className="overflow-x-auto">
@@ -841,11 +848,10 @@ const StandingTab = ({ teams, matches, eliminationCount }) => {
                         </div>
                     </Card>
                 )
-            })}
+            }) : <Card title="Standing"><p className="text-slate-400 text-center">No hay grupos definidos o partidos jugados en esta fase del torneo.</p></Card>}
         </div>
     );
 };
-
 // --- PESTAÑA 3: JUEGOS EN CURSO (DISEÑO ACTUALIZADO) ---
 const JuegosEnCursoTab = () => {
     const [matches, setMatches] = useState([]);
