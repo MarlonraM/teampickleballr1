@@ -1172,18 +1172,7 @@ export default function TournamentAdminPage() {
         socket.onclose = () => console.log('Panel de Control desconectado.');
         return () => socket.close();
     }, [fetchData]);
-
-    const fetchTournaments = useCallback(async () => {
-        try {
-            const res = await fetch(`${API_BASE_URL}/api/tournaments`);
-            const data = await res.json();
-            setTournaments(data);
-            if (data.length > 0 && !activeTournamentId) {
-                setActiveTournamentId(data[0].id);
-            }
-        } catch (err) { console.error("Error fetching tournaments", err); }
-    }, [activeTournamentId]);
-
+    
     const fetchDataForTournament = useCallback(async (tournamentId) => {
         if (!tournamentId) return;
         setLoading(true);
@@ -1193,11 +1182,14 @@ export default function TournamentAdminPage() {
                 fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/courts`)
             ]);
-            // ... (manejo de datos)
+            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos para este torneo.');
+            
             const matchesData = await matchesRes.json();
             const teamsData = await teamsRes.json();
             const courtsData = await courtsRes.json();
+
             setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
+            setError(null);
         } catch (err) {
             setError(err.message);
         } finally {
@@ -1205,17 +1197,65 @@ export default function TournamentAdminPage() {
         }
     }, []);
 
+   const fetchTournaments = useCallback(async () => {
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/tournaments`);
+            const data = await res.json();
+            setTournaments(data);
+            if (data.length > 0 && !activeTournamentId) {
+                setActiveTournamentId(data[0].id);
+            }
+        } catch (err) { console.error("Error fetching tournaments", err); }
+    }, [activeTournamentId]);
+    
     useEffect(() => {
         fetchTournaments();
-        // Fetch all teams once for the "Create Phase" modal
         fetch(`${API_BASE_URL}/api/teams`).then(res => res.json()).then(setAllTeamsForSelection);
     }, [fetchTournaments]);
-
+    
     useEffect(() => {
-        fetchDataForTournament(activeTournamentId);
+        if (activeTournamentId) {
+            fetchDataForTournament(activeTournamentId);
+        }
     }, [activeTournamentId, fetchDataForTournament]);
 
-    const handleCreatePhase = async (phaseData) => {
+    useEffect(() => {
+        const socket = new WebSocket(WS_URL);
+        socket.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
+                // Actualiza solo si el cambio pertenece al torneo activo
+                if (message.payload.tournament_id === parseInt(activeTournamentId, 10)) {
+                    fetchDataForTournament(activeTournamentId);
+                }
+            }
+        };
+        return () => socket.close();
+    }, [activeTournamentId, fetchDataForTournament]);
+
+         const handleSaveMatch = async (matchId, updateData) => {
+        setIsSaving(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(errorBody.msg || "Error al guardar el partido");
+            }
+            // La actualización ahora la gatilla el WebSocket, solo cerramos el modal
+            setModalData(null); 
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    
+        const handleCreatePhase = async (phaseData) => {
         try {
             const response = await fetch(`${API_BASE_URL}/api/tournaments/create_phase`, {
                 method: 'POST',
@@ -1233,10 +1273,10 @@ export default function TournamentAdminPage() {
     };
 
         const handleGenerationComplete = () => {
-        fetchData().then(() => setActiveTab('partidos'));
+        fetchDataForTournament(activeTournamentId);
+        setActiveTab('partidos');
         setIsConfigOpen(false);
     };
-    
     const handleSaveEditedMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
@@ -1288,19 +1328,20 @@ export default function TournamentAdminPage() {
                 </div>
 
                 <div className="pt-8">
-                    {editingMatch && <EditScoreModal match={editingMatch} courts={allData.courts} onClose={() => setEditingMatch(null)} onSave={handleSaveEditedMatch} isSaving={isSaving} />}
+                    {modalData && <MatchManagementModal matchData={modalData} courts={allData.courts} onClose={() => setModalData(null)} onSave={handleSaveMatch} isSaving={isSaving}/>}
                     
                     {loading ? ( <div className="flex justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8" /></div> ) : 
                     error ? (<div className="text-red-400 text-center p-10">{error}</div>) : (
-                        <>
-                           {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={fetchData} setEditingMatch={setEditingMatch} />}
-                           {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} refreshData={fetchData} />}
+                        <div key={activeTournamentId}>
+                           {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={() => fetchDataForTournament(activeTournamentId)} setEditingMatch={setEditingMatch} />}
+                           {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} setModalData={setModalData} />}
                            {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
                            {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
                            {activeTab === 'avisos' && <AvisosTab allData={allData} />}
-                        </>
+                        </div>
                     )}
                 </div>
+
                 <CreatePhaseModal 
                     isOpen={isCreatePhaseOpen} 
                     onClose={() => setIsCreatePhaseOpen(false)} 
@@ -1318,7 +1359,7 @@ export default function TournamentAdminPage() {
                                 <ConfiguracionPanel 
                                     onGenerationComplete={handleGenerationComplete} 
                                     initialData={allData}
-                                    refreshData={fetchData}
+                                    refreshData={() => fetchDataForTournament(activeTournamentId)}
                                     onClose={() => setIsConfigOpen(false)}
                                 />
                             </main>
