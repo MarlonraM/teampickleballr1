@@ -1027,13 +1027,14 @@ export default function TournamentAdminPage() {
     const [editingMatch, setEditingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
          
+        // --- LÓGICA DE CARGA DE DATOS CORREGIDA ---
     const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
-        if (!tournamentId) return;
-        
-        // Solo muestra el spinner en la carga inicial, no en las actualizaciones silenciosas
-        if (!isSilent) {
-            setLoading(true);
+        if (!tournamentId) {
+            setLoading(false);
+            return;
         }
+        if (!isSilent) setLoading(true);
+
         try {
             const [matchesRes, teamsRes, courtsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
@@ -1052,14 +1053,13 @@ export default function TournamentAdminPage() {
             setError(err.message);
             console.error(err);
         } finally {
-            setLoading(false);
+            if (!isSilent) setLoading(false);
         }
     }, []);
 
-
-
-       const fetchInitialData = useCallback(async () => {
+    const fetchInitialData = useCallback(async () => {
         try {
+            setLoading(true);
             const [tournamentsRes, allTeamsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
                 fetch(`${API_BASE_URL}/api/teams`)
@@ -1070,7 +1070,7 @@ export default function TournamentAdminPage() {
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
 
-            if (tournamentsData.length > 0 && !activeTournamentId) {
+            if (tournamentsData.length > 0) {
                 setActiveTournamentId(tournamentsData[0].id);
             } else {
                 setLoading(false);
@@ -1080,70 +1080,62 @@ export default function TournamentAdminPage() {
             setError("Error al cargar datos iniciales.");
             setLoading(false);
         }
-    }, [activeTournamentId]);
+    }, []);
 
+    // Carga inicial de torneos y lista completa de equipos
     useEffect(() => {
         fetchInitialData();
     }, [fetchInitialData]);
     
+    // Carga los datos del torneo cuando el ID activo cambia
     useEffect(() => {
         if (activeTournamentId) {
-            fetchDataForTournament(activeTournamentId, false); // Carga inicial del torneo con spinner
+            fetchDataForTournament(activeTournamentId, false);
         }
     }, [activeTournamentId, fetchDataForTournament]);
 
+    // Configuración del WebSocket para actualizaciones en tiempo real
     useEffect(() => {
         if (!activeTournamentId) return;
 
         const socket = new WebSocket(WS_URL);
+        socket.onopen = () => console.log('Panel de Control conectado al WebSocket.');
         socket.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
-                if (message.payload.tournament_id === parseInt(activeTournamentId, 10)) {
-                    // Actualización silenciosa, sin spinner
-                    fetchDataForTournament(activeTournamentId, true);
+            try {
+                const message = JSON.parse(event.data);
+                if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
+                    if (message.payload.tournament_id === parseInt(activeTournamentId)) {
+                        fetchDataForTournament(activeTournamentId, true); // Actualización silenciosa
+                    }
                 }
+            } catch (error) {
+                console.error("Error procesando mensaje de WebSocket:", error);
             }
         };
+        socket.onclose = () => console.log('Panel de Control desconectado.');
         return () => socket.close();
     }, [activeTournamentId, fetchDataForTournament]);
-
     
-   const fetchTournaments = useCallback(async () => {
+    const handleSaveEditedMatch = async (matchId, updateData) => {
+        setIsSaving(true);
         try {
-            const res = await fetch(`${API_BASE_URL}/api/tournaments`);
-            const data = await res.json();
-            setTournaments(data);
-            if (data.length > 0 && !activeTournamentId) {
-                setActiveTournamentId(data[0].id);
+            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updateData)
+            });
+            if (!response.ok) {
+                const errorBody = await response.json();
+                throw new Error(errorBody.msg || "Error al guardar el partido");
             }
-        } catch (err) { console.error("Error fetching tournaments", err); }
-    }, [activeTournamentId]);
-    
-    useEffect(() => {
-        fetchTournaments();
-        fetch(`${API_BASE_URL}/api/teams`).then(res => res.json()).then(setAllTeamsForSelection);
-    }, [fetchTournaments]);
-    
-    useEffect(() => {
-        if (activeTournamentId) {
-            fetchDataForTournament(activeTournamentId);
+            // El WebSocket se encarga de refrescar, solo cerramos el modal
+            setEditingMatch(null);
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
         }
-    }, [activeTournamentId, fetchDataForTournament]);
-
-    useEffect(() => {
-        const socket = new WebSocket(WS_URL);
-        socket.onmessage = (event) => {
-            const message = JSON.parse(event.data);
-            // CORRECCIÓN: Se asegura de recargar los datos PARA EL TORNEO ACTIVO
-            if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
-                if (message.payload.tournament_id === parseInt(activeTournamentId, 10)) {
-                    fetchDataForTournament(activeTournamentId);
-                }
-            }
-        };
-        return () => socket.close();
-    }, [activeTournamentId, fetchDataForTournament]);
+    };
 
          const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
