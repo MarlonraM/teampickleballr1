@@ -1131,6 +1131,7 @@ export default function TournamentAdminPage() {
     const [allTeamsForSelection, setAllTeamsForSelection] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [modalData, setModalData] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
     const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
