@@ -784,6 +784,8 @@ const StandingTab = ({ teams, matches, eliminationCount }) => {
 };
 // --- PESTAÑA 3: JUEGOS EN CURSO (DISEÑO ACTUALIZADO) ---
 const JuegosEnCursoTab = ({ matches, courts }) => {
+    const [loading, setLoading] = useState(true); 
+    const [error, setError] = useState(null); 
     const matchesByCourt = useMemo(() => {
         const data = {};
         if (!courts || !matches) return data;
