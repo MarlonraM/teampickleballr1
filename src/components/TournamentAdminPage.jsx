@@ -380,7 +380,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
                                 </td>
                                 <td className="p-3"><div className="flex items-center gap-2"><Clock size={14} /><p>{calculateDuration(match.start_time, match.end_time)}</p></div></td>
                                 <td className="p-3">
-                                    <Link to={/match/${match.id}} target="_blank">
+                                    <Link to={`/match/${match.id}`} target="_blank">
                                         <button className="px-2 py-1 text-xs bg-cyan-600 hover:bg-cyan-700 rounded-md flex items-center gap-1"><ExternalLink size={14}/> Scorekeeper</button>
                                     </Link>
                                 </td>
