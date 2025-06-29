@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Megaphone, Server } from 'lucide-react'; 
-
+const isMobile = window.innerWidth < 768;
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
 
@@ -70,31 +70,58 @@ function PublicScoreboardMichelob() {
         hamburgerIcon: { width: '24px', height: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' },
         hamburgerLine: { width: '100%', height: '3px', backgroundColor: '#E51937', borderRadius: '2px' },
         announcementsContainer: { position: 'absolute', top: '90px', left: '50%', transform: 'translateX(-50%)', zIndex: 50, width: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center' },
-        mainContent: { padding: '1rem 2rem 4rem 2rem' },
-        title: { textAlign: 'center', fontSize: '2rem', fontWeight: '900', color: '#051638', marginBottom: '2rem', textTransform: 'uppercase', letterSpacing: '1px' },
-        
+        mainContent: {
+    padding: isMobile ? '1rem' : '1rem 2rem 4rem 2rem'
+},
+        title: {
+    textAlign: 'center',
+    fontSize: isMobile ? '1.5rem' : '2rem',
+    fontWeight: '900',
+    color: '#051638',
+    marginBottom: '2rem',
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
+},
         grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(500px, 1fr))', gap: '1.5rem' },
         
         matchCard: { backgroundColor: '#FFFFFF', color: '#051638', borderRadius: '1rem', border: '1px solid #e0e0e0', overflow: 'hidden', boxShadow: '0 10px 30px -15px rgba(5, 22, 56, 0.3)' },
         
         cardHeader: { backgroundColor: '#051638', color: 'white', padding: '0.5rem', textAlign: 'center' },
         
-        cardHeaderTitle: { fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.9rem' },
+    cardHeaderTitle: {
+    fontWeight: 'bold',
+    textTransform: 'uppercase',
+    letterSpacing: '1px',
+    fontSize: isMobile ? '0.75rem' : '0.9rem',
+},
         
-        cardBody: { padding: '1rem 1.5rem' },
+        cardBody: {
+    padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem'
+},
         
         teamRow: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '1rem' },
         
         teamDetails: { textAlign: 'left' },
         
-        playersName: { fontWeight: '600', fontSize: '1em', color: '#051638' },
-       
+        playersName: {
+    fontWeight: '600',
+    fontSize: isMobile ? '0.9em' : '1em',
+    color: '#051638'
+        },
         teamName: { color: '#667', fontSize: '0.75em', fontWeight: 'normal', textTransform: 'uppercase' },
        
         rightSection: { display: 'flex', alignItems: 'center', gap: '1rem' },
         
-        score: { fontSize: '3.5rem', fontWeight: '900', color: '#E51937', minWidth: '50px', textAlign: 'right' },
-        
+       score: {
+    fontFamily: "'Teko', sans-serif",
+    fontSize: isMobile ? '4em' : '8em',  // ajustado para que no desborde en móviles
+    fontWeight: 700,
+    lineHeight: 1,
+    color: '#E51937',
+    minWidth: '50px',
+    textAlign: 'right'
+}
+
         cardFooter: { backgroundColor: 'rgba(5, 22, 56, 0.05)', color: '#666', padding: '0.5rem 1.5rem', textAlign: 'center', fontSize: '0.8rem' },
         
         serviceDotsContainer: { display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center', alignItems: 'center' },
@@ -217,7 +244,7 @@ function PublicScoreboardMichelob() {
                 </main>
 
                 <footer style={styles.footer}>
-                    Presentado por <img src="/logob.png" alt="Michelob Ultra" style={styles.logo} />
+                    Presentado por <img src="/logo.png" alt="Michelob Ultra" style={styles.logo} />
                 </footer>
             </div>
         </div>
