@@ -503,17 +503,10 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
     
 // --- PESTAÑA 2: GESTIÓN DE TORNEO ---
 const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount, setModalData }) => {
-    //const [matches, setMatches] = useState([]);
-    //const [teams, setTeams] = useState([]);
-    //const [courts, setCourts] = useState([]);
-    //const [loading, setLoading] = useState(true);
-    //const [error, setError] = useState(null);
     const { teams, matches, courts } = allData;
     const [expandedRows, setExpandedRows] = useState({});
-    const [modalData, setModalData] = useState(null);
-    const [eliminationCount, setEliminationCount] = useState({});
+    // Se eliminan los useState duplicados
     const [showTiebreakers, setShowTiebreakers] = useState(false);
-
     const [isSaving, setIsSaving] = useState(false);
     // Función para cargar todos los datos
       
@@ -521,7 +514,7 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
         const team_ids = tiedTeams.map(t => t.id);
         setIsSaving(true);
         try {
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/generate-tiebreakers`, {
+            const response = await fetch(`${API_BASE_URL}/api/matches/generate-tiebreakers`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ team_ids, category, tournament_id: 1 }) // Asumimos un tournament_id por ahora
@@ -531,10 +524,9 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
                 throw new Error(errorData.msg || 'Error al generar juegos de desempate.');
             }
             alert('Juegos de desempate generados. La tabla se actualizará.');
-            await fetchData(); // Recarga todos los datos para incluir los nuevos partidos
+            await refreshData();
         } catch(err) {
             alert(err.message);
-            console.error(err);
         } finally {
             setIsSaving(false);
         }
