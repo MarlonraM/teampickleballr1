@@ -231,7 +231,7 @@ function PublicScoreboardMichelob() {
         <div style={styles.pageWrapper}>
             <div style={styles.container}>
                 <header style={styles.header}>
-                    <img src="https://www.michelobultra.com/content/dam/brand_michelobultra/logos/michelob-ultra-logo.svg" alt="Michelob Ultra" style={styles.logo} />
+                    <img src=logoblanco.png" alt="Michelob Ultra" style={styles.logo} />
                     <div style={styles.hamburgerIcon}>
                         <div style={styles.hamburgerLine}></div>
                         <div style={styles.hamburgerLine}></div>
