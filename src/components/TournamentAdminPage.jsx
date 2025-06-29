@@ -1181,26 +1181,7 @@ export default function TournamentAdminPage() {
         setActiveTab('partidos');
         setIsConfigOpen(false);
     };
-    const handleSaveEditedMatch = async (matchId, updateData) => {
-        setIsSaving(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
-            });
-            if (!response.ok) {
-                const errorBody = await response.json();
-                throw new Error(errorBody.msg || "Error al guardar el partido");
-            }
-            await fetchData();
-            setEditingMatch(null); 
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
+    
     return (
         <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-screen-2xl mx-auto">
