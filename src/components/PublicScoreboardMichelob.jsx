@@ -199,15 +199,14 @@ function PublicScoreboardMichelob() {
                         <Announcement key={ann.id} announcement={ann} onExpire={() => removeAnnouncement(ann.id)} styles={styles} />
                     ))}
                 </div>
-
-               <main style={styles.mainContent}>
-  <h1 style={styles.title}>MARCADOR EN VIVO</h1>
-  <div style={styles.footer}>
-    Presentado por <img src="/emblem.png" alt="Michelob Ultra" style={styles.logo} />
-  </div>
-  {matches.length > 0 ? (
-                                const isTeam1Serving = match.server_team_id === match.team1_id;
-                                const isTeam2Serving = match.server_team_id === match.team2_id;
+                                <main style={styles.mainContent}>
+                                    <h1 style={styles.title}>MARCADOR EN VIVO</h1>
+                                    <div style={styles.footer}>Presentado por <img src="/emblem.png" alt="Michelob Ultra" style={styles.logo} /></div>
+                                    {matches.length > 0 ? (
+                                    <div style={styles.grid}>
+                                        {matches.map(match => {
+                                            const isTeam1Serving = match.server_team_id === match.team1_id;
+                                            const isTeam2Serving = match.server_team_id === match.team2_id;
                                 
                                 return (
                                     <div key={match.id} style={styles.matchCard}>
