@@ -1179,8 +1179,8 @@ export default function TournamentAdminPage() {
         setLoading(true);
         try {
             const [matchesRes, teamsRes, courtsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
-                fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`), // Usa la ruta específica del torneo
+                fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),             // Usa la ruta específica del torneo
                 fetch(`${API_BASE_URL}/api/courts`)
             ]);
             if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos para este torneo.');
@@ -1224,8 +1224,8 @@ export default function TournamentAdminPage() {
         const socket = new WebSocket(WS_URL);
         socket.onmessage = (event) => {
             const message = JSON.parse(event.data);
+            // CORRECCIÓN: Se asegura de recargar los datos PARA EL TORNEO ACTIVO
             if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
-                // Actualiza solo si el cambio pertenece al torneo activo
                 if (message.payload.tournament_id === parseInt(activeTournamentId, 10)) {
                     fetchDataForTournament(activeTournamentId);
                 }
