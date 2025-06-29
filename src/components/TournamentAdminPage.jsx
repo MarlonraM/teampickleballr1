@@ -502,12 +502,13 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
 
     
 // --- PESTAÑA 2: GESTIÓN DE TORNEO ---
-const GestionTorneoTab = () => {
-    const [matches, setMatches] = useState([]);
-    const [teams, setTeams] = useState([]);
-    const [courts, setCourts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount, setModalData }) => {
+    //const [matches, setMatches] = useState([]);
+    //const [teams, setTeams] = useState([]);
+    //const [courts, setCourts] = useState([]);
+    //const [loading, setLoading] = useState(true);
+    //const [error, setError] = useState(null);
+    const { teams, matches, courts } = allData;
     const [expandedRows, setExpandedRows] = useState({});
     const [modalData, setModalData] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
@@ -515,73 +516,7 @@ const GestionTorneoTab = () => {
 
     const [isSaving, setIsSaving] = useState(false);
     // Función para cargar todos los datos
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const [matchesRes, courtsRes, teamsRes] = await Promise.all([
-                fetch(`${import.meta.env.VITE_API_URL}/api/matches/scoreboard`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/courts`),
-                fetch(`${import.meta.env.VITE_API_URL}/api/teams`)
-            ]);
-            if (!matchesRes.ok || !courtsRes.ok || !teamsRes.ok) throw new Error('No se pudieron cargar los datos.');
-            
-            const matchesData = await matchesRes.json();
-            const courtsData = await courtsRes.json();
-            const teamsData = await teamsRes.json();
-
-            setMatches(matchesData);
-            setCourts(courtsData);
-            setTeams(teamsData);
-            setError(null);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // Carga inicial de datos y configuración de WebSocket
-    useEffect(() => {
-        fetchData();
-
-        const socket = new WebSocket(import.meta.env.VITE_API_URL.replace(/^http/, 'ws'));
-        socket.onopen = () => console.log("Tablero de Gestión conectado al WebSocket.");
-        
-        socket.onmessage = (event) => {
-            try {
-                const updatedData = JSON.parse(event.data);
-                if (updatedData.type === 'SCORE_UPDATE') {
-                    let wasFinalized = false;
-                    
-                    setMatches(prevMatches => {
-                        return prevMatches.map(m => {
-                            if (m.id === parseInt(updatedData.matchId, 10)) {
-                                if (updatedData.payload.status === 'finalizado' && m.status !== 'finalizado') {
-                                    wasFinalized = true;
-                                }
-                                return { ...m, ...updatedData.payload };
-                            }
-                            return m;
-                        });
-                    });
-
-                    // Si un partido se finalizó, recarga los datos de los equipos
-                    if (wasFinalized) {
-                        fetch(`${import.meta.env.VITE_API_URL}/api/teams`)
-                            .then(res => res.json())
-                            .then(setTeams)
-                            .catch(err => console.error("Error al recargar equipos:", err));
-                    }
-                }
-            } catch (error) {
-                console.error('Error al procesar mensaje del WebSocket:', error);
-            }
-        };
-
-        socket.onclose = () => console.log("Tablero de Gestión desconectado.");
-        return () => socket.close();
-    }, []);
-    
+      
      const handleGenerateTiebreakers = async (tiedTeams, category) => {
         const team_ids = tiedTeams.map(t => t.id);
         setIsSaving(true);
