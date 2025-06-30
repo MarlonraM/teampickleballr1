@@ -518,23 +518,31 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
     const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null); 
      
-    
-        useEffect(() => { 
-            const fetchData = async () => { 
-                try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
+    // CORRECCIÓN: Se sincroniza el estado interno con los props que vienen del padre
+    useEffect(() => {
+        setPlayers(initialData.players || []);
+        setTeams(initialData.teams || []);
+    }, [initialData]);
+        //useEffect(() => { 
+        //    const fetchData = async () => { 
+        //        try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
     const handleAddPlayer = async (e) => { e.preventDefault(); if (!newPlayer.fullName || !newPlayer.email) return; try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/players`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name: newPlayer.fullName, email: newPlayer.email, category: newPlayer.category, }), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.msg || 'Error al registrar jugador.'); } const addedPlayer = await response.json(); setPlayers([...players, addedPlayer]); setNewPlayer({ fullName: '', email: '', category: 'Intermedio' }); } catch (err) { console.error(err); alert(err.message); } };
     
     const handleAddTeam = async (e) => {
         e.preventDefault();
-        if (!newTeamName) return;
+        if (!newTeamName || !activeTournamentId) {
+            alert("No hay un torneo activo seleccionado.");
+            return;
+        }
         try {
             const response = await fetch(`${API_BASE_URL}/api/teams`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newTeamName, tournament_id: activeTournamentId }), // Usa el ID del torneo activo
+                body: JSON.stringify({ name: newTeamName, tournament_id: activeTournamentId }),
             });
             if (!response.ok) throw new Error('Error al registrar equipo.');
-            onGenerationComplete();
+            onGenerationComplete(); // Llama a la función del padre para refrescar los datos
+            setNewTeamName('');
         } catch (err) {
             alert(err.message);
         }
