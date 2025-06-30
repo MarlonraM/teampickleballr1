@@ -197,7 +197,7 @@ function PublicScoreboardMichelob() {
     const [announcements, setAnnouncements] = useState([]);
     const [view, setView] = useState('scoreboard'); // 'scoreboard' o 'standing'
     //const [tournaments, setTournaments] = useState([]);
-    //const [activeTournamentId, setActiveTournamentId] = useState(null);
+    const [activeTournamentId, setActiveTournamentId] = useState(null);
     const [allData, setAllData] = useState({ matches: [], teams: [] });
 
     const styles = {
