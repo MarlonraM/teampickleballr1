@@ -25,7 +25,7 @@ const TabButton = ({ tabName, label, icon: Icon, activeTab, setActiveTab }) => (
     </button>
 );
 
-// --- MODAL PARA CREAR NUEVA FASE ---
+// --- Modales (Completos) ---
 const CreatePhaseModal = ({ isOpen, onClose, allTeams, onCreate, isSaving }) => {
     const [phaseName, setPhaseName] = useState("");
     const [startDate, setStartDate] = useState("");
@@ -86,7 +86,6 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, onCreate, isSaving }) => 
         </div>
     );
 };
-
 // --- MODAL PARA EDITAR PUNTUACIÓN Y ESTADO ---
 const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
     const [scores, setScores] = useState({
@@ -1157,7 +1156,6 @@ export default function TournamentAdminPage() {
             return;
         }
         if (!isSilent) setLoading(true);
-
         try {
             const [matchesRes, teamsRes, courtsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
@@ -1165,11 +1163,9 @@ export default function TournamentAdminPage() {
                 fetch(`${API_BASE_URL}/api/courts`)
             ]);
             if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos para este torneo.');
-            
             const matchesData = await matchesRes.json();
             const teamsData = await teamsRes.json();
             const courtsData = await courtsRes.json();
-
             setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
             setError(null);
         } catch (err) {
@@ -1184,7 +1180,7 @@ export default function TournamentAdminPage() {
         try {
             const [tournamentsRes, allTeamsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
-                                fetch(`${API_BASE_URL}/api/teams`)
+                fetch(`${API_BASE_URL}/api/teams`)
             ]);
             const tournamentsData = await tournamentsRes.json();
             const allTeamsData = await allTeamsRes.json();
