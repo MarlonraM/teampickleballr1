@@ -514,7 +514,7 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
         }
         try {
             setIsSaving(true);
-            const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate`, {
+            const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ tournament_id: activeTournamentId })
