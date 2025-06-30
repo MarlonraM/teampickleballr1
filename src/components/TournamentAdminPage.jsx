@@ -603,28 +603,7 @@ useEffect(() => {
     const groupSummary = useMemo(() => { const summary = {}; groupOptions.forEach(groupNum => { const groupLetter = getGroupLetter(groupNum); if (groupLetter) { summary[groupLetter] = teams.filter(t => t.groupId === groupNum).map(t => t.name); }}); return summary; }, [teams, groupOptions]);
     const teamsPerGroup = useMemo(() => { const counts = {}; groupOptions.forEach(groupNum => { counts[groupNum] = teams.filter(t => t.groupId === groupNum).length; }); return counts; }, [teams, groupOptions]);
     const categoryValidation = useMemo(() => { const validation = {}; teams.forEach(team => { const teamPlayers = players.filter(p => p.teamId === team.id); const categoryCount = teamPlayers.reduce((acc, player) => { acc[player.category] = (acc[player.category] || 0) + 1; return acc; }, {}); validation[team.id] = { isValid: Object.values(categoryCount).every(count => count <= 2), counts: categoryCount }; }); return validation; }, [players, teams]);
-    const handleSaveAndGenerateMatches = async () => {
-        if (!activeTournamentId) {
-            alert("Por favor, selecciona un torneo válido primero.");
-            return;
-        }
-        try {
-            setIsSaving(true);
-            const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournament_id: activeTournamentId })
-            });
-            if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.');
-            alert('¡Partidos generados exitosamente!');
-            onGenerationComplete();
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-  
+    
     
     if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando datos...</span></div>;
     if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
