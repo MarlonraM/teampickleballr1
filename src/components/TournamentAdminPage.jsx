@@ -519,12 +519,11 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
         try {
             setIsSaving(true);
             // ... (lógica para guardar grupos y asignaciones de jugadores)
-            
-            const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournament_id: activeTournamentId }) // Usa el ID del torneo activo
-            });
+            const generateResponse = await fetch('...', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournament_id: activeTournamentId }) // <-- AHORA USA EL ID CORRECTO
+    });
 
             if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.');
             alert('¡Partidos generados exitosamente!');
