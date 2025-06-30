@@ -517,7 +517,14 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
      
     const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null); 
-     
+    
+    useEffect(() => {
+        console.log("✅ ConfiguracionPanel montado");
+        console.log("📦 Datos iniciales:", initialData);
+        console.log("🏆 ID del torneo activo:", activeTournamentId);
+    }, []);
+
+ 
     // CORRECCIÓN: Se sincroniza el estado interno con los props que vienen del padre
     useEffect(() => {
         setPlayers(initialData.players || []);
@@ -1262,12 +1269,7 @@ export default function TournamentAdminPage() {
         return () => socket.close();
     }, [activeTournamentId, fetchDataForTournament]);
 
- useEffect(() => {
-        console.log("✅ ConfiguracionPanel montado");
-        console.log("📦 Datos iniciales:", initialData);
-        console.log("🏆 ID del torneo activo:", activeTournamentId);
-    }, []);
-    
+   
     const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
