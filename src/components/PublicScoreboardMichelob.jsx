@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Megaphone, Server } from 'lucide-react'; 
+import { Megaphone, Server, Trophy, Shield, Flame } from 'lucide-react'; 
 const isMobile = window.innerWidth < 768;
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
