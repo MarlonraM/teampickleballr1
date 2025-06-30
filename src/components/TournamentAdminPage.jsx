@@ -465,7 +465,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
 
 
 // --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
-const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, onClose }) => {
+const ConfiguracionPanel = ({ activeTournamentId, onGenerationComplete, initialData, onGenerationComplete, refreshData, onClose }) => {
     const [players, setPlayers] = useState(initialData.players || []);
     const [teams, setTeams] = useState(initialData.teams || []);
     const [isSaving, setIsSaving] = useState(false);
@@ -507,11 +507,6 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
     const groupSummary = useMemo(() => { const summary = {}; groupOptions.forEach(groupNum => { const groupLetter = getGroupLetter(groupNum); if (groupLetter) { summary[groupLetter] = teams.filter(t => t.groupId === groupNum).map(t => t.name); }}); return summary; }, [teams, groupOptions]);
     const teamsPerGroup = useMemo(() => { const counts = {}; groupOptions.forEach(groupNum => { counts[groupNum] = teams.filter(t => t.groupId === groupNum).length; }); return counts; }, [teams, groupOptions]);
     const categoryValidation = useMemo(() => { const validation = {}; teams.forEach(team => { const teamPlayers = players.filter(p => p.teamId === team.id); const categoryCount = teamPlayers.reduce((acc, player) => { acc[player.category] = (acc[player.category] || 0) + 1; return acc; }, {}); validation[team.id] = { isValid: Object.values(categoryCount).every(count => count <= 2), counts: categoryCount }; }); return validation; }, [players, teams]);
-   
-    
-    
-const ConfiguracionPanel = ({ activeTournamentId, onGenerationComplete, ... }) => {
-
     const handleSaveAndGenerateMatches = async () => {
         if (!activeTournamentId) {
             alert("Por favor, selecciona un torneo válido primero.");
