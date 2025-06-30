@@ -25,26 +25,44 @@ const TabButton = ({ tabName, label, icon: Icon, activeTab, setActiveTab }) => (
     </button>
 );
 
-const CreatePhaseModal = ({ isOpen, onClose, allTeams, onCreate, isSaving }) => {
+// --- Modales ---
+const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, isSaving }) => {
+    const [step, setStep] = useState(1);
+    const [creationType, setCreationType] = useState(null);
+    const [tournamentName, setTournamentName] = useState("");
     const [phaseName, setPhaseName] = useState("");
     const [startDate, setStartDate] = useState("");
-    const [selectedTeams, setSelectedTeams] = useState([]);
+    const [parentTournamentId, setParentTournamentId] = useState("");
     const [carryPoints, setCarryPoints] = useState(false);
+    const [selectedTeams, setSelectedTeams] = useState([]);
+    const [scoringFormat, setScoringFormat] = useState('traditional');
+    const [gamesFormat, setGamesFormat] = useState('single_game');
+    const [pointsToWin, setPointsToWin] = useState(11);
 
-    const handleTeamToggle = (teamId) => {
-        setSelectedTeams(prev => prev.includes(teamId) ? prev.filter(id => id !== teamId) : [...prev, teamId]);
-    };
+    const parentTournamentTeams = useMemo(() => {
+        if (!parentTournamentId) return [];
+        return allTeams.filter(t => t.tournament_id === parseInt(parentTournamentId));
+    }, [parentTournamentId, allTeams]);
+
+    useEffect(() => {
+        setPointsToWin(scoringFormat === 'rally' ? 15 : 11);
+    }, [scoringFormat]);
 
     const handleCreate = () => {
-        if (!phaseName || !startDate || selectedTeams.length === 0) {
-            alert("Por favor, introduce un nombre, una fecha de inicio y selecciona equipos.");
+        const finalPhaseName = creationType === 'new' ? `${tournamentName} - Round Robin` : phaseName;
+        if (!finalPhaseName || !startDate || (creationType === 'phase' && selectedTeams.length === 0)) {
+            alert("Por favor, completa todos los campos requeridos.");
             return;
         }
         onCreate({
-            name: phaseName,
+            name: finalPhaseName,
             start_date: new Date(startDate).toISOString(),
-            teams: selectedTeams.map(id => allTeams.find(t => t.id === id)),
-            carry_points: carryPoints
+            teams: creationType === 'new' ? allTeams : selectedTeams.map(id => allTeams.find(t => t.id === id)),
+            carry_points: carryPoints,
+            scoring_format: scoringFormat,
+            games_format: gamesFormat,
+            points_to_win: pointsToWin,
+            parent_tournament_id: parentTournamentId || null,
         });
     };
     
@@ -53,39 +71,57 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, onCreate, isSaving }) => 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-2xl">
-                <h2 className="text-xl font-bold text-cyan-400 mb-4">Crear Nueva Fase del Torneo</h2>
-                <div className="space-y-4">
-                    <input type="text" value={phaseName} onChange={(e) => setPhaseName(e.target.value)} placeholder="Nombre de la fase (ej. Semifinal)" className="w-full bg-slate-700 p-2 rounded-md" />
-                    <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">Fecha de Inicio de la Fase</label>
-                        <input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md" />
+                <h2 className="text-xl font-bold text-cyan-400 mb-4">Crear Torneo o Fase</h2>
+                
+                {step === 1 && (
+                    <div className="flex gap-4">
+                        <button onClick={() => { setCreationType('new'); setStep(2); }} className="flex-1 p-4 bg-slate-700 rounded-lg text-center hover:bg-slate-600">Crear Torneo Nuevo</button>
+                        <button onClick={() => { setCreationType('phase'); setStep(2); }} className="flex-1 p-4 bg-slate-700 rounded-lg text-center hover:bg-slate-600">Crear Nueva Fase</button>
                     </div>
-                    <div className="max-h-60 overflow-y-auto border border-slate-600 p-2 rounded-md">
-                        <p className="font-semibold mb-2">Seleccionar Equipos que Avanzan:</p>
-                        {allTeams.map(team => (
-                            <div key={team.id} className="flex items-center">
-                                <input type="checkbox" id={`team-${team.id}`} checked={selectedTeams.includes(team.id)} onChange={() => handleTeamToggle(team.id)} className="mr-2" />
-                                <label htmlFor={`team-${team.id}`}>{team.name}</label>
-                            </div>
-                        ))}
+                )}
+
+                {step === 2 && (
+                    <div className="space-y-4">
+                        {creationType === 'new' && (
+                            <input type="text" value={tournamentName} onChange={(e) => setTournamentName(e.target.value)} placeholder="Nombre del Torneo" className="w-full bg-slate-700 p-2 rounded-md" />
+                        )}
+                        {creationType === 'phase' && (
+                            <>
+                                <select value={parentTournamentId} onChange={(e) => setParentTournamentId(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md">
+                                    <option value="">Selecciona un Torneo Existente</option>
+                                    {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                                <input type="text" value={phaseName} onChange={(e) => setPhaseName(e.target.value)} placeholder="Nombre de la nueva fase (ej. Semifinal)" className="w-full bg-slate-700 p-2 rounded-md" />
+                                <div className="flex items-center"><input type="checkbox" id="carry-points" checked={carryPoints} onChange={(e) => setCarryPoints(e.target.checked)} className="mr-2" /><label htmlFor="carry-points">Arrastrar puntos de la fase anterior</label></div>
+                                <div className="max-h-40 overflow-y-auto border border-slate-600 p-2 rounded-md">
+                                    <p className="font-semibold mb-2">Seleccionar Equipos que Avanzan:</p>
+                                    {parentTournamentTeams.map(team => (
+                                        <div key={team.id} className="flex items-center">
+                                            <input type="checkbox" id={`team-${team.id}`} checked={selectedTeams.includes(team.id)} onChange={() => handleTeamToggle(team.id)} className="mr-2" />
+                                            <label htmlFor={`team-${team.id}`}>{team.name} ({team.tournament_points || 0} pts)</label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        )}
+                        <div><label className="block text-sm font-medium text-slate-300 mb-1">Fecha de Inicio de la Fase</label><input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md" /></div>
+                        
+                        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-700">
+                            <div><label>Formato Puntuación</label><select value={scoringFormat} onChange={e => setScoringFormat(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md mt-1"><option value="traditional">Tradicional</option><option value="rally">Rally Scoring</option></select></div>
+                            <div><label>Juegos</label><select value={gamesFormat} onChange={e => setGamesFormat(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md mt-1"><option value="single_game">1 Juego</option><option value="best_of_3">Mejor de 3</option></select></div>
+                            <div><label>Puntos para Ganar</label><input type="number" value={pointsToWin} onChange={e => setPointsToWin(parseInt(e.target.value))} className="w-full bg-slate-700 p-2 rounded-md mt-1" /></div>
+                        </div>
+
+                        <div className="mt-6 flex justify-between">
+                            <button onClick={() => setStep(1)} className="px-4 py-2 bg-slate-600 rounded-md">Atrás</button>
+                            <button onClick={handleCreate} className="px-4 py-2 bg-green-600 rounded-md" disabled={isSaving}>Crear</button>
+                        </div>
                     </div>
-                    <div className="flex items-center">
-                        <input type="checkbox" id="carry-points" checked={carryPoints} onChange={(e) => setCarryPoints(e.target.checked)} className="mr-2" />
-                        <label htmlFor="carry-points">Arrastrar puntos de la fase anterior</label>
-                    </div>
-                </div>
-                <div className="mt-6 flex justify-end gap-4">
-                    <button onClick={onClose} className="px-4 py-2 bg-slate-600 rounded-md" disabled={isSaving}>Cancelar</button>
-                    <button onClick={handleCreate} className="px-4 py-2 bg-green-600 rounded-md flex items-center" disabled={isSaving}>
-                        {isSaving && <Loader2 className="animate-spin mr-2"/>}
-                        Crear Fase
-                    </button>
-                </div>
+                )}
             </div>
         </div>
     );
 };
-
 // --- MODAL PARA EDITAR PUNTUACIÓN Y ESTADO ---
 const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
     const [scores, setScores] = useState({
@@ -1123,10 +1159,6 @@ const HorariosTab = ({ matches, courts, openScheduleModal }) => {
     );
 };
 
-
-
-
-
 // --- COMPONENTE PRINCIPAL ---
 export default function TournamentAdminPage() {
     const [activeTab, setActiveTab] = useState('partidos');
@@ -1138,7 +1170,6 @@ export default function TournamentAdminPage() {
     const [error, setError] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
     
-    // Estados para los modales
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
@@ -1146,10 +1177,7 @@ export default function TournamentAdminPage() {
     const [isSaving, setIsSaving] = useState(false);
     
     const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
-        if (!tournamentId) {
-            setLoading(false);
-            return;
-        }
+        if (!tournamentId) { setLoading(false); return; }
         if (!isSilent) setLoading(true);
         try {
             const [matchesRes, teamsRes, courtsRes] = await Promise.all([
@@ -1157,7 +1185,7 @@ export default function TournamentAdminPage() {
                 fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/courts`)
             ]);
-            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos para este torneo.');
+            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
             const matchesData = await matchesRes.json();
             const teamsData = await teamsRes.json();
             const courtsData = await courtsRes.json();
@@ -1165,12 +1193,11 @@ export default function TournamentAdminPage() {
             setError(null);
         } catch (err) {
             setError(err.message);
-            console.error(err);
         } finally {
             if (!isSilent) setLoading(false);
         }
     }, []);
-    
+
     const fetchInitialData = useCallback(async () => {
         try {
             const [tournamentsRes, allTeamsRes] = await Promise.all([
@@ -1179,15 +1206,11 @@ export default function TournamentAdminPage() {
             ]);
             const tournamentsData = await tournamentsRes.json();
             const allTeamsData = await allTeamsRes.json();
-
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
-
             if (tournamentsData.length > 0) {
                 if (!activeTournamentId) {
                     setActiveTournamentId(tournamentsData[0].id);
-                } else {
-                    fetchDataForTournament(activeTournamentId);
                 }
             } else {
                 setLoading(false);
@@ -1196,22 +1219,26 @@ export default function TournamentAdminPage() {
             setError("Error al cargar datos iniciales.");
             setLoading(false);
         }
-    }, [activeTournamentId, fetchDataForTournament]);
+    }, [activeTournamentId]);
 
     useEffect(() => {
         fetchInitialData();
     }, [fetchInitialData]);
-    
+
+    useEffect(() => {
+        if (activeTournamentId) {
+            fetchDataForTournament(activeTournamentId);
+        }
+    }, [activeTournamentId, fetchDataForTournament]);
+
     useEffect(() => {
         if (!activeTournamentId) return;
         const socket = new WebSocket(WS_URL);
         socket.onmessage = (event) => {
             try {
                 const message = JSON.parse(event.data);
-                if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
-                    if (message.payload.tournament_id === parseInt(activeTournamentId)) {
-                        fetchDataForTournament(activeTournamentId, true);
-                    }
+                if ((message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') && message.payload.tournament_id === parseInt(activeTournamentId)) {
+                    fetchDataForTournament(activeTournamentId, true);
                 }
             } catch (error) {
                 console.error("Error procesando mensaje de WebSocket:", error);
@@ -1223,15 +1250,11 @@ export default function TournamentAdminPage() {
     const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+            await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(updateData)
             });
-            if (!response.ok) {
-                const errorBody = await response.json();
-                throw new Error(errorBody.msg || "Error al guardar el partido");
-            }
             setEditingMatch(null);
             setSchedulingMatch(null);
         } catch (err) {
@@ -1240,14 +1263,12 @@ export default function TournamentAdminPage() {
             setIsSaving(false);
         }
     };
+    
     const handleGenerationComplete = () => {
-        if(activeTournamentId) {
-            fetchDataForTournament(activeTournamentId);
-            setActiveTab('partidos');
-        }
+        fetchDataForTournament(activeTournamentId);
         setIsConfigOpen(false);
     };
-   
+
     const handleCreatePhase = async (phaseData) => {
         setIsSaving(true);
         try {
@@ -1258,7 +1279,6 @@ export default function TournamentAdminPage() {
             });
             const newTournament = await response.json();
             if (!response.ok) throw new Error(newTournament.msg || "Error al crear la fase");
-            
             await fetchInitialData();
             setActiveTournamentId(newTournament.id);
             setIsCreatePhaseOpen(false);
@@ -1310,7 +1330,7 @@ export default function TournamentAdminPage() {
                            {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} setModalData={setEditingMatch} />}
                            {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
                            {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
-                           {activeTab === 'avisos' && <AvisosTab allData={allData} refreshData={() => fetchDataForTournament(activeTournamentId, true)} />}
+                           {activeTab === 'avisos' && <AvisosTab allData={allData} />}
                         </div>
                     )}
                 </div>
@@ -1331,9 +1351,9 @@ export default function TournamentAdminPage() {
                             </header>
                             <main className="p-6 overflow-y-auto">
                                 <ConfiguracionPanel 
-                                    initialData={allData}
                                     onGenerationComplete={handleGenerationComplete} 
-                                    activeTournamentId={activeTournamentId} // <-- ¡CORRECCIÓN CLAVE!
+                                    initialData={allData}
+                                    activeTournamentId={activeTournamentId}
                                     onClose={() => setIsConfigOpen(false)}
                                 />
                             </main>
