@@ -1337,10 +1337,11 @@ export default function TournamentAdminPage() {
         }
     };
     
-    const handleGenerationComplete = () => {
+   const handleGenerationComplete = () => {
+        fetchInitialData(); // Refresca la lista global de jugadores y equipos
         fetchDataForTournament(activeTournamentId);
-        setIsConfigOpen(false);
     };
+
 
     const handleCreatePhase = async (phaseData) => {
         setIsSaving(true);
