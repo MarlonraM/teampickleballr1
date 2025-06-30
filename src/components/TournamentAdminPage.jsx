@@ -1289,19 +1289,43 @@ const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false
         }
     }, []);
 
+    const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
+        if (!tournamentId) { setLoading(false); return; }
+        if (!isSilent) setLoading(true);
+        try {
+            const [matchesRes, teamsRes, courtsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/teams/by-tournament/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/courts`)
+            ]);
+            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
+            const matchesData = await matchesRes.json();
+            const teamsData = await teamsRes.json();
+            const courtsData = await courtsRes.json();
+            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
+            setError(null);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            if (!isSilent) setLoading(false);
+        }
+    }, []);
+
     const fetchInitialData = useCallback(async () => {
         try {
             const [tournamentsRes, allTeamsRes, allPlayersRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
                 fetch(`${API_BASE_URL}/api/teams`),
-                fetch(`${API_BASE_URL}/api/players`)
+                fetch(`${API_BASE_URL}/api/players`) // <-- NUEVO: Carga todos los jugadores
             ]);
             const tournamentsData = await tournamentsRes.json();
             const allTeamsData = await allTeamsRes.json();
-            const allPlayersData = await allPlayersRes.json();
+            const allPlayersData = await allPlayersRes.json(); // <-- NUEVO
+
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
-            setAllPlayers(allPlayersData);
+            setAllPlayers(allPlayersData); // <-- NUEVO
+
             if (tournamentsData.length > 0) {
                 if (!activeTournamentId) {
                     setActiveTournamentId(tournamentsData[0].id);
@@ -1340,7 +1364,7 @@ const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false
         };
         return () => socket.close();
     }, [activeTournamentId, fetchDataForTournament]);
-
+    
     const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
