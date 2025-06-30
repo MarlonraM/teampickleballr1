@@ -465,7 +465,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
 
 
 // --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
-const ConfiguracionPanel = ({ activeTournamentId, onGenerationComplete, initialData, onGenerationComplete, refreshData, onClose }) => {
+const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationComplete, refreshData, onClose }) => {
     const [players, setPlayers] = useState(initialData.players || []);
     const [teams, setTeams] = useState(initialData.teams || []);
     const [isSaving, setIsSaving] = useState(false);
