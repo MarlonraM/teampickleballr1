@@ -377,8 +377,8 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
                     <thead className="bg-slate-700/50">
                         <tr>
                             <SortableHeader sortKey="id" className="w-16">ID</SortableHeader>
-                            <th className="p-3 w-1/4">Equipos</th>
-                            <th className="p-3 w-1/4">Jugadores</th>
+                            <th className="p-3 w-1/6">Equipos</th>
+                            <th className="p-3 w-1/6">Jugadores</th>
                             <th className="p-3 w-28">Categoría</th>
                             <SortableHeader sortKey="status" className="w-28">Estado</SortableHeader>
                             <th className="p-3 w-32">Cancha</th>
