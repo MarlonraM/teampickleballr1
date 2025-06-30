@@ -141,13 +141,8 @@ const StandingView = ({ styles }) => {
         };
         fetchDataForTournament();
     }, [activeTournamentId]);
-const styles = {
-    navIcons: { display: 'flex', alignItems: 'center', gap: '1.5rem', flexDirection: 'row'},
-    navIcon: { cursor: 'pointer' },
-    tableHeader: { padding: '12px', textAlign: 'left', fontWeight: 'bold', borderBottom: '2px solid #051638' },
-    tableCell: { padding: '12px' },
 
-};
+    
     return (
         <div style={styles.mainContent}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
@@ -207,6 +202,13 @@ function PublicScoreboardMichelob() {
     const [allData, setAllData] = useState({ matches: [], teams: [] });
 
     const styles = {
+        navIcons: { display: 'flex', alignItems: 'center', gap: '1.5rem', flexDirection: 'row'},
+    navIcon: { cursor: 'pointer' },
+    tableHeader: { padding: '12px', textAlign: 'left', fontWeight: 'bold', borderBottom: '2px solid #051638' },
+    tableCell: { padding: '12px' },
+
+
+        
         pageWrapper: { backgroundColor: '#051638', padding: '8px', minHeight: '100vh' },
         container: { fontFamily: "'Inter', sans-serif, sans-serif", backgroundColor: '#FFFFFF', color: '#051638', minHeight: 'calc(100vh - 16px)', borderRadius: '8px', position: 'relative', paddingTop: '80px' },
         header: { position: 'fixed', top: '0px', left: '0px', right: '0px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', backgroundColor: '#051638', color: 'white', zIndex: 100},
