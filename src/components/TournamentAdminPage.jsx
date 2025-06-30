@@ -1262,6 +1262,12 @@ export default function TournamentAdminPage() {
         return () => socket.close();
     }, [activeTournamentId, fetchDataForTournament]);
 
+ useEffect(() => {
+        console.log("✅ ConfiguracionPanel montado");
+        console.log("📦 Datos iniciales:", initialData);
+        console.log("🏆 ID del torneo activo:", activeTournamentId);
+    }, []);
+    
     const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
