@@ -377,14 +377,14 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
                     <thead className="bg-slate-700/50">
                         <tr>
                             <SortableHeader sortKey="id" className="w-16">ID</SortableHeader>
-                            <th className="p-3">Equipos</th>
-                            <th className="p-3">Jugadores</th>
-                            <th className="p-3">Categoría</th>
-                            <SortableHeader sortKey="status">Estado</SortableHeader>
-                            <th className="p-3">Cancha</th>
-                            <SortableHeader sortKey="scheduled_start_time">Hr. Prog.</SortableHeader>
-                            <th className="p-3">Marcador</th>
-                            <th className="p-3">Acciones</th>
+                            <th className="p-3 w-1/4">Equipos</th>
+                            <th className="p-3 w-1/4">Jugadores</th>
+                            <th className="p-3 w-28">Categoría</th>
+                            <SortableHeader sortKey="status" className="w-28">Estado</SortableHeader>
+                            <th className="p-3 w-32">Cancha</th>
+                            <SortableHeader sortKey="scheduled_start_time" className="w-32">Hr. Prog.</SortableHeader>
+                            <th className="p-3 w-28">Marcador</th>
+                            <th className="p-3 w-32">Scorekeeper</th>
                         </tr>
                         <tr>
                             <th className="p-2"><input name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
@@ -407,8 +407,8 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
                                 <td className="p-3 font-mono">{match.id}</td>
                                 <td className="p-3 font-semibold">{match.team1_name} vs {match.team2_name}</td>
                                 <td className="p-3 text-slate-400 text-xs">
-                                    <div>{match.team1_player1_name} / {match.team1_player2_name}</div>
-                                    <div>{match.team2_player1_name} / {match.team2_player2_name}</div>
+                                    <div>{match.team1_player1_name || 'N/A'} / {match.team1_player2_name || 'N/A'}</div>
+                                    <div>{match.team2_player1_name || 'N/A'} / {match.team2_player2_name || 'N/A'}</div>
                                 </td>
                                 <td className="p-3">{match.category}</td>
                                 <td className="p-3">{getStatusTag(match.status)}</td>
@@ -419,11 +419,9 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
                                     </select>
                                 </td>
                                 <td className="p-3">
-                                    <div className="flex items-center gap-2 font-mono">
+                                    <div onClick={() => openScheduleModal(match)} className="bg-slate-700/50 hover:bg-slate-700 p-2 rounded-md cursor-pointer flex items-center justify-center gap-2 font-mono">
+                                        <Clock size={14} />
                                         <span>{formatScheduledTime(match.scheduled_start_time)}</span>
-                                        <button onClick={() => openScheduleModal(match)} className="text-slate-400 hover:text-white">
-                                            <Clock size={14} />
-                                        </button>
                                     </div>
                                 </td>
                                 <td className="p-3">
@@ -447,6 +445,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
         </Card>
     );
 };
+
 
 
 
