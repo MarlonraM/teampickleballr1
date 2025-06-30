@@ -1183,6 +1183,7 @@ export default function TournamentAdminPage() {
     const [error, setError] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
     
+    // Estados para los modales
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
@@ -1211,7 +1212,7 @@ export default function TournamentAdminPage() {
         }
     }, []);
 
-   const fetchInitialData = useCallback(async () => {
+    const fetchInitialData = useCallback(async () => {
         try {
             const [tournamentsRes, allTeamsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
@@ -1293,7 +1294,6 @@ export default function TournamentAdminPage() {
             });
             const newTournament = await response.json();
             if (!response.ok) throw new Error(newTournament.msg || "Error al crear la fase");
-            
             await fetchInitialData();
             setActiveTournamentId(newTournament.id);
             setIsCreatePhaseOpen(false);
