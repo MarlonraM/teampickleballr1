@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, Trophy, Swords, MonitorPlay, ListOrdered, Clock, ExternalLink, Pencil, Megaphone, Send, Bell, Check, PlusCircle, Calendar } from 'lucide-react';
+import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, ArrowRight, Trophy, Swords, MonitorPlay, ListOrdered, Clock, ExternalLink, Pencil, Megaphone, Send, Bell, Check, PlusCircle, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import.meta.env.VITE_API_URL;
 
@@ -265,7 +265,7 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
 };
 
 // --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
-    const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingMatch }) => {
+const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingMatch, openScheduleModal }) => {    
     const [matches, setMatches] = useState(initialMatches);
     const [filters, setFilters] = useState({ id: '', teams: '', players: '', category: '', status: '', court: '' });
     const [sortConfig, setSortConfig] = useState({ key: 'status', direction: 'ascending' });
@@ -414,21 +414,24 @@ const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) 
         }
     };
 
-
+ const formatScheduledTime = (time) => {
+        if (!time) return '-';
+        return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    };
+    
   return (
         <Card title="Lista Completa de Partidos" icon={ListOrdered}>
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                     <thead className="bg-slate-700/50">
                         <tr>
-                            <th className="p-2 w-[100px]"><SortableHeader sortKey="id">ID</SortableHeader></th> 
+                            <SortableHeader sortKey="id">ID</SortableHeader>
                             <th className="p-3">Equipos</th>
-                            <th className="p-3">Jugadores</th>
                             <th className="p-3">Categoría</th>
                             <SortableHeader sortKey="status">Estado</SortableHeader>
                             <th className="p-3">Cancha</th>
+                            <SortableHeader sortKey="scheduled_start_time">Hr. Prog.</SortableHeader>
                             <th className="p-3">Marcador</th>
-                            <th className="p-3">Duración</th>
                             <th className="p-3">Acciones</th>
                         </tr>
                         <tr>
@@ -503,7 +506,7 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
     const [newPlayer, setNewPlayer] = useState({ fullName: '', email: '', category: 'Intermedio' });
     const [newTeamName, setNewTeamName] = useState('');
     const [numberOfGroups, setNumberOfGroups] = useState(2);
-    
+    const [schedulingMatch, setSchedulingMatch] = useState(null); // <-- Estado para el nuevo modal
      
     const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null); 
