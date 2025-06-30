@@ -519,6 +519,7 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
 useEffect(() => {
         setPlayers(allPlayers || []);
         setTeams(initialData.teams || []);
+         setLoading(false);
     }, [initialData, allPlayers]);
 
 
