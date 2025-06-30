@@ -533,7 +533,28 @@ useEffect(() => {
         //useEffect(() => { 
         //    const fetchData = async () => { 
         //        try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
-    const handleAddPlayer = async (e) => { e.preventDefault(); if (!newPlayer.fullName || !newPlayer.email) return; try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/players`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name: newPlayer.fullName, email: newPlayer.email, category: newPlayer.category, }), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.msg || 'Error al registrar jugador.'); } const addedPlayer = await response.json(); setPlayers([...players, addedPlayer]); setNewPlayer({ fullName: '', email: '', category: 'Intermedio' }); } catch (err) { console.error(err); alert(err.message); } };
+const handleAddPlayer = async (e) => {
+        e.preventDefault();
+        if (!newPlayer.fullName) {
+            alert("El nombre del jugador es obligatorio.");
+            return;
+        }
+        try {
+            await fetch(`${API_BASE_URL}/api/players`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: newPlayer.fullName,
+                    email: newPlayer.email || null,
+                    category: newPlayer.category,
+                }),
+            });
+            onGenerationComplete();
+            setNewPlayer({ fullName: '', email: '', category: 'Intermedio' });
+        } catch (err) {
+            alert(err.message);
+        }
+    };
     
     const handleAddTeam = async (e) => {
         e.preventDefault();
