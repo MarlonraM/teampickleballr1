@@ -275,7 +275,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
         setMatches(initialMatches);
     }, [initialMatches]);
 
-   onst handleFilterChange = (e) => {
+   const handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
