@@ -141,7 +141,40 @@ const StandingView = ({ styles }) => {
         };
         fetchDataForTournament();
     }, [activeTournamentId]);
-
+const styles = {
+    pageWrapper: { backgroundColor: '#051638', padding: '8px', minHeight: '100vh' },
+    container: { fontFamily: "'Inter', sans-serif, sans-serif", backgroundColor: '#FFFFFF', color: '#051638', minHeight: 'calc(100vh - 16px)', borderRadius: '8px', position: 'relative' },
+    header: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', backgroundColor: '#FFFFFF', color: '#051638', zIndex: 100, borderTopLeftRadius: '8px', borderTopRightRadius: '8px', borderBottom: '1px solid #e0e0e0', position: 'sticky', top: '8px' },
+    logo: { height: '24px' },
+    navIcons: { display: 'flex', alignItems: 'center', gap: '1.5rem', flexDirection: 'row'},
+    navIcon: { cursor: 'pointer' },
+    announcementsContainer: { position: 'fixed', top: '90px', left: '50%', transform: 'translateX(-50%)', zIndex: 50, width: '90%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px' },
+    mainContent: { padding: '1rem 2rem 4rem 2rem' },
+    title: { textAlign: 'center', fontSize: '2rem', fontWeight: '900', color: '#051638', marginBottom: '2rem', textTransform: 'uppercase', letterSpacing: '1px' },
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '1.5rem' },
+    matchCard: { backgroundColor: '#FFFFFF', color: '#051638', borderRadius: '1rem', border: '1px solid #e0e0e0', overflow: 'hidden', boxShadow: '0 10px 30px -15px rgba(5, 22, 56, 0.2)' },
+    cardHeader: { backgroundColor: '#051638', color: 'white', padding: '0.5rem', textAlign: 'center' },
+    cardHeaderTitle: { fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px', fontSize: '0.9rem' },
+    cardBody: { padding: '1rem 1.5rem' },
+   
+   
+    rightSection: { display: 'flex', alignItems: 'center', gap: '1rem' },
+    score: { fontSize: '3.5rem', fontWeight: '900', color: '#E51937', minWidth: '50px', textAlign: 'right' },
+    cardFooter: { backgroundColor: 'rgba(5, 22, 56, 0.05)', color: '#666', padding: '0.5rem 1.5rem', textAlign: 'center', fontSize: '0.8rem' },
+    serviceDotsContainer: { display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center', alignItems: 'center' },
+    serviceDot: { width: '10px', height: '10px', borderRadius: '50%', transition: 'all 0.3s ease' },
+    serviceDotActive: { backgroundColor: '#E51937' },
+    inactiveDotStyle: { backgroundColor: '#d1d5db' },
+    divider: { height: '1px', backgroundColor: '#e0e0e0', border: 'none', margin: '0.75rem 0' },
+    verticalDivider: { width: '1px', height: '35px', backgroundColor: '#e0e0e0' },
+    footer: { display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px', padding: '2rem 0 1rem 0', color: 'rgba(5, 22, 56, 0.6)', fontSize: '0.9rem' },
+    footerLogo: { height: '24px' },
+    tableHeader: { padding: '12px', textAlign: 'left', fontWeight: 'bold', borderBottom: '2px solid #051638' },
+    tableCell: { padding: '12px' },
+    announcementBar: { width: '100%', maxWidth: '500px', padding: '1rem', borderRadius: '0.75rem', boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1)', marginBottom: '1rem' },
+    announcementBarGeneral: { backgroundColor: '#E51937', color: 'white', fontWeight: 'bold', textAlign: 'center' },
+    announcementBarGame: { backgroundColor: '#FFFFFF', color: '#051638', border: `2px solid #E51937` },
+};
     return (
         <div style={styles.mainContent}>
             <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
@@ -329,8 +362,8 @@ function PublicScoreboardMichelob() {
                          <select value={activeTournamentId || ''} onChange={(e) => setActiveTournamentId(e.target.value)} style={{backgroundColor: 'transparent', border: 'none', color: 'white', fontWeight: 'bold'}}>
                             {tournaments.map(t => <option key={t.id} value={t.id} style={{color: 'black'}}>{t.name}</option>)}
                         </select>
-                         <Trophy size={24} style={{...styles.navIcon, color: view === 'standing' ? '#E51937' : 'white'}} onClick={() => setView('standing')} />
-                         <Shield size={24} style={{...styles.navIcon, color: view === 'scoreboard' ? '#E51937' : 'white'}} onClick={() => setView('scoreboard')} />
+                         <Trophy size={20} style={{...styles.navIcon, color: view === 'standing' ? '#E51937' : 'white'}} onClick={() => setView('standing')} />
+                         <Shield size={20} style={{...styles.navIcon, color: view === 'scoreboard' ? '#E51937' : 'white'}} onClick={() => setView('scoreboard')} />
                     </div>
                 </header>
                 
