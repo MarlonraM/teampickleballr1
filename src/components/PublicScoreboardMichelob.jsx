@@ -272,7 +272,7 @@ function PublicScoreboardMichelob() {
   )}
 </main>
 
-                <footer style={styles.footer tex>
+                <footer style={styles.footer tex}>
                     El consumo excesivo de alcohol es perjudicial para la salud ley 42-01.
                 </footer>
             </div>
