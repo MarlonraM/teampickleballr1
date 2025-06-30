@@ -552,32 +552,7 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
         //useEffect(() => { 
         //    const fetchData = async () => { 
         //        try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
-const handleAddPlayer = async (e) => {
-        e.preventDefault();
-        if (!newPlayer.fullName) {
-            alert("El nombre del jugador es obligatorio.");
-            return;
-        }
-        setIsSavingPlayer(true);
-        try {
-            await fetch(`${API_BASE_URL}/api/players`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    full_name: newPlayer.fullName,
-                    email: newPlayer.email || null,
-                    category: newPlayer.category,
-                }),
-            });
-            onGenerationComplete(); // Llama a la función del padre para refrescar TODOS los datos
-            setNewPlayer({ fullName: '', email: '', category: 'Intermedio' }); // Limpia el formulario
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSavingPlayer(false);
-        }
-    };
-    
+
     const handleAddTeam = async (e) => {
         e.preventDefault();
         if (!newTeamName || !activeTournamentId) {
@@ -1267,27 +1242,7 @@ export default function TournamentAdminPage() {
     const [schedulingMatch, setSchedulingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
-const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
-        if (!tournamentId) { setLoading(false); return; }
-        if (!isSilent) setLoading(true);
-        try {
-            const [matchesRes, teamsRes, courtsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
-                fetch(`${API_BASE_URL}/api/teams/by-tournament/${tournamentId}`),
-                fetch(`${API_BASE_URL}/api/courts`)
-            ]);
-            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
-            const matchesData = await matchesRes.json();
-            const teamsData = await teamsRes.json();
-            const courtsData = await courtsRes.json();
-            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
-            setError(null);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            if (!isSilent) setLoading(false);
-        }
-    }, []);
+
 
     const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
         if (!tournamentId) { setLoading(false); return; }
