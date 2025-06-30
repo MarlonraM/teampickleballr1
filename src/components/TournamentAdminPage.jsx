@@ -643,7 +643,9 @@ const handleAddPlayer = async (e) => {
                         <input required type="text" placeholder="Nombre Completo" value={newPlayer.fullName} onChange={(e) => setNewPlayer({...newPlayer, fullName: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
                         <input type="email" placeholder="Email del Jugador (Opcional)" value={newPlayer.email} onChange={(e) => setNewPlayer({...newPlayer, email: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600" />
                         <select value={newPlayer.category} onChange={(e) => setNewPlayer({...newPlayer, category: e.target.value})} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none"><option>Intermedio</option><option>Intermedio Fuerte</option><option>Avanzado</option><option>Femenino</option></select>
-                        <button type="submit" disabled={isSavingPlayer} className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">Registrar
+                        <button type="submit" disabled={isSavingPlayer} className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">
+                            {isSavingPlayer && <Loader2 className="animate-spin mr-2"/>}
+                            Registrar Jugador
                         </button>
                     </form>
                 </Card>
