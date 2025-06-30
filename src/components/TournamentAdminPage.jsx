@@ -496,15 +496,6 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
 };
 
 
-
-
-
-
-
-
-
-
-
 // --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
 const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationComplete, refreshData, onClose }) => {
     const [players, setPlayers] = useState(initialData.players || []);
@@ -526,11 +517,19 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
 
  
     // CORRECCIÓN: Se sincroniza el estado interno con los props que vienen del padre
+  
+useEffect(() => {
+        setPlayers(initialData.players || []);
+        setTeams(initialData.teams || []);
+    }, [initialData]);
+
     useEffect(() => {
   if (initialData.players || initialData.teams) {
     setLoading(false);
   }
 }, [initialData]);
+
+
         //useEffect(() => { 
         //    const fetchData = async () => { 
         //        try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
@@ -555,8 +554,48 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
             alert(err.message);
         }
     };
-    const handleSaveGroups = async () => { const groupAssignments = teams.map(team => ({ id: team.id, group_id: team.groupId })); try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams/assign-groups`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(groupAssignments) }); if (!response.ok) throw new Error('Error al guardar los grupos.'); alert('Grupos guardados exitosamente!'); } catch (err) { console.error(err); alert(err.message); } };
-    const handleAssignTeamToPlayer = (playerId, teamId) => { setPlayers(players.map(p => p.id === playerId ? { ...p, teamId: teamId ? parseInt(teamId, 10) : null } : p)); };
+    const handleSaveGroups = async () => { 
+        const groupAssignments = teams.map(team => ({ id: team.id, group_id: team.groupId })); 
+        try { 
+            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams/assign-groups`, { 
+                method: 'PUT', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(groupAssignments) 
+            }); 
+            if (!response.ok) throw new Error('Error al guardar los grupos.'); 
+            alert('Grupos guardados exitosamente!'); 
+        } catch (err) { 
+            console.error(err); 
+            alert(err.message);
+        } 
+    };
+         
+    const handleSaveAndGenerateMatches = async () => {
+        if (!activeTournamentId) {
+            alert("Por favor, selecciona un torneo válido primero.");
+            return;
+        }
+        try {
+            setIsSaving(true);
+            await handleSaveGroups();
+            
+            const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournament_id: activeTournamentId })
+            });
+
+            if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.');
+            alert('¡Partidos generados exitosamente!');
+            onGenerationComplete();
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    
     const handleAssignGroupToTeam = (teamId, groupId) => { setTeams(teams.map(t => t.id === teamId ? { ...t, groupId: groupId ? parseInt(groupId, 10) : null } : t)); };
     const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
     const groupOptions = useMemo(() => Array.from({ length: numberOfGroups }, (_, i) => i + 1), [numberOfGroups]);
@@ -1191,7 +1230,6 @@ export default function TournamentAdminPage() {
     const [error, setError] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
     
-    // Estados para los modales
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
@@ -1231,7 +1269,9 @@ export default function TournamentAdminPage() {
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
             if (tournamentsData.length > 0) {
-                setActiveTournamentId(tournamentsData[0].id);
+                if (!activeTournamentId) {
+                    setActiveTournamentId(tournamentsData[0].id);
+                }
             } else {
                 setLoading(false);
             }
@@ -1239,21 +1279,18 @@ export default function TournamentAdminPage() {
             setError("Error al cargar datos iniciales.");
             setLoading(false);
         }
-    }, []);
+    }, [activeTournamentId]);
 
-    // Carga inicial de torneos y lista completa de equipos
     useEffect(() => {
         fetchInitialData();
     }, [fetchInitialData]);
-    
-    // Carga los datos del torneo cuando el ID activo cambia
+
     useEffect(() => {
         if (activeTournamentId) {
             fetchDataForTournament(activeTournamentId);
         }
     }, [activeTournamentId, fetchDataForTournament]);
 
-    // Configuración del WebSocket para actualizaciones en tiempo real
     useEffect(() => {
         if (!activeTournamentId) return;
         const socket = new WebSocket(WS_URL);
@@ -1270,7 +1307,6 @@ export default function TournamentAdminPage() {
         return () => socket.close();
     }, [activeTournamentId, fetchDataForTournament]);
 
-   
     const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
@@ -1303,6 +1339,7 @@ export default function TournamentAdminPage() {
             });
             const newTournament = await response.json();
             if (!response.ok) throw new Error(newTournament.msg || "Error al crear la fase");
+            
             await fetchInitialData();
             setActiveTournamentId(newTournament.id);
             setIsCreatePhaseOpen(false);
