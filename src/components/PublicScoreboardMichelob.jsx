@@ -65,7 +65,21 @@ function PublicScoreboardMichelob() {
     const styles = {
         pageWrapper: { backgroundColor: '#051638', padding: '8px', minHeight: '100vh' },
         container: { fontFamily: "'Inter', sans-serif, sans-serif", backgroundColor: '#FFFFFF', color: '#051638', minHeight: 'calc(100vh - 16px)', borderRadius: '8px', position: 'relative', paddingTop: '80px' },
-        header: { position: 'fixed', top: '8px', left: '8px', right: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem', backgroundColor: '#051638', color: 'white', zIndex: 100, borderTopLeftRadius: '8px', borderTopRightRadius: '8px' },
+        header: { 
+            position: 'fixed', 
+            top: '8px', 
+            left: '8px', 
+            right: '8px', 
+            display: 'flex', 
+            justifyContent: 'space-between', 
+            alignItems: 'center', 
+            padding: '1rem 1.5rem', 
+            backgroundColor: '#051638', 
+            color: 'white', 
+            zIndex: 100, 
+            borderTopLeftRadius: '0px', 
+            borderTopRightRadius: '0px' },
+        
         logo: { height: '24px' },
         hamburgerIcon: { width: '24px', height: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', cursor: 'pointer' },
         hamburgerLine: { width: '100%', height: '3px', backgroundColor: '#E51937', borderRadius: '2px' },
@@ -115,7 +129,7 @@ function PublicScoreboardMichelob() {
     fontSize: isMobile ? '0.9em' : '1em',
     color: '#051638'
         },
-        teamName: { color: '#667', fontSize: '0.75em', fontWeight: 'normal', textTransform: 'uppercase' },
+        teamName: { color: '#667', fontSize: '0.85em', fontWeight: 'normal', textTransform: 'uppercase' },
        
         rightSection: { display: 'flex', alignItems: 'center', gap: '1rem' },
         
@@ -212,8 +226,8 @@ function PublicScoreboardMichelob() {
     marginBottom: 4,
     marginTop: 0
   }}>
-    Presentado por
-    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 40, transform: 'scale(1.3)' }} />
+    Presentado por&nbsp;&nbsp;
+    <img src="/emblem.png" alt="Michelob Ultra" style="height: 50px; transform: scale(1.35);" />
   </div>
 
   {matches.length > 0 ? (
