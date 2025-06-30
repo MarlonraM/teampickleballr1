@@ -39,11 +39,14 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, is
     const [gamesFormat, setGamesFormat] = useState('single_game');
     const [pointsToWin, setPointsToWin] = useState(11);
 
+    // Filtra los equipos del torneo padre seleccionado
     const parentTournamentTeams = useMemo(() => {
         if (!parentTournamentId) return [];
+        // Aseguramos que la comparación sea entre números
         return allTeams.filter(t => t.tournament_id === parseInt(parentTournamentId));
     }, [parentTournamentId, allTeams]);
 
+    // Ajusta los puntos por defecto según el formato de puntuación
     useEffect(() => {
         setPointsToWin(scoringFormat === 'rally' ? 15 : 11);
     }, [scoringFormat]);
@@ -54,7 +57,7 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, is
             alert("Por favor, completa todos los campos requeridos.");
             return;
         }
-        onCreate({
+       onCreate({
             name: finalPhaseName,
             start_date: new Date(startDate).toISOString(),
             teams: creationType === 'new' ? allTeams : selectedTeams.map(id => allTeams.find(t => t.id === id)),
@@ -66,17 +69,45 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, is
         });
     };
     
+    const resetState = () => {
+        setStep(1);
+        setCreationType(null);
+        setTournamentName("");
+        setPhaseName("");
+        setStartDate("");
+        setParentTournamentId("");
+        setCarryPoints(false);
+        setSelectedTeams([]);
+    };
+
+    const handleClose = () => {
+        resetState();
+        onClose();
+    };
+
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-2xl">
-                <h2 className="text-xl font-bold text-cyan-400 mb-4">Crear Torneo o Fase</h2>
+                <div className="flex justify-between items-center mb-4">
+                    <h2 className="text-xl font-bold text-cyan-400">Crear Torneo o Fase</h2>
+                    <button onClick={handleClose} className="text-slate-400 hover:text-white"><X size={20}/></button>
+                </div>
                 
                 {step === 1 && (
-                    <div className="flex gap-4">
-                        <button onClick={() => { setCreationType('new'); setStep(2); }} className="flex-1 p-4 bg-slate-700 rounded-lg text-center hover:bg-slate-600">Crear Torneo Nuevo</button>
-                        <button onClick={() => { setCreationType('phase'); setStep(2); }} className="flex-1 p-4 bg-slate-700 rounded-lg text-center hover:bg-slate-600">Crear Nueva Fase</button>
+                    <div className="space-y-4">
+                        <p>¿Qué deseas crear?</p>
+                        <div className="flex gap-4">
+                            <button onClick={() => { setCreationType('new'); setStep(2); }} className="flex-1 p-4 bg-slate-700 rounded-lg text-center hover:bg-slate-600 transition-colors">
+                                <h3 className="font-bold">Torneo Nuevo</h3>
+                                <p className="text-xs text-slate-400">Inicia un evento desde cero.</p>
+                            </button>
+                            <button onClick={() => { setCreationType('phase'); setStep(2); }} className="flex-1 p-4 bg-slate-700 rounded-lg text-center hover:bg-slate-600 transition-colors">
+                                <h3 className="font-bold">Nueva Fase</h3>
+                                <p className="text-xs text-slate-400">Crea una etapa (ej. Semifinal) para un torneo existente.</p>
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -107,14 +138,17 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, is
                         <div><label className="block text-sm font-medium text-slate-300 mb-1">Fecha de Inicio de la Fase</label><input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md" /></div>
                         
                         <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-700">
-                            <div><label>Formato Puntuación</label><select value={scoringFormat} onChange={e => setScoringFormat(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md mt-1"><option value="traditional">Tradicional</option><option value="rally">Rally Scoring</option></select></div>
-                            <div><label>Juegos</label><select value={gamesFormat} onChange={e => setGamesFormat(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md mt-1"><option value="single_game">1 Juego</option><option value="best_of_3">Mejor de 3</option></select></div>
-                            <div><label>Puntos para Ganar</label><input type="number" value={pointsToWin} onChange={e => setPointsToWin(parseInt(e.target.value))} className="w-full bg-slate-700 p-2 rounded-md mt-1" /></div>
+                            <div><label className="text-sm">Formato</label><select value={scoringFormat} onChange={e => setScoringFormat(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md mt-1 text-sm"><option value="traditional">Tradicional</option><option value="rally">Rally Scoring</option></select></div>
+                            <div><label className="text-sm">Juegos</label><select value={gamesFormat} onChange={e => setGamesFormat(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md mt-1 text-sm"><option value="single_game">1 Juego</option><option value="best_of_3">Mejor de 3</option></select></div>
+                            <div><label className="text-sm">Puntos a Ganar</label><input type="number" value={pointsToWin} onChange={e => setPointsToWin(parseInt(e.target.value))} className="w-full bg-slate-700 p-2 rounded-md mt-1 text-sm" /></div>
                         </div>
 
                         <div className="mt-6 flex justify-between">
-                            <button onClick={() => setStep(1)} className="px-4 py-2 bg-slate-600 rounded-md">Atrás</button>
-                            <button onClick={handleCreate} className="px-4 py-2 bg-green-600 rounded-md" disabled={isSaving}>Crear</button>
+                            <button onClick={() => setStep(1)} className="px-4 py-2 bg-slate-600 rounded-md" disabled={isSaving}>Atrás</button>
+                            <button onClick={handleCreate} className="px-4 py-2 bg-green-600 rounded-md flex items-center" disabled={isSaving}>
+                                {isSaving && <Loader2 className="animate-spin mr-2"/>}
+                                Crear
+                            </button>
                         </div>
                     </div>
                 )}
