@@ -1435,6 +1435,7 @@ export default function TournamentAdminPage() {
                             <main className="p-6 overflow-y-auto">
                                 <ConfiguracionPanel 
                                     initialData={allData}
+                                    allPlayers={allPlayers}
                                     onGenerationComplete={handleGenerationComplete} 
                                     activeTournamentId={activeTournamentId}
                                     onClose={() => setIsConfigOpen(false)}
