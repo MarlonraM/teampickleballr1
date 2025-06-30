@@ -550,6 +550,7 @@ useEffect(() => {
         //useEffect(() => { 
         //    const fetchData = async () => { 
         //        try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
+    const handleAssignTeamToPlayer = (playerId, teamId) => { setPlayers(players.map(p => p.id === playerId ? { ...p, teamId: teamId ? parseInt(teamId, 10) : null } : p)); };
 
     const handleAddTeam = async (e) => {
         e.preventDefault();
