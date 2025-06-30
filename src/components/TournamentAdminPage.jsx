@@ -275,11 +275,11 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
         setMatches(initialMatches);
     }, [initialMatches]);
 
-    const handleFilterChange = (e) => {
+   onst handleFilterChange = (e) => {
         const { name, value } = e.target;
         setFilters(prev => ({ ...prev, [name]: value }));
     };
-    
+
     const requestSort = (key) => {
         let direction = 'ascending';
         if (sortConfig.key === key && sortConfig.direction === 'ascending') {
@@ -287,7 +287,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
         }
         setSortConfig({ key, direction });
     };
-    
+
     const sortedAndFilteredMatches = useMemo(() => {
         let sortableItems = [...initialMatches];
 
@@ -316,8 +316,11 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
                 let bValue = b[sortConfig.key];
                 
                 if (sortConfig.key === 'status') {
-                    aValue = statusOrder[a.status];
-                    bValue = statusOrder[b.status];
+                    aValue = statusOrder[a.status] || 99;
+                    bValue = statusOrder[b.status] || 99;
+                } else if (sortConfig.key === 'scheduled_start_time') {
+                    aValue = a.scheduled_start_time ? new Date(a.scheduled_start_time).getTime() : 0;
+                    bValue = b.scheduled_start_time ? new Date(b.scheduled_start_time).getTime() : 0;
                 }
                 
                 if (aValue < bValue) { return sortConfig.direction === 'ascending' ? -1 : 1; }
@@ -329,81 +332,18 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
     }, [initialMatches, filters, sortConfig]);
 
 
-    const SortableHeader = ({ sortKey, children }) => {
+    const SortableHeader = ({ sortKey, children, className = '' }) => {
         const isSorted = sortConfig.key === sortKey;
-        const icon = isSorted ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : '';
+        const icon = isSorted ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : '↕';
         return (
-            <th className="p-3 cursor-pointer" onClick={() => requestSort(sortKey)}>
-                {children} <span className="text-cyan-400">{icon}</span>
+            <th className={`p-3 cursor-pointer select-none ${className}`} onClick={() => requestSort(sortKey)}>
+                <div className="flex items-center gap-2">
+                    {children} <span className="text-cyan-400">{icon}</span>
+                </div>
             </th>
         );
     };
 
-    const handleScoreChange = (matchId, team, value) => {
-        setEditingScore(prev => ({ ...prev, [team]: value }));
-    };
-
-    const handleScoreBlur = async (matchId) => {
-        const { team1_score, team2_score } = editingScore;
-        const score1 = parseInt(team1_score, 10);
-        const score2 = parseInt(team2_score, 10);
-
-        if (isNaN(score1) || isNaN(score2)) {
-            setEditingScore(null);
-            return;
-        }
-        
-        if (Math.abs(score1 - score2) < 2 && (score1 >= 11 || score2 >= 11)) {
-            alert('La diferencia de puntos debe ser de al menos 2 para finalizar el partido.');
-            setEditingScore(null); // Cancela la edición
-            return;
-        }
-
-        try {
-            await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ team1_score: score1, team2_score: score2 })
-            });
-            await refreshData();
-        } catch (error) {
-            console.error("Error al actualizar el marcador:", error);
-        } finally {
-            setEditingScore(null);
-        }
-    };
-    
-    const handleCourtChange = async (matchId, courtId) => {
-        try {
-            await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ court_id: courtId ? parseInt(courtId, 10) : null })
-            });
-            await refreshData();
-        } catch (error) {
-            console.error("Error al asignar cancha:", error);
-        }
-    };
-    
-    const calculateDuration = (start, end) => {
-        if (!start || !end) return '-';
-        const diffMs = new Date(end) - new Date(start);
-        const diffMins = Math.round(diffMs / 60000);
-        if (diffMins < 60) return `${diffMins}m`;
-        const hours = Math.floor(diffMins / 60);
-        const mins = diffMins % 60;
-        return `${hours}h ${mins.toString().padStart(2, '0')}m`;
-    };
-
-    const filteredMatches = useMemo(() => {
-        return matches.filter(match => 
-            (match.id.toString().includes(filters.id)) &&
-            ((match.team1_name || '').toLowerCase().includes(filters.teams.toLowerCase()) || (match.team2_name || '').toLowerCase().includes(filters.teams.toLowerCase())) &&
-            ((match.category || '').toLowerCase().includes(filters.category.toLowerCase())) &&
-            ((match.status || '').toLowerCase().includes(filters.status.toLowerCase())) &&
-            (filters.court === '' || match.court_id === parseInt(filters.court))
-        );
-    }, [matches, filters]);
-    
     const getStatusTag = (status) => {
         const baseClasses = "px-2 py-1 text-xs font-semibold rounded-full";
         switch (status) {
@@ -413,20 +353,32 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
             default: return <span className={`${baseClasses} bg-slate-600/50 text-slate-300`}>Pendiente</span>;
         }
     };
-
- const formatScheduledTime = (time) => {
+    
+    const formatScheduledTime = (time) => {
         if (!time) return '-';
         return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
-    
-  return (
+
+    const handleCourtChange = async (matchId, courtId) => {
+        try {
+            await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
+                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ court_id: courtId ? parseInt(courtId, 10) : null })
+            });
+            refreshData();
+        } catch (error) {
+            console.error("Error al asignar cancha:", error);
+        }
+    };
+
+    return (
         <Card title="Lista Completa de Partidos" icon={ListOrdered}>
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm">
                     <thead className="bg-slate-700/50">
                         <tr>
-                            <SortableHeader sortKey="id">ID</SortableHeader>
+                            <SortableHeader sortKey="id" className="w-16">ID</SortableHeader>
                             <th className="p-3">Equipos</th>
+                            <th className="p-3">Jugadores</th>
                             <th className="p-3">Categoría</th>
                             <SortableHeader sortKey="status">Estado</SortableHeader>
                             <th className="p-3">Cancha</th>
@@ -461,10 +413,18 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
                                 <td className="p-3">{match.category}</td>
                                 <td className="p-3">{getStatusTag(match.status)}</td>
                                 <td className="p-3">
-                                    <select value={match.court_id || ''} className="w-full bg-slate-700 p-1 rounded-md border border-slate-600 text-xs">
+                                    <select value={match.court_id || ''} onChange={(e) => handleCourtChange(match.id, e.target.value)} className="w-full bg-slate-700 p-1 rounded-md border border-slate-600 text-xs">
                                         <option value="">Sin Asignar</option>
                                         {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                                     </select>
+                                </td>
+                                <td className="p-3">
+                                    <div className="flex items-center gap-2 font-mono">
+                                        <span>{formatScheduledTime(match.scheduled_start_time)}</span>
+                                        <button onClick={() => openScheduleModal(match)} className="text-slate-400 hover:text-white">
+                                            <Clock size={14} />
+                                        </button>
+                                    </div>
                                 </td>
                                 <td className="p-3">
                                     <div className="flex items-center gap-2 font-mono">
@@ -474,7 +434,6 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
                                         </button>
                                     </div>
                                 </td>
-                                <td className="p-3"><div className="flex items-center gap-2"><Clock size={14} /><p>{calculateDuration(match.start_time, match.end_time)}</p></div></td>
                                 <td className="p-3">
                                     <Link to={`/match/${match.id}`} target="_blank">
                                         <button className="px-2 py-1 text-xs bg-cyan-600 hover:bg-cyan-700 rounded-md flex items-center gap-1"><ExternalLink size={14}/> Scorekeeper</button>
