@@ -516,14 +516,11 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
         console.log("🏆 ID del torneo activo:", activeTournamentId);
     }, []);
 
- 
-    // CORRECCIÓN: Se sincroniza el estado interno con los props que vienen del padre
-  
-// CORRECCIÓN: Sincroniza el estado interno con los props que vienen del padre
-    useEffect(() => {
+useEffect(() => {
         setPlayers(allPlayers || []);
         setTeams(initialData.teams || []);
     }, [initialData, allPlayers]);
+
 
     const handleAddPlayer = async (e) => {
         e.preventDefault();
@@ -1235,7 +1232,7 @@ export default function TournamentAdminPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
-    
+    const [allPlayers, setAllPlayers] = useState([]);
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
