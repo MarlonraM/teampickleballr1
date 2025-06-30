@@ -527,9 +527,10 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
  
     // CORRECCIÓN: Se sincroniza el estado interno con los props que vienen del padre
     useEffect(() => {
-        setPlayers(initialData.players || []);
-        setTeams(initialData.teams || []);
-    }, [initialData]);
+  if (initialData.players || initialData.teams) {
+    setLoading(false);
+  }
+}, [initialData]);
         //useEffect(() => { 
         //    const fetchData = async () => { 
         //        try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
