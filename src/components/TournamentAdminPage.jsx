@@ -25,7 +25,6 @@ const TabButton = ({ tabName, label, icon: Icon, activeTab, setActiveTab }) => (
     </button>
 );
 
-// --- Modales (Completos) ---
 const CreatePhaseModal = ({ isOpen, onClose, allTeams, onCreate, isSaving }) => {
     const [phaseName, setPhaseName] = useState("");
     const [startDate, setStartDate] = useState("");
@@ -86,6 +85,7 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, onCreate, isSaving }) => 
         </div>
     );
 };
+
 // --- MODAL PARA EDITAR PUNTUACIÓN Y ESTADO ---
 const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
     const [scores, setScores] = useState({
