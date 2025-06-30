@@ -62,7 +62,7 @@ const StandingView = ({ styles }) => {
     const [activeTournamentId, setActiveTournamentId] = useState(null);
     const [data, setData] = useState({ teams: [], matches: [] });
     const [loading, setLoading] = useState(true);
-
+    const { teams, matches } = data;
     const calculateStats = (teamMatches, teamId) => {
         return teamMatches.reduce((acc, match) => {
             if (match.status !== 'finalizado' || match.is_tiebreaker) return acc;
