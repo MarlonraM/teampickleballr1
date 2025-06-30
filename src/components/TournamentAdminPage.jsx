@@ -1249,7 +1249,7 @@ export default function TournamentAdminPage() {
     const [schedulingMatch, setSchedulingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
     
-    const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
+const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
         if (!tournamentId) { setLoading(false); return; }
         if (!isSilent) setLoading(true);
         try {
@@ -1273,14 +1273,14 @@ export default function TournamentAdminPage() {
 
     const fetchInitialData = useCallback(async () => {
         try {
-            const [tournamentsRes, allTeamsRes] = await Promise.all([
+            const [tournamentsRes, allTeamsRes, allPlayersRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
                 fetch(`${API_BASE_URL}/api/teams`),
                 fetch(`${API_BASE_URL}/api/players`)
             ]);
             const tournamentsData = await tournamentsRes.json();
             const allTeamsData = await allTeamsRes.json();
-            const allPlayersData = await allPlayersRes.json(); // <-- NUEVO
+            const allPlayersData = await allPlayersRes.json();
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
             setAllPlayers(allPlayersData);
