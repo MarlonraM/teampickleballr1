@@ -174,7 +174,7 @@ const StandingView = ({ styles }) => {
                                         <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{index + 1}</td>
                                         <td style={styles.tableCell}>
                                             <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                                                {index === 0 && <img src="/icon1.png" alt="Líder" style={{height: '20px'}} />}
+                                                {index === 0 && <img src="/ICON1.png" alt="Líder" style={{height: '20px'}} />}
                                                 {team.name}
                                             </div>
                                         </td>
@@ -362,7 +362,7 @@ function PublicScoreboardMichelob() {
     marginTop: 0
   }}>
     Presentado por:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
-    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 30, transform: 'scale(2.0)' }} />
+    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 20, transform: 'scale(2.0)' }} />
   </div>
 
   {matches.length > 0 ? (
