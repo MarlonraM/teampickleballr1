@@ -1127,45 +1127,40 @@ const HorariosTab = ({ matches, courts, openScheduleModal }) => {
 
 // --- COMPONENTE PRINCIPAL ---
 export default function TournamentAdminPage() {
-    const [activeTab, setActiveTab] = useState('partidos');
+    const [activeTab, setActiveTab] = useState('gestion');
     const [tournaments, setTournaments] = useState([]);
     const [activeTournamentId, setActiveTournamentId] = useState(null);
-    const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [allData, setAllData] = useState({ matches: [], teams: [], courts: [] });
     const [allTeamsForSelection, setAllTeamsForSelection] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [modalData, setModalData] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
-    const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
+    
+    // Estados para los modales
+    const [isConfigOpen, setIsConfigOpen] = useState(false);
+    const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false); // <-- CORRECCIÓN: Estado añadido
     const [editingMatch, setEditingMatch] = useState(null);
+    const [schedulingMatch, setSchedulingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [schedulingMatch, setSchedulingMatch] = useState(null);     
-        // --- LÓGICA DE CARGA DE DATOS CORREGIDA ---
+    
     const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
-        if (!tournamentId) {
-            setLoading(false);
-            return;
-        }
+        if (!tournamentId) { setLoading(false); return; }
         if (!isSilent) setLoading(true);
-
         try {
             const [matchesRes, teamsRes, courtsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/courts`)
             ]);
-            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos para este torneo.');
+            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
             
             const matchesData = await matchesRes.json();
             const teamsData = await teamsRes.json();
             const courtsData = await courtsRes.json();
-
             setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
             setError(null);
         } catch (err) {
             setError(err.message);
-            console.error(err);
         } finally {
             if (!isSilent) setLoading(false);
         }
@@ -1173,64 +1168,50 @@ export default function TournamentAdminPage() {
 
     const fetchInitialData = useCallback(async () => {
         try {
-            setLoading(true);
             const [tournamentsRes, allTeamsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
                 fetch(`${API_BASE_URL}/api/teams`)
             ]);
             const tournamentsData = await tournamentsRes.json();
             const allTeamsData = await allTeamsRes.json();
-
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
-
-            if (tournamentsData.length > 0) {
+            if (tournamentsData.length > 0 && !activeTournamentId) {
                 setActiveTournamentId(tournamentsData[0].id);
-            } else {
+            } else if (tournamentsData.length === 0) {
                 setLoading(false);
             }
         } catch (err) {
-            console.error("Error fetching initial data", err);
             setError("Error al cargar datos iniciales.");
             setLoading(false);
         }
-    }, []);
+    }, [activeTournamentId]);
 
-    // Carga inicial de torneos y lista completa de equipos
     useEffect(() => {
         fetchInitialData();
     }, [fetchInitialData]);
-    
-    // Carga los datos del torneo cuando el ID activo cambia
+
     useEffect(() => {
         if (activeTournamentId) {
-            fetchDataForTournament(activeTournamentId, false);
+            fetchDataForTournament(activeTournamentId);
         }
     }, [activeTournamentId, fetchDataForTournament]);
 
-    // Configuración del WebSocket para actualizaciones en tiempo real
     useEffect(() => {
         if (!activeTournamentId) return;
-
         const socket = new WebSocket(WS_URL);
-        socket.onopen = () => console.log('Panel de Control conectado al WebSocket.');
         socket.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
-                    if (message.payload.tournament_id === parseInt(activeTournamentId)) {
-                        fetchDataForTournament(activeTournamentId, true); // Actualización silenciosa
-                    }
+            const message = JSON.parse(event.data);
+            if (message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') {
+                if (message.payload.tournament_id === parseInt(activeTournamentId)) {
+                    fetchDataForTournament(activeTournamentId, true);
                 }
-            } catch (error) {
-                console.error("Error procesando mensaje de WebSocket:", error);
             }
         };
-        socket.onclose = () => console.log('Panel de Control desconectado.');
         return () => socket.close();
     }, [activeTournamentId, fetchDataForTournament]);
-    
-    const handleSaveEditedMatch = async (matchId, updateData) => {
+
+    const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
@@ -1242,38 +1223,24 @@ export default function TournamentAdminPage() {
                 const errorBody = await response.json();
                 throw new Error(errorBody.msg || "Error al guardar el partido");
             }
-            // El WebSocket se encarga de refrescar, solo cerramos el modal
             setEditingMatch(null);
+            setSchedulingMatch(null);
         } catch (err) {
             alert(err.message);
         } finally {
             setIsSaving(false);
         }
     };
-
-         const handleSaveMatch = async (matchId, updateData) => {
-        setIsSaving(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
-            });
-            if (!response.ok) {
-                const errorBody = await response.json();
-                throw new Error(errorBody.msg || "Error al guardar el partido");
-            }
-            // La actualización ahora la gatilla el WebSocket, solo cerramos el modal
-            setModalData(null); 
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
     
-        const handleCreatePhase = async (phaseData) => {
+    const handleGenerationComplete = () => {
+        fetchInitialData().then(() => {
+            setActiveTab('partidos');
+            setIsConfigOpen(false);
+        });
+    };
+
+    const handleCreatePhase = async (phaseData) => {
+        setIsSaving(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/tournaments/create_phase`, {
                 method: 'POST',
@@ -1281,40 +1248,29 @@ export default function TournamentAdminPage() {
                 body: JSON.stringify(phaseData)
             });
             const newTournament = await response.json();
-            setTournaments(prev => [newTournament, ...prev]);
-            setActiveTournamentId(newTournament.id);
+            if (!response.ok) throw new Error(newTournament.msg || "Error al crear la fase");
+            
+            await fetchInitialData(); 
+            setActiveTournamentId(newTournament.id); 
             setIsCreatePhaseOpen(false);
         } catch (err) {
-            console.error("Error creating new phase:", err);
-            alert("Error al crear la nueva fase.");
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
         }
     };
 
-        const handleGenerationComplete = () => {
-        fetchDataForTournament(activeTournamentId);
-        setActiveTab('partidos');
-        setIsConfigOpen(false);
-    };
-    
     return (
         <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-screen-2xl mx-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold text-cyan-400">Panel de Control del Torneo</h1>
+                    <h1 className="text-3xl font-bold text-cyan-400">Panel de Control</h1>
                     <div className="flex items-center gap-4">
-                        <select
-                            value={activeTournamentId || ''}
-                            onChange={(e) => setActiveTournamentId(e.target.value)}
-                            className="bg-slate-700 border border-slate-600 rounded-md p-2"
-                        >
+                        <select value={activeTournamentId || ''} onChange={(e) => setActiveTournamentId(e.target.value)} className="bg-slate-700 border border-slate-600 rounded-md p-2">
                             {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
-                        <button onClick={() => setIsCreatePhaseOpen(true)} className="p-2 rounded-full hover:bg-slate-700" title="Crear Nueva Fase">
-                            <PlusCircle />
-                        </button>
-                        <button onClick={() => setIsConfigOpen(true)} className="p-2 rounded-full hover:bg-slate-700" title="Configuración General">
-                            <Settings />
-                        </button>
+                        <button onClick={() => setIsCreatePhaseOpen(true)} className="p-2 rounded-full hover:bg-slate-700" title="Crear Nueva Fase"><PlusCircle /></button>
+                        <button onClick={() => setIsConfigOpen(true)} className="p-2 rounded-full hover:bg-slate-700" title="Configuración General"><Settings /></button>
                     </div>
                 </div>
                 
@@ -1328,13 +1284,14 @@ export default function TournamentAdminPage() {
                 </div>
 
                 <div className="pt-8">
-                    {modalData && <MatchManagementModal matchData={modalData} courts={allData.courts} onClose={() => setModalData(null)} onSave={handleSaveMatch} isSaving={isSaving}/>}
+                    {editingMatch && <EditScoreModal match={editingMatch} courts={allData.courts} onClose={() => setEditingMatch(null)} onSave={handleSaveMatch} isSaving={isSaving} />}
+                    {schedulingMatch && <ScheduleMatchModal match={schedulingMatch} courts={allData.courts} onClose={() => setSchedulingMatch(null)} onSave={handleSaveMatch} isSaving={isSaving} />}
                     
                     {loading ? ( <div className="flex justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8" /></div> ) : 
                     error ? (<div className="text-red-400 text-center p-10">{error}</div>) : (
                         <div key={activeTournamentId}>
-                           {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={() => fetchDataForTournament(activeTournamentId)} setEditingMatch={setEditingMatch} />}
-                           {activeTab === 'horarios' && <HorariosTab matches={allData.matches} courts={allData.courts} refreshData={() => fetchDataForTournament(activeTournamentId)} openScheduleModal={setSchedulingMatch} />}
+                           {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={() => fetchDataForTournament(activeTournamentId)} setEditingMatch={setEditingMatch} openScheduleModal={setSchedulingMatch}/>}
+                           {activeTab === 'horarios' && <HorariosTab matches={allData.matches} courts={allData.courts} openScheduleModal={setSchedulingMatch} />}
                            {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} setModalData={setEditingMatch} />}
                            {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
                            {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
