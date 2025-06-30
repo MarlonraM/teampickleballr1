@@ -61,7 +61,23 @@ const StandingView = ({ styles }) => {
     const [activeTournamentId, setActiveTournamentId] = useState(null);
     const [data, setData] = useState({ teams: [], matches: [] });
     const [loading, setLoading] = useState(true);
-
+    const calculateStats = (teamMatches, teamId) => {
+        return teamMatches.reduce((acc, match) => {
+            if (match.status !== 'finalizado' || match.is_tiebreaker) return acc;
+            const isTeam1 = match.team1_id === teamId;
+            if (isTeam1) {
+                acc.GF += match.team1_score || 0;
+                acc.GC += match.team2_score || 0;
+                acc.TournamentPoints += match.team1_tournament_points || 0;
+            } else {
+                acc.GF += match.team2_score || 0;
+                acc.GC += match.team1_score || 0;
+                acc.TournamentPoints += match.team2_tournament_points || 0;
+            }
+            if (match.winner_id === teamId) acc.G += 1; else acc.P += 1;
+            return acc;
+        }, { G: 0, P: 0, GF: 0, GC: 0, TournamentPoints: 0 });
+    };
     const { teams, matches } = data;
 
     const fetchDataForTournament = useCallback(async (tournamentId) => {
