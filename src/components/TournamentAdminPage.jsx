@@ -1211,7 +1211,7 @@ export default function TournamentAdminPage() {
         }
     }, []);
 
-    const fetchInitialData = useCallback(async () => {
+   const fetchInitialData = useCallback(async () => {
         try {
             const [tournamentsRes, allTeamsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
@@ -1222,9 +1222,7 @@ export default function TournamentAdminPage() {
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
             if (tournamentsData.length > 0) {
-                if (!activeTournamentId) {
-                    setActiveTournamentId(tournamentsData[0].id);
-                }
+                setActiveTournamentId(tournamentsData[0].id);
             } else {
                 setLoading(false);
             }
@@ -1232,18 +1230,21 @@ export default function TournamentAdminPage() {
             setError("Error al cargar datos iniciales.");
             setLoading(false);
         }
-    }, [activeTournamentId]);
+    }, []);
 
+    // Carga inicial de torneos y lista completa de equipos
     useEffect(() => {
         fetchInitialData();
     }, [fetchInitialData]);
-
+    
+    // Carga los datos del torneo cuando el ID activo cambia
     useEffect(() => {
         if (activeTournamentId) {
             fetchDataForTournament(activeTournamentId);
         }
     }, [activeTournamentId, fetchDataForTournament]);
 
+    // Configuración del WebSocket para actualizaciones en tiempo real
     useEffect(() => {
         if (!activeTournamentId) return;
         const socket = new WebSocket(WS_URL);
