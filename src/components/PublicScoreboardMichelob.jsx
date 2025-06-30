@@ -77,9 +77,9 @@ function PublicScoreboardMichelob() {
         title: {
     textAlign: 'center',
     fontSize: isMobile ? '1.25rem' : '1.75rem',
-    fontWeight: '900',
+    fontWeight: '700',
     color: '#051638',
-    marginBottom: '0.5rem',
+    marginBottom: '0.1rem',
     textTransform: 'uppercase',
     letterSpacing: '1px'
 },
@@ -200,7 +200,7 @@ function PublicScoreboardMichelob() {
                     ))}
                 </div>
   <main style={{ ...styles.mainContent, paddingTop: 4 }}>
-  <h1 style={{ ...styles.title, marginBottom: 4 }}>MARCADOR EN VIVO</h1>
+  <h1 style={{ ...styles.title, marginBottom: 1 }}>MARCADOR EN VIVO</h1>
 
   <div style={{
     display: 'flex',
@@ -209,11 +209,11 @@ function PublicScoreboardMichelob() {
     gap: 8,
     fontSize: 14,
     color: '#666',
-    marginBottom: 4,
+    marginBottom: 1,
     marginTop: 0
   }}>
-    Presentado por
-    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 40, transform: 'scale(1.3)' }} />
+    Presentado por:&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+    <img src="/emblem.png" alt="Michelob Ultra" style={{ height: 30, transform: 'scale(2.0)' }} />
   </div>
 
   {matches.length > 0 ? (
