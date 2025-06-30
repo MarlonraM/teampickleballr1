@@ -57,8 +57,11 @@ const ServiceDots = ({ isServing, styles }) => {
 };
 
 // --- Nuevo Componente para la vista de Standing ---
-const StandingView = ({ allData, styles }) => {
-    const { teams, matches } = allData;
+const StandingView = ({ styles }) => {
+    const [tournaments, setTournaments] = useState([]);
+    const [activeTournamentId, setActiveTournamentId] = useState(null);
+    const [data, setData] = useState({ teams: [], matches: [] });
+    const [loading, setLoading] = useState(true);
 
     const calculateStats = (teamMatches, teamId) => {
         return teamMatches.reduce((acc, match) => {
@@ -106,25 +109,62 @@ const StandingView = ({ allData, styles }) => {
             });
         }
         return Object.values(groups);
-    }, [teams, matches]);
+    }, [data.teams, data.matches]);
+    
+    useEffect(() => {
+        fetch(`${API_BASE_URL}/api/tournaments`)
+            .then(res => res.json())
+            .then(data => {
+                setTournaments(data);
+                if (data.length > 0) setActiveTournamentId(data[0].id);
+                else setLoading(false);
+            });
+    }, []);
+
+    useEffect(() => {
+        if (!activeTournamentId) return;
+        const fetchDataForTournament = async () => {
+            setLoading(true);
+            try {
+                const [teamsRes, matchesRes] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/teams/${activeTournamentId}`),
+                    fetch(`${API_BASE_URL}/api/matches/scoreboard/${activeTournamentId}`)
+                ]);
+                const teamsData = await teamsRes.json();
+                const matchesData = await matchesRes.json();
+                setData({ teams: teamsData, matches: matchesData });
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchDataForTournament();
+    }, [activeTournamentId]);
 
     return (
         <div style={styles.mainContent}>
-            <h1 style={styles.title}>Tabla de Posiciones</h1>
+            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem'}}>
+                <h1 style={{...styles.title, margin: 0}}>Tabla de Posiciones</h1>
+                <select value={activeTournamentId || ''} onChange={(e) => setActiveTournamentId(e.target.value)} style={{backgroundColor: '#f0f0f0', border: '1px solid #ccc', borderRadius: '8px', padding: '8px'}}>
+                    {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
+            </div>
+            {loading ? <div style={{textAlign: 'center'}}>Cargando...</div> :
             <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                 {standingsByGroup.map((group, groupIndex) => (
-                    <div key={groupIndex} style={styles.matchCard}>
-                        <div style={styles.cardHeader}>
+                    <div key={groupIndex} style={{...styles.matchCard, boxShadow: '0 10px 25px -5px rgba(5, 22, 56, 0.1)'}}>
+                        <div style={{...styles.cardHeader, backgroundColor: '#E51937'}}>
                             <h2 style={styles.cardHeaderTitle}>{group.name}</h2>
                         </div>
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
-                                <tr style={{ borderBottom: '1px solid #e0e0e0' }}>
-                                    <th style={{...styles.tableHeader, width: '50px'}}>#</th>
+                                <tr style={{ borderBottom: '2px solid #051638' }}>
+                                    <th style={{...styles.tableHeader, width: '50px', textAlign: 'center'}}>#</th>
                                     <th style={styles.tableHeader}>Equipo</th>
-                                    <th style={styles.tableHeader}>G/P</th>
-                                    <th style={styles.tableHeader}>Dif.</th>
-                                    <th style={styles.tableHeader}>Pts.</th>
+                                    <th style={{...styles.tableHeader, textAlign: 'center'}}>G/P</th>
+                                    <th style={{...styles.tableHeader, textAlign: 'center'}}>Dif.</th>
+                                    <th style={{...styles.tableHeader, textAlign: 'center'}}>Pts.</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -133,11 +173,11 @@ const StandingView = ({ allData, styles }) => {
                                         <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{index + 1}</td>
                                         <td style={styles.tableCell}>
                                             <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                                                {index === 0 && <img src="/icon1.png" alt="Winner" style={{height: '20px'}} />}
+                                                {index === 0 && <img src="/icon1.png" alt="Líder" style={{height: '20px'}} />}
                                                 {team.name}
                                             </div>
                                         </td>
-                                        <td style={{...styles.tableCell, textAlign: 'center'}}>{team.stats.G}/{team.stats.P}</td>
+                                        <td style={{...styles.tableCell, textAlign: 'center', fontFamily: 'monospace'}}>{team.stats.G}/{team.stats.P}</td>
                                         <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{team.diff}</td>
                                         <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold', color: '#E51937'}}>{team.tournament_points}</td>
                                     </tr>
@@ -146,19 +186,18 @@ const StandingView = ({ allData, styles }) => {
                         </table>
                     </div>
                 ))}
-            </div>
+            </div>}
         </div>
     );
 };
-
 function PublicScoreboardMichelob() {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [announcements, setAnnouncements] = useState([]);
     const [view, setView] = useState('scoreboard'); // 'scoreboard' o 'standing'
-    const [tournaments, setTournaments] = useState([]);
-    const [activeTournamentId, setActiveTournamentId] = useState(null);
+    //const [tournaments, setTournaments] = useState([]);
+    //const [activeTournamentId, setActiveTournamentId] = useState(null);
     const [allData, setAllData] = useState({ matches: [], teams: [] });
 
     const styles = {
@@ -243,57 +282,36 @@ function PublicScoreboardMichelob() {
         announcementBarGame: { backgroundColor: '#FFFFFF', color: '#051638', border: `2px solid #E51937` },
     };
 
-    const fetchData = useCallback(async (tournamentId) => {
-        if (!tournamentId) return;
-        setLoading(true);
+    const fetchData = useCallback(async (isInitialLoad = false) => {
+        if (isInitialLoad) setLoading(true);
         try {
-            const [matchesRes, teamsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
-                fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),
-            ]);
-            if (!matchesRes.ok || !teamsRes.ok) throw new Error('No se pudieron cargar los datos.');
-            const matchesData = await matchesRes.json();
-            const teamsData = await teamsRes.json();
-            setAllData({ matches: matchesData, teams: teamsData });
+            const response = await fetch(`${API_BASE_URL}/api/matches/scoreboard`);
+            if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
+            const data = await response.json();
+            setMatches(data);
             setError(null);
         } catch (err) {
             setError(err.message);
         } finally {
-            setLoading(false);
+            if (isInitialLoad) setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetch(`${API_BASE_URL}/api/tournaments`)
-            .then(res => res.json())
-            .then(data => {
-                setTournaments(data);
-                if (data.length > 0) setActiveTournamentId(data[0].id);
-                else setLoading(false);
-            });
-    }, []);
-
-    useEffect(() => {
-        if (activeTournamentId) {
-            fetchData(activeTournamentId);
-        }
-    }, [activeTournamentId, fetchData]);
-
-    useEffect(() => {
+        fetchData(true);
         const socket = new WebSocket(WS_URL);
+        socket.onopen = () => console.log("Tablero Michelob conectado al WebSocket.");
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'SCORE_UPDATE' || data.type === 'MATCH_UPDATE') {
-                if (data.payload.tournament_id === parseInt(activeTournamentId)) {
-                    fetchData(activeTournamentId);
-                }
+                fetchData(false);
             }
             if (data.type === 'ANNOUNCEMENT_NEW') {
                 setAnnouncements(prev => [data.payload, ...prev]);
             }
         };
         return () => socket.close();
-    }, [activeTournamentId, fetchData]);
+    }, [fetchData]);
 
     const removeAnnouncement = (id) => {
         setAnnouncements(prev => prev.filter(ann => ann.id !== id));
@@ -301,7 +319,6 @@ function PublicScoreboardMichelob() {
 
     if (loading) return <div style={styles.container}>Cargando...</div>;
     if (error) return <div style={styles.container}>Error: {error}</div>;
-    const liveMatches = allData.matches.filter(m => m && m.status === 'en_vivo');
    
     return (
         <div style={styles.pageWrapper}>
