@@ -1137,7 +1137,7 @@ export default function TournamentAdminPage() {
     const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-         
+    const [schedulingMatch, setSchedulingMatch] = useState(null);     
         // --- LÓGICA DE CARGA DE DATOS CORREGIDA ---
     const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
         if (!tournamentId) {
