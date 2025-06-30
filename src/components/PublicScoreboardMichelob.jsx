@@ -56,11 +56,110 @@ const ServiceDots = ({ isServing, styles }) => {
     );
 };
 
+// --- Nuevo Componente para la vista de Standing ---
+const StandingView = ({ allData, styles }) => {
+    const { teams, matches } = allData;
+
+    const calculateStats = (teamMatches, teamId) => {
+        return teamMatches.reduce((acc, match) => {
+            if (match.status !== 'finalizado' || match.is_tiebreaker) return acc;
+            const isTeam1 = match.team1_id === teamId;
+            if (isTeam1) {
+                acc.GF += match.team1_score || 0;
+                acc.GC += match.team2_score || 0;
+                acc.TournamentPoints += match.team1_tournament_points || 0;
+            } else {
+                acc.GF += match.team2_score || 0;
+                acc.GC += match.team1_score || 0;
+                acc.TournamentPoints += match.team2_tournament_points || 0;
+            }
+            if (match.winner_id === teamId) acc.G += 1; else acc.P += 1;
+            return acc;
+        }, { G: 0, P: 0, GF: 0, GC: 0, TournamentPoints: 0 });
+    };
+
+    const standingsByGroup = useMemo(() => {
+        if (!teams || !matches) return [];
+        const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
+        const groups = {};
+        const teamsWithData = teams.map(team => {
+            const teamMatches = matches.filter(m => !m.is_tiebreaker && (m.team1_id === team.id || m.team2_id === team.id));
+            const stats = calculateStats(teamMatches, team.id);
+            return { ...team, stats, diff: stats.GF - stats.GC, tournament_points: stats.TournamentPoints };
+        });
+
+        teamsWithData.forEach(team => {
+            const groupKey = team.groupId;
+            if (groupKey) {
+                if (!groups[groupKey]) {
+                    groups[groupKey] = { name: `Grupo ${getGroupLetter(groupKey)}`, teams: [] };
+                }
+                groups[groupKey].teams.push(team);
+            }
+        });
+
+        for(const groupKey in groups) {
+            groups[groupKey].teams.sort((a, b) => {
+                if (b.tournament_points !== a.tournament_points) return b.tournament_points - a.tournament_points;
+                if (b.diff !== a.diff) return b.diff - a.diff;
+                return b.stats.GF - a.stats.GF;
+            });
+        }
+        return Object.values(groups);
+    }, [teams, matches]);
+
+    return (
+        <div style={styles.mainContent}>
+            <h1 style={styles.title}>Tabla de Posiciones</h1>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {standingsByGroup.map((group, groupIndex) => (
+                    <div key={groupIndex} style={styles.matchCard}>
+                        <div style={styles.cardHeader}>
+                            <h2 style={styles.cardHeaderTitle}>{group.name}</h2>
+                        </div>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '1px solid #e0e0e0' }}>
+                                    <th style={{...styles.tableHeader, width: '50px'}}>#</th>
+                                    <th style={styles.tableHeader}>Equipo</th>
+                                    <th style={styles.tableHeader}>G/P</th>
+                                    <th style={styles.tableHeader}>Dif.</th>
+                                    <th style={styles.tableHeader}>Pts.</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {group.teams.map((team, index) => (
+                                    <tr key={team.id} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                                        <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{index + 1}</td>
+                                        <td style={styles.tableCell}>
+                                            <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                                                {index === 0 && <img src="/icon1.png" alt="Winner" style={{height: '20px'}} />}
+                                                {team.name}
+                                            </div>
+                                        </td>
+                                        <td style={{...styles.tableCell, textAlign: 'center'}}>{team.stats.G}/{team.stats.P}</td>
+                                        <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{team.diff}</td>
+                                        <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold', color: '#E51937'}}>{team.tournament_points}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
 function PublicScoreboardMichelob() {
     const [matches, setMatches] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [announcements, setAnnouncements] = useState([]);
+    const [view, setView] = useState('scoreboard'); // 'scoreboard' o 'standing'
+    const [tournaments, setTournaments] = useState([]);
+    const [activeTournamentId, setActiveTournamentId] = useState(null);
+    const [allData, setAllData] = useState({ matches: [], teams: [] });
 
     const styles = {
         pageWrapper: { backgroundColor: '#051638', padding: '8px', minHeight: '100vh' },
@@ -144,36 +243,57 @@ function PublicScoreboardMichelob() {
         announcementBarGame: { backgroundColor: '#FFFFFF', color: '#051638', border: `2px solid #E51937` },
     };
 
-    const fetchData = useCallback(async (isInitialLoad = false) => {
-        if (isInitialLoad) setLoading(true);
+    const fetchData = useCallback(async (tournamentId) => {
+        if (!tournamentId) return;
+        setLoading(true);
         try {
-            const response = await fetch(`${API_BASE_URL}/api/matches/scoreboard`);
-            if (!response.ok) throw new Error('No se pudieron cargar los partidos.');
-            const data = await response.json();
-            setMatches(data);
+            const [matchesRes, teamsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/teams/${tournamentId}`),
+            ]);
+            if (!matchesRes.ok || !teamsRes.ok) throw new Error('No se pudieron cargar los datos.');
+            const matchesData = await matchesRes.json();
+            const teamsData = await teamsRes.json();
+            setAllData({ matches: matchesData, teams: teamsData });
             setError(null);
         } catch (err) {
             setError(err.message);
         } finally {
-            if (isInitialLoad) setLoading(false);
+            setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        fetchData(true);
+        fetch(`${API_BASE_URL}/api/tournaments`)
+            .then(res => res.json())
+            .then(data => {
+                setTournaments(data);
+                if (data.length > 0) setActiveTournamentId(data[0].id);
+                else setLoading(false);
+            });
+    }, []);
+
+    useEffect(() => {
+        if (activeTournamentId) {
+            fetchData(activeTournamentId);
+        }
+    }, [activeTournamentId, fetchData]);
+
+    useEffect(() => {
         const socket = new WebSocket(WS_URL);
-        socket.onopen = () => console.log("Tablero Michelob conectado al WebSocket.");
         socket.onmessage = (event) => {
             const data = JSON.parse(event.data);
             if (data.type === 'SCORE_UPDATE' || data.type === 'MATCH_UPDATE') {
-                fetchData(false);
+                if (data.payload.tournament_id === parseInt(activeTournamentId)) {
+                    fetchData(activeTournamentId);
+                }
             }
             if (data.type === 'ANNOUNCEMENT_NEW') {
                 setAnnouncements(prev => [data.payload, ...prev]);
             }
         };
         return () => socket.close();
-    }, [fetchData]);
+    }, [activeTournamentId, fetchData]);
 
     const removeAnnouncement = (id) => {
         setAnnouncements(prev => prev.filter(ann => ann.id !== id));
@@ -181,16 +301,19 @@ function PublicScoreboardMichelob() {
 
     if (loading) return <div style={styles.container}>Cargando...</div>;
     if (error) return <div style={styles.container}>Error: {error}</div>;
-
+    const liveMatches = allData.matches.filter(m => m && m.status === 'en_vivo');
+   
     return (
         <div style={styles.pageWrapper}>
             <div style={styles.container}>
                 <header style={styles.header}>
                     <img src="/logoblanco.png" alt="Michelob Ultra" style={styles.logo} />
-                    <div style={styles.hamburgerIcon}>
-                        <div style={styles.hamburgerLine}></div>
-                        <div style={styles.hamburgerLine}></div>
-                        <div style={styles.hamburgerLine}></div>
+                    <div style={styles.navIcons}>
+                         <select value={activeTournamentId || ''} onChange={(e) => setActiveTournamentId(e.target.value)} style={{backgroundColor: 'transparent', border: 'none', color: 'white', fontWeight: 'bold'}}>
+                            {tournaments.map(t => <option key={t.id} value={t.id} style={{color: 'black'}}>{t.name}</option>)}
+                        </select>
+                         <Trophy size={24} style={{...styles.navIcon, color: view === 'standing' ? '#E51937' : 'white'}} onClick={() => setView('standing')} />
+                         <Shield size={24} style={{...styles.navIcon, color: view === 'scoreboard' ? '#E51937' : 'white'}} onClick={() => setView('scoreboard')} />
                     </div>
                 </header>
                 
@@ -199,6 +322,7 @@ function PublicScoreboardMichelob() {
                         <Announcement key={ann.id} announcement={ann} onExpire={() => removeAnnouncement(ann.id)} styles={styles} />
                     ))}
                 </div>
+  {view === 'scoreboard' ? (
   <main style={{ ...styles.mainContent, paddingTop: 4 }}>
   <h1 style={{ ...styles.title, marginBottom: 1 }}>MARCADOR EN VIVO</h1>
 
@@ -271,6 +395,9 @@ function PublicScoreboardMichelob() {
     </p>
   )}
 </main>
+) : (
+                    <StandingView allData={allData} styles={styles} />
+                )}
 
                 <footer style={styles.footer tex}>
                     El consumo excesivo de alcohol es perjudicial para la salud ley 42-01.
