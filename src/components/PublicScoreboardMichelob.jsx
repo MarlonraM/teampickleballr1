@@ -129,7 +129,7 @@ function PublicScoreboardMichelob() {
     textAlign: 'right'
 },
 
-        cardFooter: { backgroundColor: 'rgba(5, 22, 56, 0.05)', color: '#666', padding: '0.5rem 1.5rem', textAlign: 'center', fontSize: '0.8rem' },
+        cardFooter: { backgroundColor: 'rgba(5, 22, 56, 0.05)', color: '#666', padding: '0.5rem 1.5rem', textAlign: 'center', fontSize: '0.8rem', justify-content: center },
         
         serviceDotsContainer: { display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center', alignItems: 'center' },
         serviceDot: { width: '10px', height: '10px', borderRadius: '50%', transition: 'all 0.3s ease' },
@@ -272,7 +272,7 @@ function PublicScoreboardMichelob() {
   )}
 </main>
 
-                <footer style={styles.footer tex; justify-content: center}>
+                <footer style={styles.footer tex>
                     El consumo excesivo de alcohol es perjudicial para la salud ley 42-01.
                 </footer>
             </div>
