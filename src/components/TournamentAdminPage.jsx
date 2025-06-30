@@ -519,17 +519,35 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
  
     // CORRECCIÓN: Se sincroniza el estado interno con los props que vienen del padre
   
-useEffect(() => {
-        setPlayers(initialData.players || []);
-        setTeams(initialData.teams || []);
-    }, [initialData]);
-
+// CORRECCIÓN: Sincroniza el estado interno con los props que vienen del padre
     useEffect(() => {
-  if (initialData.players || initialData.teams) {
-    setLoading(false);
-  }
-}, [initialData]);
+        setPlayers(allPlayers || []);
+        setTeams(initialData.teams || []);
+    }, [initialData, allPlayers]);
 
+    const handleAddPlayer = async (e) => {
+        e.preventDefault();
+        if (!newPlayer.fullName) {
+            alert("El nombre del jugador es obligatorio.");
+            return;
+        }
+        try {
+            await fetch(`${API_BASE_URL}/api/players`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    full_name: newPlayer.fullName,
+                    email: newPlayer.email || null,
+                    category: newPlayer.category,
+                }),
+            });
+            onGenerationComplete(); // Llama a la función del padre para refrescar TODOS los datos
+            setNewPlayer({ fullName: '', email: '', category: 'Intermedio' }); // Limpia el formulario
+        } catch (err) {
+            alert(err.message);
+        }
+    };
+    
 
         //useEffect(() => { 
         //    const fetchData = async () => { 
