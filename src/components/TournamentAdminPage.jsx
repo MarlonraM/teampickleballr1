@@ -1336,11 +1336,11 @@ export default function TournamentAdminPage() {
                             </header>
                             <main className="p-6 overflow-y-auto">
                                 <ConfiguracionPanel 
-    initialData={allData}
-    onGenerationComplete={handleGenerationComplete} 
-    activeTournamentId={activeTournamentId} // <-- ¡CORRECCIÓN CLAVE!
-    onClose={() => setIsConfigOpen(false)}
-/>
+                                    initialData={allData}
+                                    onGenerationComplete={handleGenerationComplete} 
+                                    activeTournamentId={activeTournamentId} // <-- ¡CORRECCIÓN CLAVE!
+                                    onClose={() => setIsConfigOpen(false)}
+                                />
                             </main>
                         </div>
                     </div>
