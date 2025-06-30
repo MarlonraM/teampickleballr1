@@ -483,7 +483,22 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
             const fetchData = async () => { 
                 try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
     const handleAddPlayer = async (e) => { e.preventDefault(); if (!newPlayer.fullName || !newPlayer.email) return; try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/players`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name: newPlayer.fullName, email: newPlayer.email, category: newPlayer.category, }), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.msg || 'Error al registrar jugador.'); } const addedPlayer = await response.json(); setPlayers([...players, addedPlayer]); setNewPlayer({ fullName: '', email: '', category: 'Intermedio' }); } catch (err) { console.error(err); alert(err.message); } };
-    const handleAddTeam = async (e) => { e.preventDefault(); if (!newTeamName) return; try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: newTeamName, tournament_id: 1 }), }); if (!response.ok) { const errorData = await response.json(); throw new Error(errorData.msg || 'Error al registrar equipo.'); } const addedTeam = await response.json(); setTeams([...teams, addedTeam]); setNewTeamName(''); } catch (err) { console.error(err); alert(err.message); } };
+    
+    const handleAddTeam = async (e) => {
+        e.preventDefault();
+        if (!newTeamName) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/teams`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name: newTeamName, tournament_id: activeTournamentId }), // Usa el ID del torneo activo
+            });
+            if (!response.ok) throw new Error('Error al registrar equipo.');
+            onGenerationComplete();
+        } catch (err) {
+            alert(err.message);
+        }
+    };
     const handleSaveGroups = async () => { const groupAssignments = teams.map(team => ({ id: team.id, group_id: team.groupId })); try { const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams/assign-groups`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(groupAssignments) }); if (!response.ok) throw new Error('Error al guardar los grupos.'); alert('Grupos guardados exitosamente!'); } catch (err) { console.error(err); alert(err.message); } };
     const handleAssignTeamToPlayer = (playerId, teamId) => { setPlayers(players.map(p => p.id === playerId ? { ...p, teamId: teamId ? parseInt(teamId, 10) : null } : p)); };
     const handleAssignGroupToTeam = (teamId, groupId) => { setTeams(teams.map(t => t.id === teamId ? { ...t, groupId: groupId ? parseInt(groupId, 10) : null } : t)); };
@@ -496,9 +511,37 @@ const ConfiguracionPanel = ({ initialData, onGenerationComplete, refreshData, on
    
     
     
-    const handleSaveAndGenerateMatches = async () => { try { setLoading(true); await handleSaveGroups(); const playerAssignments = players.map(player => ({ player_id: player.id, team_id: player.teamId })); await fetch(`${import.meta.env.VITE_API_URL}/api/players/assign-teams`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(playerAssignments) }); const generateResponse = await fetch(`${import.meta.env.VITE_API_URL}/api/matches/generate-round-robin`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tournament_id: 1 }) }); if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.'); alert('¡Asignaciones guardadas y partidos generados exitosamente!'); onGenerationComplete(); } catch (err) { console.error(err); alert(err.message); } finally { setLoading(false); } };
+    const handleSaveAndGenerateMatches = async () => {
+        if (!activeTournamentId) {
+            alert("Por favor, selecciona un torneo válido primero.");
+            return;
+        }
+        try {
+            setIsSaving(true);
+            await handleSaveGroups(); 
+            const playerAssignments = players.map(player => ({ player_id: player.id, team_id: player.teamId }));
+            await fetch(`${API_BASE_URL}/api/players/assign-teams`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(playerAssignments) });
+            
+            const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournament_id: activeTournamentId }) // Usa el ID del torneo activo
+            });
+
+            if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.');
+            alert('¡Asignaciones guardadas y partidos generados exitosamente!');
+            onGenerationComplete();
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
     if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando datos...</span></div>;
     if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
+    
+    
     return ( 
         <div className="space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1208,13 +1251,14 @@ export default function TournamentAdminPage() {
             setIsSaving(false);
         }
     };
-    
     const handleGenerationComplete = () => {
-        fetchDataForTournament(activeTournamentId, false);
-        setActiveTab('partidos');
+        if(activeTournamentId) {
+            fetchDataForTournament(activeTournamentId);
+            setActiveTab('partidos');
+        }
         setIsConfigOpen(false);
     };
-
+   
     const handleCreatePhase = async (phaseData) => {
         setIsSaving(true);
         try {
