@@ -497,7 +497,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
 
 
 // --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
-const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationComplete, refreshData, onClose }) => {
+const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGenerationComplete, refreshData, onClose }) => {
     const [players, setPlayers] = useState(initialData.players || []);
     const [teams, setTeams] = useState(initialData.teams || []);
     const [isSavingPlayer, setIsSavingPlayer] = useState(false);
@@ -593,8 +593,8 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
             alert("Por favor, selecciona un torneo válido primero.");
             return;
         }
+        setIsSaving(true);
         try {
-            setIsSaving(true);
             await handleSaveGroups();
             
             const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
@@ -610,7 +610,7 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, onGenerationCompl
         } catch (err) {
             alert(err.message);
         } finally {
-            setIsSavingMatches(false);
+            setIsSaving(false);
         }
     };
     
@@ -1343,14 +1343,7 @@ export default function TournamentAdminPage() {
         fetchDataForTournament(activeTournamentId);
     };
 
- 
-//   const handleGenerationComplete = () => {
-  //      fetchInitialData(); // Refresca la lista global de jugadores y equipos
-   //     fetchDataForTournament(activeTournamentId);
-   // };
-
-
-    const handleCreatePhase = async (phaseData) => {
+     const handleCreatePhase = async (phaseData) => {
         setIsSaving(true);
         try {
             const response = await fetch(`${API_BASE_URL}/api/tournaments/create_phase`, {
