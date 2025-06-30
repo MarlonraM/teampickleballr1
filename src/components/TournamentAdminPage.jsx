@@ -781,7 +781,7 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
                                                 </tr>
                                                 {expandedRows[team.id] && (
                                                     <>
-                                                        {['Avanzado', 'Intermedio Fuerte', 'Intermedio'].map(category => {
+                                                        {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenino'].map(category => {
                                                             const categoryMatches = groupMatches.filter(m => m.category === category);
                                                             const categoryStats = calculateStats(categoryMatches, team.id);
                                                             return (
@@ -827,7 +827,7 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
                                             <div className="mt-2 text-xs space-y-1">
                                                 <p className="font-bold">Generar partidos de desempate por categoría:</p>
                                                 <div className="flex gap-2">
-                                                    {['Avanzado', 'Intermedio Fuerte', 'Intermedio'].map(category => (
+                                                    {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenino'].map(category => (
                                                         <button key={category} onClick={() => handleGenerateTiebreakers(tiedTeams, category)} className="bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded-md text-xs">{category}</button>
                                                     ))}
                                                 </div>
@@ -1276,11 +1276,14 @@ export default function TournamentAdminPage() {
             const [tournamentsRes, allTeamsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
                 fetch(`${API_BASE_URL}/api/teams`)
+                fetch(`${API_BASE_URL}/api/players`)
             ]);
             const tournamentsData = await tournamentsRes.json();
             const allTeamsData = await allTeamsRes.json();
+            const allPlayersData = await allPlayersRes.json(); // <-- NUEVO
             setTournaments(tournamentsData);
             setAllTeamsForSelection(allTeamsData);
+            setAllPlayers(allPlayersData);
             if (tournamentsData.length > 0) {
                 if (!activeTournamentId) {
                     setActiveTournamentId(tournamentsData[0].id);
