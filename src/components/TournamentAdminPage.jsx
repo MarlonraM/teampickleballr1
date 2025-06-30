@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, Trophy, Swords, MonitorPlay, ListOrdered, Clock, ExternalLink, Pencil, Megaphone, Send, Bell, Check, PlusCircle } from 'lucide-react';
+import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, Trophy, Swords, MonitorPlay, ListOrdered, Clock, ExternalLink, Pencil, Megaphone, Send, Bell, Check, PlusCircle, Calendar } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import.meta.env.VITE_API_URL;
 
@@ -98,6 +98,7 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
 
     if (!match) return null;
 
+
     const handleScoreChange = (team, value) => {
         setScores(prev => ({ ...prev, [team]: parseInt(value, 10) || 0 }));
     };
@@ -184,6 +185,45 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
         </div>
     );
 };
+
+
+// --- MODAL PARA EDITAR PARTIDO/HORARIO ---
+const ScheduleMatchModal = ({ match, courts, onClose, onSave, isSaving }) => {
+    const [courtId, setCourtId] = useState(match.court_id || '');
+    const [scheduledTime, setScheduledTime] = useState(
+        match.scheduled_start_time ? new Date(match.scheduled_start_time).toISOString().substring(0, 16) : ''
+    );
+
+    const handleSave = () => {
+        const updateData = {
+            court_id: courtId ? parseInt(courtId, 10) : null,
+            scheduled_start_time: scheduledTime ? new Date(scheduledTime).toISOString() : null,
+        };
+        onSave(match.id, updateData);
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-md relative">
+                <button onClick={onClose} className="absolute top-3 right-3 text-slate-400 hover:text-white"><X size={20}/></button>
+                <h2 className="text-xl font-bold text-cyan-400 mb-4">Programar Partido #{match.id}</h2>
+                <div className="space-y-4">
+                    <p><span className="font-semibold">{match.team1_name}</span> vs <span className="font-semibold">{match.team2_name}</span></p>
+                    <p className="text-sm text-slate-400">Categoría: {match.category}</p>
+                    <div><label htmlFor="court-select" className="block text-sm font-medium text-slate-300">Asignar Cancha</label><select id="court-select" value={courtId} onChange={e => setCourtId(e.target.value)} className="mt-1 w-full bg-slate-700 p-2 rounded-md border border-slate-600"><option value="">Pendiente</option>{courts.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
+                    <div><label htmlFor="time-select" className="block text-sm font-medium text-slate-300">Asignar Hora</label><input type="datetime-local" id="time-select" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} className="mt-1 w-full bg-slate-700 p-2 rounded-md border border-slate-600" /></div>
+                </div>
+                <div className="mt-6 flex justify-end gap-4">
+                    <button onClick={onClose} className="bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded-md text-sm" disabled={isSaving}>Cancelar</button>
+                    <button onClick={handleSave} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md text-sm font-semibold" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar Horario'}</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+
 
 // --- MODAL PARA GESTIONAR PARTIDO ---
 const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) => {
@@ -1011,6 +1051,77 @@ const AvisosTab = ({ allData }) => {
         </div>
     );
 };
+
+const HorariosTab = ({ matches, courts, openScheduleModal }) => {
+    const timeSlots = useMemo(() => {
+        const slots = [];
+        for (let h = 7; h < 22; h++) {
+            for (let m = 0; m < 60; m += 15) {
+                const time = new Date();
+                time.setHours(h, m, 0, 0);
+                slots.push(time);
+            }
+        }
+        return slots;
+    }, []);
+
+    const getStatusColor = (status) => {
+        if (status === 'finalizado') return 'border-green-500 bg-green-500/20';
+        if (status === 'en_vivo') return 'border-red-500 bg-red-500/20';
+        if (status === 'asignado') return 'border-blue-500 bg-blue-500/20';
+        return 'border-slate-600 bg-slate-700/50';
+    };
+
+    const MatchBlock = ({ match }) => (
+        <div 
+            onClick={() => openScheduleModal(match)}
+            className={`p-2 rounded-md cursor-pointer hover:scale-105 transition-transform border-l-4 mb-1 ${getStatusColor(match.status)}`}
+        >
+            <p className="text-xs font-bold truncate">{match.team1_name} vs {match.team2_name}</p>
+            <p className="text-xs text-slate-400">{match.category}</p>
+        </div>
+    );
+
+    return (
+        <Card title="Calendario de Partidos" icon={Calendar}>
+            <div className="overflow-x-auto">
+                <table style={{ minWidth: `${120 + 200 * (courts.length + 1)}px` }} className="w-full border-collapse">
+                    <thead>
+                        <tr className="bg-slate-700/50">
+                            <th className="sticky left-0 bg-slate-700 p-2 border border-slate-600 w-24 text-sm">Hora</th>
+                            <th className="p-2 border border-slate-600 w-48 text-sm">Pendiente Asignar</th>
+                            {courts.map(court => (
+                                <th key={court.id} className="p-2 border border-slate-600 w-48 text-sm">{court.name}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {timeSlots.map((slot, index) => (
+                            <tr key={index}>
+                                <td className="sticky left-0 bg-slate-800 p-2 border border-slate-700 text-center text-xs font-mono">
+                                    {slot.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </td>
+                                <td className="p-1 border border-slate-700 align-top">
+                                    {matches.filter(m => !m.court_id && m.scheduled_start_time && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000).map(match => <MatchBlock key={match.id} match={match} />)}
+                                </td>
+                                {courts.map(court => (
+                                    <td key={court.id} className="p-1 border border-slate-700 align-top">
+                                        {matches.filter(m => m.court_id === court.id && m.scheduled_start_time && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000).map(match => <MatchBlock key={match.id} match={match} />)}
+                                    </td>
+                                ))}
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+        </Card>
+    );
+};
+
+
+
+
+
 // --- COMPONENTE PRINCIPAL ---
 export default function TournamentAdminPage() {
     const [activeTab, setActiveTab] = useState('partidos');
@@ -1186,7 +1297,7 @@ export default function TournamentAdminPage() {
         <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
             <div className="max-w-screen-2xl mx-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold text-cyan-400">Panel de Control</h1>
+                    <h1 className="text-3xl font-bold text-cyan-400">Panel de Control del Torneo</h1>
                     <div className="flex items-center gap-4">
                         <select
                             value={activeTournamentId || ''}
@@ -1206,6 +1317,7 @@ export default function TournamentAdminPage() {
                 
                 <div className="flex border-b border-slate-700 overflow-x-auto">
                     <TabButton tabName="partidos" label="Partidos" icon={BarChart2} activeTab={activeTab} setActiveTab={setActiveTab} />
+                    <TabButton tabName="horarios" label="Horarios" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="grupos" label="Grupos" icon={Users} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="standing" label="Standing" icon={ListOrdered} activeTab={activeTab} setActiveTab={setActiveTab} />
                     <TabButton tabName="juegos" label="En Vivo" icon={MonitorPlay} activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -1219,7 +1331,8 @@ export default function TournamentAdminPage() {
                     error ? (<div className="text-red-400 text-center p-10">{error}</div>) : (
                         <div key={activeTournamentId}>
                            {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={() => fetchDataForTournament(activeTournamentId)} setEditingMatch={setEditingMatch} />}
-                           {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} setModalData={setModalData} />}
+                           {activeTab === 'horarios' && <HorariosTab matches={allData.matches} courts={allData.courts} refreshData={() => fetchDataForTournament(activeTournamentId)} openScheduleModal={setSchedulingMatch} />}
+                           {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} setModalData={setEditingMatch} />}
                            {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
                            {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
                            {activeTab === 'avisos' && <AvisosTab allData={allData} />}
