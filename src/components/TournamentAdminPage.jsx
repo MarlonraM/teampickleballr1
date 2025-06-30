@@ -1170,6 +1170,7 @@ export default function TournamentAdminPage() {
     const [error, setError] = useState(null);
     const [eliminationCount, setEliminationCount] = useState({});
     
+    // Estados para los modales
     const [isConfigOpen, setIsConfigOpen] = useState(false);
     const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
     const [editingMatch, setEditingMatch] = useState(null);
@@ -1341,6 +1342,7 @@ export default function TournamentAdminPage() {
                     allTeams={allTeamsForSelection} 
                     onCreate={handleCreatePhase} 
                     isSaving={isSaving}
+                    tournaments={tournaments}
                 />
                 {isConfigOpen && (
                     <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 pt-20">
@@ -1351,8 +1353,8 @@ export default function TournamentAdminPage() {
                             </header>
                             <main className="p-6 overflow-y-auto">
                                 <ConfiguracionPanel 
-                                    onGenerationComplete={handleGenerationComplete} 
                                     initialData={allData}
+                                    onGenerationComplete={handleGenerationComplete} 
                                     activeTournamentId={activeTournamentId}
                                     onClose={() => setIsConfigOpen(false)}
                                 />
@@ -1364,4 +1366,3 @@ export default function TournamentAdminPage() {
         </div>
     );
 }
-
