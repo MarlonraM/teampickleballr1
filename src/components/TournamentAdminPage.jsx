@@ -51,6 +51,12 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, is
         setPointsToWin(scoringFormat === 'rally' ? 15 : 11);
     }, [scoringFormat]);
 
+    const handleTeamToggle = (teamId) => {
+        setSelectedTeams(prev => 
+            prev.includes(teamId) ? prev.filter(id => id !== teamId) : [...prev, teamId]
+        );
+    };
+
     const handleCreate = () => {
         const finalPhaseName = creationType === 'new' ? `${tournamentName} - Round Robin` : phaseName;
         if (!finalPhaseName || !startDate || (creationType === 'phase' && selectedTeams.length === 0)) {
