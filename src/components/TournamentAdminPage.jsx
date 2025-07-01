@@ -506,7 +506,8 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
     const [newTeamName, setNewTeamName] = useState('');
     const [numberOfGroups, setNumberOfGroups] = useState(2);
     const [schedulingMatch, setSchedulingMatch] = useState(null); // <-- Estado para el nuevo modal
-     
+    const [tournamentGroups, setTournamentGroups] = useState([]); // Nuevo estado para los grupos del torneo
+
     const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null); 
    
