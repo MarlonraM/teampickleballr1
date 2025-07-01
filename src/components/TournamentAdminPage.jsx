@@ -509,6 +509,33 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
      
     const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null); 
+   
+    // Sincroniza los datos con el componente padre
+    useEffect(() => {
+        setPlayers(allPlayers || []);
+        setTeams(initialData.teams || []);
+        setLoading(false);
+    }, [initialData, allPlayers]);
+
+    // Carga los grupos existentes para el torneo activo
+    const fetchGroupsForTournament = useCallback(async () => {
+        if (!activeTournamentId) return;
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/tournaments/${activeTournamentId}/groups`);
+            if (!response.ok) throw new Error('No se pudieron cargar los grupos.');
+            const data = await response.json();
+            setTournamentGroups(data);
+        } catch (err) {
+            console.error(err);
+        }
+    }, [activeTournamentId]);
+
+    useEffect(() => {
+        fetchGroupsForTournament();
+    }, [fetchGroupsForTournament]);
+
+
+
     
     useEffect(() => {
         console.log("✅ ConfiguracionPanel montado");
@@ -516,12 +543,23 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
         console.log("🏆 ID del torneo activo:", activeTournamentId);
     }, []);
 
-useEffect(() => {
-        setPlayers(allPlayers || []);
-        setTeams(initialData.teams || []);
-         setLoading(false);
-    }, [initialData, allPlayers]);
-
+    const handleCreateGroups = async () => {
+        setIsSaving(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/tournaments/${activeTournamentId}/groups`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ numberOfGroups })
+            });
+            if (!response.ok) throw new Error('Error al crear los grupos.');
+            await fetchGroupsForTournament(); // Refresca la lista de grupos
+            alert(`${numberOfGroups} grupos creados exitosamente.`);
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
     const handleAddPlayer = async (e) => {
         e.preventDefault();
@@ -614,7 +652,10 @@ useEffect(() => {
     };
     
     
-    const handleAssignGroupToTeam = (teamId, groupId) => { setTeams(teams.map(t => t.id === teamId ? { ...t, groupId: groupId ? parseInt(groupId, 10) : null } : t)); };
+ const handleAssignGroupToTeam = (teamId, groupId) => {
+        setTeams(teams.map(t => t.id === teamId ? { ...t, groupId: groupId ? parseInt(groupId, 10) : null } : t));
+    };
+    
     const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
     const groupOptions = useMemo(() => Array.from({ length: numberOfGroups }, (_, i) => i + 1), [numberOfGroups]);
     const idealTeamsPerGroup = useMemo(() => numberOfGroups > 0 ? Math.ceil(teams.length / numberOfGroups) : 0, [teams.length, numberOfGroups]);
@@ -641,8 +682,55 @@ useEffect(() => {
                         </button>
                     </form>
                 </Card>
-                <Card title="Registrar Equipo" icon={ShieldPlus}><form onSubmit={handleAddTeam} className="space-y-4"><input required type="text" placeholder="Nombre del Equipo" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
-                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">Registrar</button></form></Card></div><Card title="Asignación de Grupos (Round Robin)" icon={Users}><div className="bg-slate-900/50 p-4 rounded-md mb-4 flex flex-wrap items-center justify-between gap-4 text-sm text-slate-300"><p><strong>{teams.length}</strong> equipos registrados.</p><div className="flex items-center gap-2"><label>Crear</label><input type="number" min="1" max="10" value={numberOfGroups} onChange={(e) => setNumberOfGroups(parseInt(e.target.value))} className="w-16 bg-slate-700 p-2 rounded text-center border border-slate-600"/><label>grupos.</label></div><p>Equipos por grupo (ideal): <strong>{idealTeamsPerGroup > 0 ? `~${idealTeamsPerGroup.toFixed(1)}` : 'N/A'}</strong></p></div><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-700/50"><tr className="border-b border-slate-600"><th className="p-3 text-sm font-semibold text-slate-300">Equipo</th><th className="p-3 text-sm font-semibold text-slate-300">Grupo Asignado</th><th className="p-3 text-sm font-semibold text-slate-300">Estado</th></tr></thead><tbody>{teams.map(team => (<tr key={team.id} className="border-b border-slate-700 hover:bg-slate-800 transition-colors"><td className="p-3">{team.name}</td><td className="p-3"><select value={team.groupId || ''} onChange={(e) => handleAssignGroupToTeam(team.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"><option value="">Sin Grupo</option>{groupOptions.map(gNum => <option key={gNum} value={gNum}>Grupo {getGroupLetter(gNum)}</option>)}</select></td><td className="p-3">{team.groupId && teamsPerGroup[team.groupId] > idealTeamsPerGroup && (<span className="text-yellow-400 flex items-center text-xs"><AlertTriangle size={14} className="mr-1" /> Sobrecargado</span>)}</td></tr>))}</tbody></table></div><div className="mt-6 flex justify-end"><button onClick={handleSaveGroups} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors"><Save className="mr-2 h-5 w-5" /> Guardar Grupos</button></div></Card><Card title="Asignación de Jugadores a Equipos" icon={UserPlus}><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-700/50"><tr className="border-b border-slate-600"><th className="p-3 text-sm font-semibold text-slate-300">Jugador</th><th className="p-3 text-sm font-semibold text-slate-300">Categoría</th><th className="p-3 text-sm font-semibold text-slate-300">Email</th><th className="p-3 text-sm font-semibold text-slate-300">Asignar Equipo</th><th className="p-3 text-sm font-semibold text-slate-300">Grupo</th><th className="p-3 text-sm font-semibold text-slate-300">Validación</th></tr></thead><tbody>{players.map(player => { const assignedTeam = teams.find(t => t.id === player.teamId); const validationInfo = assignedTeam ? categoryValidation[assignedTeam.id] : null; const isInvalid = validationInfo && !validationInfo.isValid; return (<tr key={player.id} className={`border-b border-slate-700 hover:bg-slate-800 transition-colors ${isInvalid ? 'bg-red-900/20' : ''}`}><td className="p-3">{player.fullName}</td><td className="p-3">{player.category}</td><td className="p-3">{player.email}</td><td className="p-3"><select value={player.teamId || ''} onChange={(e) => handleAssignTeamToPlayer(player.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"><option value="">Sin Equipo</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></td><td className="p-3 font-mono">{assignedTeam?.groupId ? `Grupo ${getGroupLetter(assignedTeam.groupId)}` : '—'}</td><td className="p-3">{isInvalid && (<span className="text-red-400 flex items-center text-xs"><AlertTriangle size={14} className="mr-1" /> Límite excedido</span>)}</td></tr>)})}</tbody></table></div><div className="mt-6 flex justify-end"><button onClick={handleSaveAndGenerateMatches} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors"><Save className="mr-2 h-5 w-5" /> Guardar Asignaciones y Generar Partidos</button></div></Card>
+                <Card title="Registrar Equipo" icon={ShieldPlus}><form onSubmit={handleAddTeam} className="space-y-4">
+                    <input required type="text" placeholder="Nombre del Equipo" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
+                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">
+                            Registrar
+                        </button>
+                </form>
+                </Card>
+            </div>
+             <Card title="Asignación de Grupos (Round Robin)" icon={Users}>
+                <div className="bg-slate-900/50 p-4 rounded-md mb-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                        <label>Crear</label>
+                        <input type="number" min="1" max="26" value={numberOfGroups} onChange={(e) => setNumberOfGroups(parseInt(e.target.value))} className="w-16 bg-slate-700 p-2 rounded text-center border border-slate-600"/>
+                        <label>grupos para este torneo:</label>
+                        <button onClick={handleCreateGroups} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-semibold" disabled={isSaving}>Crear Grupos</button>
+                    </div>
+                    <p className="text-xs text-slate-400">Grupos existentes: {tournamentGroups.map(g => g.name).join(', ') || 'Ninguno'}</p>
+                </div>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-700/50">
+                            <tr className="border-b border-slate-600">
+                                <th className="p-3 text-sm font-semibold">Equipo</th>
+                                <th className="p-3 text-sm font-semibold">Grupo Asignado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {teams.map(team => (
+                                <tr key={team.id} className="border-b border-slate-700">
+                                    <td className="p-3">{team.name}</td>
+                                    <td className="p-3">
+                                        <select value={team.groupId || ''} onChange={(e) => handleAssignGroupToTeam(team.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600">
+                                            <option value="">Sin Grupo</option>
+                                            {tournamentGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
+                                        </select>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="mt-6 flex justify-end">
+                    <button onClick={handleSaveGroups} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold">
+                        <Save className="mr-2 h-5 w-5" /> Guardar Asignación de Grupos
+                    </button>
+                </div>
+            </Card>
+            
+            <Card title="Asignación de Jugadores a Equipos" icon={UserPlus}><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-700/50"><tr className="border-b border-slate-600"><th className="p-3 text-sm font-semibold text-slate-300">Jugador</th><th className="p-3 text-sm font-semibold text-slate-300">Categoría</th><th className="p-3 text-sm font-semibold text-slate-300">Email</th><th className="p-3 text-sm font-semibold text-slate-300">Asignar Equipo</th><th className="p-3 text-sm font-semibold text-slate-300">Grupo</th><th className="p-3 text-sm font-semibold text-slate-300">Validación</th></tr></thead><tbody>{players.map(player => { const assignedTeam = teams.find(t => t.id === player.teamId); const validationInfo = assignedTeam ? categoryValidation[assignedTeam.id] : null; const isInvalid = validationInfo && !validationInfo.isValid; return (<tr key={player.id} className={`border-b border-slate-700 hover:bg-slate-800 transition-colors ${isInvalid ? 'bg-red-900/20' : ''}`}><td className="p-3">{player.fullName}</td><td className="p-3">{player.category}</td><td className="p-3">{player.email}</td><td className="p-3"><select value={player.teamId || ''} onChange={(e) => handleAssignTeamToPlayer(player.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"><option value="">Sin Equipo</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></td><td className="p-3 font-mono">{assignedTeam?.groupId ? `Grupo ${getGroupLetter(assignedTeam.groupId)}` : '—'}</td><td className="p-3">{isInvalid && (<span className="text-red-400 flex items-center text-xs"><AlertTriangle size={14} className="mr-1" /> Límite excedido</span>)}</td></tr>)})}</tbody></table></div><div className="mt-6 flex justify-end"><button onClick={handleSaveAndGenerateMatches} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors"><Save className="mr-2 h-5 w-5" /> Guardar Asignaciones y Generar Partidos</button></div></Card>
         </div>);
 };
 
