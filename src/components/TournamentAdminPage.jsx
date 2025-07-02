@@ -983,7 +983,7 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
                                                 </tr>
                                                 {expandedRows[team.id] && (
                                                     <>
-                                                        {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenino'].map(category => {
+                                                        {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenina'].map(category => {
                                                             const categoryMatches = groupMatches.filter(m => m.category === category);
                                                             const categoryStats = calculateStats(categoryMatches, team.id);
                                                             return (
@@ -1029,7 +1029,7 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
                                             <div className="mt-2 text-xs space-y-1">
                                                 <p className="font-bold">Generar partidos de desempate por categoría:</p>
                                                 <div className="flex gap-2">
-                                                    {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenino'].map(category => (
+                                                    {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenina'].map(category => (
                                                         <button key={category} onClick={() => handleGenerateTiebreakers(tiedTeams, category)} className="bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded-md text-xs">{category}</button>
                                                     ))}
                                                 </div>
