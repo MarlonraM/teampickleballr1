@@ -663,7 +663,7 @@ const savePlayerAssignments = async () => {
     const response = await fetch(`${API_BASE_URL}/api/players/assign-teams`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ players: updates })
+      body: JSON.stringify({updates})
     });
     if (!response.ok) throw new Error('Error al asignar jugadores a equipos.');
   } catch (err) {
