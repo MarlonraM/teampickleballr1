@@ -551,6 +551,7 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ numberOfGroups })
+                
             });
             if (!response.ok) throw new Error('Error al crear los grupos.');
             await fetchGroupsForTournament(); // Refresca la lista de grupos
@@ -589,7 +590,19 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
         //useEffect(() => { 
         //    const fetchData = async () => { 
         //        try { setLoading(true); const [playersResponse, teamsResponse] = await Promise.all([fetch(`${import.meta.env.VITE_API_URL}/api/players`), fetch(`${import.meta.env.VITE_API_URL}/api/teams`)]); if (!playersResponse.ok || !teamsResponse.ok) throw new Error('Error al cargar datos.'); const playersData = await playersResponse.json(); const teamsData = await teamsResponse.json(); setPlayers(playersData); setTeams(teamsData); setError(null); } catch (err) { setError(err.message); console.error(err); } finally { setLoading(false); } }; fetchData(); }, []);
-    const handleAssignTeamToPlayer = (playerId, teamId) => { setPlayers(players.map(p => p.id === playerId ? { ...p, teamId: teamId ? parseInt(teamId, 10) : null } : p)); };
+   
+    //Esta función sirve para asignar un equipo a un jugador (localmente en el estado del componente).
+    //Cuando esta Seleccionando Equipos en el Modal de configuracion.
+    //Agarra los Players que llegaron y Clona el listado, Mapiando el Playerid especifico
+    const handleAssignTeamToPlayer = (playerId, teamId) => { 
+        setPlayers(
+            players.map(p => 
+                p.id === playerId 
+                ? { ...p, teamId: teamId ? parseInt(teamId, 10) : null } 
+                : p
+            )
+        ); 
+    };
 
     const handleAddTeam = async (e) => {
         e.preventDefault();
@@ -626,32 +639,34 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
         } 
     };
          
-    const handleSaveAndGenerateMatches = async () => {
-        if (!activeTournamentId) {
-            alert("Por favor, selecciona un torneo válido primero.");
-            return;
-        }
-        setIsSaving(true);
-        try {
-            await handleSaveGroups();
-            
-            const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournament_id: activeTournamentId })
-            });
+const handleSaveAndGenerateMatches = async () => {
+    if (!activeTournamentId) {
+        alert("Por favor, selecciona un torneo válido primero.");
+        return;
+    }
 
-            if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.');
-            alert('¡Partidos generados exitosamente!');
-            onGenerationComplete();
-            onClose();
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-    
+    setIsSaving(true);
+    try {
+        await handleSaveGroups();              // Guarda los grupos
+        await savePlayerAssignments();         // Guarda asignaciones de jugadores a equipos
+
+        const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tournament_id: activeTournamentId })
+        });
+
+        if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.');
+        
+        alert('¡Partidos generados exitosamente!');
+        onGenerationComplete();
+        onClose();
+    } catch (err) {
+        alert(err.message);
+    } finally {
+        setIsSaving(false);
+    }
+};
     
  const handleAssignGroupToTeam = (teamId, groupId) => {
         setTeams(teams.map(t => t.id === teamId ? { ...t, groupId: groupId ? parseInt(groupId, 10) : null } : t));
@@ -731,7 +746,57 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
                 </div>
             </Card>
             
-            <Card title="Asignación de Jugadores a Equipos" icon={UserPlus}><div className="overflow-x-auto"><table className="w-full text-left"><thead className="bg-slate-700/50"><tr className="border-b border-slate-600"><th className="p-3 text-sm font-semibold text-slate-300">Jugador</th><th className="p-3 text-sm font-semibold text-slate-300">Categoría</th><th className="p-3 text-sm font-semibold text-slate-300">Email</th><th className="p-3 text-sm font-semibold text-slate-300">Asignar Equipo</th><th className="p-3 text-sm font-semibold text-slate-300">Grupo</th><th className="p-3 text-sm font-semibold text-slate-300">Validación</th></tr></thead><tbody>{players.map(player => { const assignedTeam = teams.find(t => t.id === player.teamId); const validationInfo = assignedTeam ? categoryValidation[assignedTeam.id] : null; const isInvalid = validationInfo && !validationInfo.isValid; return (<tr key={player.id} className={`border-b border-slate-700 hover:bg-slate-800 transition-colors ${isInvalid ? 'bg-red-900/20' : ''}`}><td className="p-3">{player.fullName}</td><td className="p-3">{player.category}</td><td className="p-3">{player.email}</td><td className="p-3"><select value={player.teamId || ''} onChange={(e) => handleAssignTeamToPlayer(player.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"><option value="">Sin Equipo</option>{teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></td><td className="p-3 font-mono">{assignedTeam?.groupId ? `Grupo ${getGroupLetter(assignedTeam.groupId)}` : '—'}</td><td className="p-3">{isInvalid && (<span className="text-red-400 flex items-center text-xs"><AlertTriangle size={14} className="mr-1" /> Límite excedido</span>)}</td></tr>)})}</tbody></table></div><div className="mt-6 flex justify-end"><button onClick={handleSaveAndGenerateMatches} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors"><Save className="mr-2 h-5 w-5" /> Guardar Asignaciones y Generar Partidos</button></div></Card>
+            <Card title="Asignación de Jugadores a Equipos" icon={UserPlus}>
+                <div className="overflow-x-auto">
+                    <table className="w-full text-left">
+                        <thead className="bg-slate-700/50">
+                            <tr className="border-b border-slate-600">
+                                <th className="p-3 text-sm font-semibold text-slate-300">Jugador</th>
+                                <th className="p-3 text-sm font-semibold text-slate-300">Categoría</th>
+                                <th className="p-3 text-sm font-semibold text-slate-300">Email</th>
+                                <th className="p-3 text-sm font-semibold text-slate-300">Asignar Equipo</th>
+                                <th className="p-3 text-sm font-semibold text-slate-300">Grupo</th>
+                                <th className="p-3 text-sm font-semibold text-slate-300">Validación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {players.map(player => { 
+                                const assignedTeam = teams.find(t => t.id === player.teamId); 
+                                const validationInfo = assignedTeam ? categoryValidation[assignedTeam.id] : null; 
+                                const isInvalid = validationInfo && !validationInfo.isValid; 
+                                return (
+                                    <tr key={player.id} className={`border-b border-slate-700 hover:bg-slate-800 transition-colors ${isInvalid ? 'bg-red-900/20' : ''}`}>
+                                        <td className="p-3">{player.fullName}</td>
+                                        <td className="p-3">{player.category}</td>
+                                        <td className="p-3">{player.email}</td>
+                                        <td className="p-3">
+                                            <select 
+                                                value={player.teamId || ''} 
+                                                onChange={(e) => handleAssignTeamToPlayer(player.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"
+                                                >
+                                                <option value="">Sin Equipo</option>{
+                                                teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                            </select>
+                                        </td>
+                                        <td className="p-3 font-mono">{assignedTeam?.groupId ? `Grupo ${getGroupLetter(assignedTeam.groupId)}` : '—'}</td>
+                                        <td className="p-3">
+                                            {isInvalid && (
+                                        <span className="text-red-400 flex items-center text-xs">
+                                            <AlertTriangle size={14} className="mr-1" /> Límite excedido
+                                        </span>
+                                            )}
+                                        </td>
+                                    </tr>
+                                )})}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="mt-6 flex justify-end">
+                    <button onClick={handleSaveAndGenerateMatches} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors">
+                        <Save className="mr-2 h-5 w-5" /> Guardar Asignaciones y Generar Partidos
+                    </button>
+                </div>
+            </Card>
         </div>);
 };
 
