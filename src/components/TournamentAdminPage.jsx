@@ -1488,8 +1488,6 @@ const HorariosTab = ({ matches, courts, openScheduleModal, tournamentStartDate }
   );
 };
 
-export default HorariosTab;
-
 // --- COMPONENTE PRINCIPAL ---
 export default function TournamentAdminPage() {
     const [activeTab, setActiveTab] = useState('partidos');
