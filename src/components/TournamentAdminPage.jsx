@@ -595,7 +595,6 @@ const ConfiguracionPanel = ({ allPlayers, initialData, onGenerationComplete, act
   );
 };
 
-export default ConfiguracionPanel;
 
     
 // --- PESTAÑA 2: GESTIÓN DE TORNEO ---
