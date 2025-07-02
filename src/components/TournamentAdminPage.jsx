@@ -652,10 +652,10 @@ const ConfiguracionPanel = ({ allPlayers, initialData, onGenerationComplete, act
 
 
 const savePlayerAssignments = async () => {
-  // Solo jugadores con equipo asignado
+  // Genera un array con la forma que espera el backend
   const updates = players
     .filter(p => p.teamId)
-    .map(p => ({ id: p.id, teamId: p.teamId }));
+    .map(p => ({ player_id: p.id, team_id: p.teamId }));
 
   if (updates.length === 0) return;
 
@@ -663,15 +663,14 @@ const savePlayerAssignments = async () => {
     const response = await fetch(`${API_BASE_URL}/api/players/assign-teams`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({updates})
+      body: JSON.stringify(updates) // <- NO lo envuelvas en {players: updates}
     });
     if (!response.ok) throw new Error('Error al asignar jugadores a equipos.');
   } catch (err) {
     alert(err.message);
-    throw err; // Opcional, para cortar el flujo si esto falla
+    throw err; // Opcional
   }
 };
-    
 const handleSaveAndGenerateMatches = async () => {
     if (!activeTournamentId) {
         alert("Por favor, selecciona un torneo válido primero.");
