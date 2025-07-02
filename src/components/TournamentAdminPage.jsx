@@ -580,7 +580,7 @@ const ConfiguracionPanel = ({ allPlayers, initialData, onGenerationComplete, act
         >
           <option value="">Selecciona categoría</option>
           {categoryList.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
+            <option key={cat.id} value={cat.id}>{cat.name || '-'}</option>
           ))}
         </select>
         <button
