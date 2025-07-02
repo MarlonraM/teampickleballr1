@@ -1197,7 +1197,7 @@ export default function TournamentAdminPage() {
         if (!tournamentId) { setLoading(false); return; }
         if (!isSilent) setLoading(true);
         try {
-            const [matchesRes, teamsRes, courtsRes] = await Promise.all([
+            const [matchesRes, teamsRes, courtsRes, categoriesres] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/teams/by-tournament/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/courts`),
