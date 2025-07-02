@@ -507,7 +507,7 @@ const ConfiguracionPanel = ({ activeTournamentId, initialData, allPlayers, onGen
     const [numberOfGroups, setNumberOfGroups] = useState(2);
     const [schedulingMatch, setSchedulingMatch] = useState(null); // <-- Estado para el nuevo modal
     const [tournamentGroups, setTournamentGroups] = useState([]); // Nuevo estado para los grupos del torneo
-
+const [loading, setLoading] = useState(true); 
     const [error, setError] = useState(null); 
    
     // Sincroniza los datos con el componente padre
