@@ -1201,6 +1201,7 @@ export default function TournamentAdminPage() {
                 fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/teams/by-tournament/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/courts`)
+                fetch(`${API_BASE_URL}/api/categories`)
             ]);
             if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
             const matchesData = await matchesRes.json();
