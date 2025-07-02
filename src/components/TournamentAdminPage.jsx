@@ -1454,71 +1454,7 @@ const AvisosTab = ({ allData }) => {
     );
 };
 
-const HorariosTab = ({ matches, courts, openScheduleModal }) => {
-    const timeSlots = useMemo(() => {
-        const slots = [];
-        for (let h = 7; h < 22; h++) {
-            for (let m = 0; m < 60; m += 20) {
-                const time = new Date();
-                time.setHours(h, m, 0, 0);
-                slots.push(time);
-            }
-        }
-        return slots;
-    }, []);
 
-    const getStatusColor = (status) => {
-        if (status === 'finalizado') return 'border-green-500 bg-green-500/20';
-        if (status === 'en_vivo') return 'border-red-500 bg-red-500/20';
-        if (status === 'asignado') return 'border-blue-500 bg-blue-500/20';
-        return 'border-slate-600 bg-slate-700/50';
-    };
-
-    const MatchBlock = ({ match }) => (
-        <div 
-            onClick={() => openScheduleModal(match)}
-            className={`p-2 rounded-md cursor-pointer hover:scale-105 transition-transform border-l-4 mb-1 ${getStatusColor(match.status)}`}
-        >
-            <p className="text-xs font-bold truncate">{match.team1_name} vs {match.team2_name}</p>
-            <p className="text-xs text-slate-400">{match.category}</p>
-        </div>
-    );
-
-    return (
-        <Card title="Calendario de Partidos" icon={Calendar}>
-            <div className="overflow-x-auto">
-                <table style={{ minWidth: `${120 + 200 * (courts.length + 1)}px` }} className="w-full border-collapse">
-                    <thead>
-                        <tr className="bg-slate-700/50">
-                            <th className="sticky left-0 bg-slate-700 p-2 border border-slate-600 w-24 text-sm">Hora</th>
-                            <th className="p-2 border border-slate-600 w-48 text-sm">Pendiente Asignar</th>
-                            {courts.map(court => (
-                                <th key={court.id} className="p-2 border border-slate-600 w-48 text-sm">{court.name}</th>
-                            ))}
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {timeSlots.map((slot, index) => (
-                            <tr key={index}>
-                                <td className="sticky left-0 bg-slate-800 p-2 border border-slate-700 text-center text-xs font-mono">
-                                    {slot.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </td>
-                                <td className="p-1 border border-slate-700 align-top">
-                                    {matches.filter(m => !m.court_id && m.scheduled_start_time && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000).map(match => <MatchBlock key={match.id} match={match} />)}
-                                </td>
-                                {courts.map(court => (
-                                    <td key={court.id} className="p-1 border border-slate-700 align-top">
-                                        {matches.filter(m => m.court_id === court.id && m.scheduled_start_time && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000).map(match => <MatchBlock key={match.id} match={match} />)}
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </Card>
-    );
-};
 
 // --- COMPONENTE PRINCIPAL ---
 export default function TournamentAdminPage() {
