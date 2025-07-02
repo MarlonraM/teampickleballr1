@@ -235,21 +235,7 @@ const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
     );
 };
 
-
-import React, { useState, useMemo } from 'react';
-import { Calendar } from 'lucide-react';
-
-// Componente de tarjeta visual (usa tu Card, reemplaza si es otro)
-const Card = ({ title, icon: Icon, children }) => (
-  <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-lg mb-6">
-    <div className="p-4 border-b border-slate-700 flex items-center gap-2">
-      {Icon && <Icon className="mr-3 h-5 w-5" />}
-      <h3 className="text-lg font-semibold text-cyan-400">{title}</h3>
-    </div>
-    <div className="p-6">{children}</div>
-  </div>
-);
-
+//HORARIOS TAB
 const HorariosTab = ({ matches, courts, openScheduleModal, tournamentStartDate }) => {
   // 1. Obtén fecha por defecto: startDate (de torneo) o hoy
   const defaultDate = useMemo(() => {
