@@ -270,7 +270,7 @@ const HorariosTab = ({ matches, courts, openScheduleModal, tournamentStartDate }
     const slots = [];
     const [year, month, day] = selectedDate.split('-').map(Number);
     for (let h = 7; h < 22; h++) {
-      for (let m = 0; m < 60; m += 15) {
+      for (let m = 0; m < 60; m += 20) {
         const slot = new Date(year, month - 1, day, h, m, 0, 0);
         slots.push(slot);
       }
