@@ -1193,17 +1193,17 @@ export default function TournamentAdminPage() {
     const [allCategories, setAllCategories] = useState([]);
 
 
-    const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
+     const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
         if (!tournamentId) { setLoading(false); return; }
         if (!isSilent) setLoading(true);
         try {
-            const [matchesRes, teamsRes, courtsRes, categoriesres] = await Promise.all([
+            const [matchesRes, teamsRes, courtsRes, categoriesRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/teams/by-tournament/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/courts`),
                 fetch(`${API_BASE_URL}/api/categories`)
-            ]);            
-            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok || !categoriesres.ok) throw new Error('No se pudieron cargar los datos del torneo.');
+            ]);
+            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok || !categoriesRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
             const matchesData = await matchesRes.json();
             const teamsData = await teamsRes.json();
             const courtsData = await courtsRes.json();    
@@ -1217,34 +1217,41 @@ export default function TournamentAdminPage() {
         }
     }, []);
 
-    const [tournamentsRes, allTeamsRes, allPlayersRes, categoriesRes] = await Promise.all([
-        fetch(`${API_BASE_URL}/api/tournaments`),
-        fetch(`${API_BASE_URL}/api/teams`),
-        fetch(`${API_BASE_URL}/api/players`),
-        fetch(`${API_BASE_URL}/api/categories`)
-    ]);
-            const tournamentsData = await tournamentsRes.json();
-            const allTeamsData = await allTeamsRes.json();
-            const allPlayersData = await allPlayersRes.json();
-            const categoriesData = await categoriesRes.json();
-            
-            setTournaments(tournamentsData);
-            setAllTeamsForSelection(allTeamsData);
-            setAllPlayers(allPlayersData);
+const fetchInitialData = useCallback(async () => {
+    try {
+        const [tournamentsRes, allTeamsRes, allPlayersRes, categoriesRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/tournaments`),
+            fetch(`${API_BASE_URL}/api/teams`),
+            fetch(`${API_BASE_URL}/api/players`),
+            fetch(`${API_BASE_URL}/api/categories`)
+        ]);
+        const tournamentsData = await tournamentsRes.json();
+        const allTeamsData = await allTeamsRes.json();
+        const allPlayersData = await allPlayersRes.json();
+        const categoriesData = await categoriesRes.json();
 
+        setTournaments(tournamentsData);
+        setAllTeamsForSelection(allTeamsData);
+        setAllPlayers(allPlayersData);
 
-            if (tournamentsData.length > 0) {
-                if (!activeTournamentId) {
-                    setActiveTournamentId(tournamentsData[0].id);
-                }
-            } else {
-                setLoading(false);
+        // Si quieres guardar las categorías también en allData
+        setAllData(prev => ({
+            ...prev,
+            categories: categoriesData
+        }));
+
+        if (tournamentsData.length > 0) {
+            if (!activeTournamentId) {
+                setActiveTournamentId(tournamentsData[0].id);
             }
-        } catch (err) {
-            setError("Error al cargar datos iniciales.");
+        } else {
             setLoading(false);
         }
-    }, [activeTournamentId]);
+    } catch (err) {
+        setError("Error al cargar datos iniciales.");
+        setLoading(false);
+    }
+}, [activeTournamentId]);
 
     useEffect(() => {
         fetchInitialData();
