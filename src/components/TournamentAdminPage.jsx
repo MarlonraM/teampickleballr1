@@ -1222,8 +1222,8 @@ export default function TournamentAdminPage() {
             const [tournamentsRes, allTeamsRes, allPlayersRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
                 fetch(`${API_BASE_URL}/api/teams`),
-                fetch(`${API_BASE_URL}/api/players`) // <-- NUEVO: Carga todos los jugadores
-                fetch(`${API_BASE_URL}/api/categories`),
+                fetch(`${API_BASE_URL}/api/players`), // <-- NUEVO: Carga todos los jugadores
+                fetch(`${API_BASE_URL}/api/categories`)
             ]);
             const tournamentsData = await tournamentsRes.json();
             const allTeamsData = await allTeamsRes.json();
