@@ -1387,7 +1387,7 @@ const HorariosTab = ({ matches, courts, openScheduleModal, tournamentStartDate }
   const timeSlots = useMemo(() => {
     const slots = [];
     const [year, month, day] = selectedDate.split('-').map(Number);
-    for (let h = 7; h < 22; h++) {
+    for (let h = 9; h < 22; h++) {
       for (let m = 0; m < 60; m += 20) {
         const slot = new Date(year, month - 1, day, h, m, 0, 0);
         slots.push(slot);
@@ -1406,15 +1406,18 @@ const HorariosTab = ({ matches, courts, openScheduleModal, tournamentStartDate }
 
   // 5. Componente visual partido
   const MatchBlock = ({ match }) => (
-    <div
-      onClick={() => openScheduleModal(match)}
-      className={`p-2 rounded-md cursor-pointer hover:scale-105 transition-transform border-l-4 mb-1 ${getStatusColor(match.status)}`}
-    >
-      <p className="text-xs font-bold truncate">{match.team1_name} vs {match.team2_name}</p>
-      <p className="text-xs text-slate-400">{match.category}</p>
+  <div
+    onClick={() => openScheduleModal(match)}
+    className={`p-2 rounded-md cursor-pointer hover:scale-105 transition-transform border-l-4 mb-1 ${getStatusColor(match.status)}`}
+  >
+    <p className="text-xs font-bold truncate">{match.team1_name} vs {match.team2_name}</p>
+    <div className="text-slate-400 text-xs leading-tight mt-1 mb-1">
+      <div>{match.team1_player1_name || 'N/A'} / {match.team1_player2_name || 'N/A'}</div>
+      <div>{match.team2_player1_name || 'N/A'} / {match.team2_player2_name || 'N/A'}</div>
     </div>
-  );
-
+    <p className="text-xs text-slate-400">{match.category}</p>
+  </div>
+);
   // 6. Render
   return (
     <>
