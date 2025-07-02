@@ -1200,14 +1200,15 @@ export default function TournamentAdminPage() {
             const [matchesRes, teamsRes, courtsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
                 fetch(`${API_BASE_URL}/api/teams/by-tournament/${tournamentId}`),
-                fetch(`${API_BASE_URL}/api/courts`)
+                fetch(`${API_BASE_URL}/api/courts`),
                 fetch(`${API_BASE_URL}/api/categories`)
             ]);
             if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
             const matchesData = await matchesRes.json();
             const teamsData = await teamsRes.json();
             const courtsData = await courtsRes.json();
-            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData });
+            const categoriesData = await categoriesRes.json();
+            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData, categories: categoriesData});
             setError(null);
         } catch (err) {
             setError(err.message);
@@ -1222,6 +1223,7 @@ export default function TournamentAdminPage() {
                 fetch(`${API_BASE_URL}/api/tournaments`),
                 fetch(`${API_BASE_URL}/api/teams`),
                 fetch(`${API_BASE_URL}/api/players`) // <-- NUEVO: Carga todos los jugadores
+                
             ]);
             const tournamentsData = await tournamentsRes.json();
             const allTeamsData = await allTeamsRes.json();
