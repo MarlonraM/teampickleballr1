@@ -9,8 +9,9 @@ import PublicScoreboard from './components/PublicScoreboard';
 import PublicScoreboardMichelob from './components/PublicScoreboardMichelob';
 import RegisterPage from './components/RegisterPage';
 import LoginPage from './pages/LoginPage';
-import ProtectedRoute from './components/ProtectedRoute';
 import Horarios from './components/HorariosTentativosJuegos';
+import ProtectedRoute from './components/ProtectedRoute';
+
 
 function App() {
   // CORRECCIÓN: Se elimina el <BrowserRouter> que envolvía todo.
@@ -21,10 +22,11 @@ function App() {
     
         {/* RUTAS PÚBLICAS */}
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/Horarios" element={<Horarios />} />
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/scoreboard" element={<PublicScoreboard />} />
         <Route path="/scoreboard/michelob" element={<PublicScoreboardMichelob />} />
-        <Route path="/Horarios" element={<Horarios />} />
+        
         
         {/* RUTAS PROTEGIDAS */}
         <Route 
