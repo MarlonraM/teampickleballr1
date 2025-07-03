@@ -127,98 +127,76 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, is
     );
 };
 
-// --- MODAL PARA EDITAR PUNTUACIÓN Y ESTADO ---
+// --- MODAL PARA EDITAR PUNTUACIÓN, ESTADO Y CANCHA ---
 const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
-    const [courtId, setCourtId] = useState(match.court_id || '');
-    const [scores, setScores] = useState({
-        team1: match.team1_score ?? 0,
-        team2: match.team2_score ?? 0
+  const [courtId, setCourtId] = useState(match.court_id || "");
+  const [scores, setScores] = useState({
+    team1: match.team1_score ?? 0,
+    team2: match.team2_score ?? 0,
+  });
+  const [isEditingScore, setIsEditingScore] = useState(
+    match.status !== "finalizado"
+  );
+
+  // Sync on match change
+  useEffect(() => {
+    setCourtId(match.court_id || "");
+    setScores({
+      team1: match.team1_score ?? 0,
+      team2: match.team2_score ?? 0,
     });
-    const [isEditingScore, setIsEditingScore] = useState(match.status !== 'finalizado');
+    setIsEditingScore(match.status !== "finalizado");
+  }, [match]);
 
-    // Sync on match change
-    useEffect(() => {
-        setCourtId(match.court_id || '');
-        setScores({
-            team1: match.team1_score ?? 0,
-            team2: match.team2_score ?? 0
-        });
-        setIsEditingScore(match.status !== 'finalizado');
-    }, [match]);
+  // Cambia el estado automáticamente al (des)asignar cancha
+  useEffect(() => {
+    if (!courtId && match.status === "asignado") {
+      // Si se desasigna, regresa a pendiente
+      onSave(match.id, { court_id: null, status: "pendiente" }, true);
+    }
+    // No cambiamos a 'asignado' aquí porque lo hacemos al guardar.
+    // eslint-disable-next-line
+  }, [courtId]);
 
-    // ----- Cambia el estado automáticamente al (des)asignar cancha -----
-    useEffect(() => {
-        if (!courtId && match.status === 'asignado') {
-            // Si se desasigna, regresa a pendiente
-            onSave(match.id, { court_id: null, status: 'pendiente' }, true);
-        }
-        // No cambiamos a 'asignado' aquí porque lo hacemos al guardar.
-    }, [courtId]); // eslint-disable-line
+  const handleScoreChange = (team, value) => {
+    setScores((prev) => ({
+      ...prev,
+      [team]: Math.max(0, parseInt(value, 10) || 0),
+    }));
+  };
 
-    // ----- Manejo de score -----
-    const handleScoreChange = (team, value) => {
-        setScores(prev => ({
-            ...prev,
-            [team]: Math.max(0, parseInt(value, 10) || 0)
-        }));
-    };
+  const handleSaveScore = () => {
+    const { team1, team2 } = scores;
+    let payload = { team1_score: team1, team2_score: team2 };
 
-    // Guardar solo score/cambios
-    const handleSaveScore = () => {
-        const { team1, team2 } = scores;
-        let payload = { team1_score: team1, team2_score: team2 };
+    // Si estaba finalizado pero score ya no es válido, revierte
+    if (
+      match.status === "finalizado" &&
+      (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2)
+    ) {
+      alert(
+        "El marcador ya no es válido para un partido finalizado. Estado revertido a 'Pendiente'."
+      );
+      payload = {
+        ...payload,
+        status: "pendiente",
+        winner_id: null,
+        end_time: null,
+        court_id: null,
+        team1_tournament_points: 0,
+        team2_tournament_points: 0,
+      };
+    }
+    onSave(match.id, payload);
+  };
 
-        // Si estaba finalizado pero score ya no es válido, revierte
-        if (match.status === 'finalizado' && (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2)) {
-            alert("El marcador ya no es válido para un partido finalizado. Estado revertido a 'Pendiente'.");
-            payload = {
-                ...payload,
-                status: 'pendiente',
-                winner_id: null,
-                end_time: null,
-                court_id: null,
-                team1_tournament_points: 0,
-                team2_tournament_points: 0,
-            };
-        }
-        onSave(match.id, payload);
-    };
-
-    // Finalizar partido (verifica score válido)
-    const handleFinalize = () => {
-        const { team1, team2 } = scores;
-        if (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2) {
-            alert('Para finalizar, el ganador debe tener al menos 11 puntos y una ventaja de 2.');
-            return;
-        }
-        if (window.confirm('¿Deseas marcar este partido como Finalizado? Esta acción es definitiva.')) {
-            onSave(match.id, {
-                team1_score: team1,
-                team2_score: team2,
-                status: 'finalizado'
-            });
-        }
-    };
-
-    // Guardar asignación de cancha y cambia estado si corresponde
-    const handleSaveCourt = () => {
-        if (courtId) {
-            const newStatus = match.status === 'pendiente' ? 'asignado' : match.status;
-            onSave(match.id, {
-                court_id: parseInt(courtId, 10),
-                status: newStatus
-            });
-        } else {
-            onSave(match.id, {
-                court_id: null,
-                status: 'pendiente'
-            });
-        }
-    };
-
-    if (!match) return null;
-
-        return;
+  const handleFinalize = () => {
+    const { team1, team2 } = scores;
+    if (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2) {
+      alert(
+        "Para finalizar, el ganador debe tener al menos 11 puntos y una ventaja de 2."
+      );
+      return;
     }
     if (
       window.confirm(
@@ -226,14 +204,28 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
       )
     ) {
       onSave(match.id, {
-        team1_score: scores.team1,
-        team2_score: scores.team2,
+        team1_score: team1,
+        team2_score: team2,
         status: "finalizado",
       });
     }
   };
 
-  // Estado para badge
+  const handleSaveCourt = () => {
+    if (courtId) {
+      const newStatus = match.status === "pendiente" ? "asignado" : match.status;
+      onSave(match.id, {
+        court_id: parseInt(courtId, 10),
+        status: newStatus,
+      });
+    } else {
+      onSave(match.id, {
+        court_id: null,
+        status: "pendiente",
+      });
+    }
+  };
+
   const getStatusBadge = (status) => {
     const color =
       status === "finalizado"
@@ -244,13 +236,13 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
         ? "bg-red-600"
         : "bg-slate-600";
     return (
-      <span
-        className={`ml-2 px-3 py-1 rounded-full text-xs text-white font-bold ${color}`}
-      >
+      <span className={`ml-2 px-3 py-1 rounded-full text-xs text-white font-bold ${color}`}>
         {status}
       </span>
     );
   };
+
+  if (!match) return null;
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
@@ -282,10 +274,8 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
                   type="number"
                   min={0}
                   value={scores.team1}
-                  onChange={(e) =>
-                    handleScoreChange("team1", e.target.value)
-                  }
-                  disabled={!isEditing}
+                  onChange={(e) => handleScoreChange("team1", e.target.value)}
+                  disabled={!isEditingScore}
                   className="w-20 h-16 text-center text-4xl font-extrabold bg-slate-700 rounded-xl border border-slate-600 shadow-sm"
                 />
                 <span className="text-3xl font-extrabold text-slate-400">-</span>
@@ -293,10 +283,8 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
                   type="number"
                   min={0}
                   value={scores.team2}
-                  onChange={(e) =>
-                    handleScoreChange("team2", e.target.value)
-                  }
-                  disabled={!isEditing}
+                  onChange={(e) => handleScoreChange("team2", e.target.value)}
+                  disabled={!isEditingScore}
                   className="w-20 h-16 text-center text-4xl font-extrabold bg-slate-700 rounded-xl border border-slate-600 shadow-sm"
                 />
               </div>
@@ -307,9 +295,9 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
             </div>
             {/* Botones de score */}
             <div className="mt-8 flex flex-col gap-3 w-full">
-              {match.status === "finalizado" && !isEditing ? (
+              {match.status === "finalizado" && !isEditingScore ? (
                 <button
-                  onClick={() => setIsEditing(true)}
+                  onClick={() => setIsEditingScore(true)}
                   className="w-full py-2 rounded-md font-bold bg-yellow-600 hover:bg-yellow-700 text-white text-base transition-colors"
                 >
                   Corregir Puntuación
