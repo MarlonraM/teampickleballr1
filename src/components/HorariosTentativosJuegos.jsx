@@ -23,10 +23,14 @@ const HorariosPage = () => {
     const fetchDataForTournament = useCallback(async (tournamentId) => {
         if (!tournamentId) return;
         try {
-            const matchesRes = await fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`);
-            if (!matchesRes.ok) throw new Error("No se pudieron cargar los partidos del torneo.");
+            const [matchesRes, courtsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/courts`),
+            ]);
+            if (!matchesRes.ok || !courtsRes.ok) throw new Error("No se pudieron cargar los datos del torneo.");
             const matchesData = await matchesRes.json();
-            setAllData(prev => ({...prev, matches: matchesData}));
+            const courtsData = await courtsRes.json();
+            setAllData({ matches: matchesData, courts: courtsData });
         } catch (err) {
             setError(err.message);
         } finally {
@@ -38,19 +42,10 @@ const HorariosPage = () => {
         setLoading(true);
         setError(null);
         try {
-            const [tournamentsRes, courtsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/tournaments`),
-                fetch(`${API_BASE_URL}/api/courts`),
-            ]);
-            if (!tournamentsRes.ok || !courtsRes.ok) {
-                throw new Error("Error en la comunicación con el servidor.");
-            }
-
+            const tournamentsRes = await fetch(`${API_BASE_URL}/api/tournaments`);
+            if (!tournamentsRes.ok) throw new Error("Error en la comunicación con el servidor.");
             const tournamentsData = await tournamentsRes.json();
-            const courtsData = await courtsRes.json();
-            
             setTournaments(tournamentsData);
-            setAllData(prev => ({...prev, courts: courtsData}));
 
             if (tournamentsData.length > 0) {
                 const firstTournament = tournamentsData[0];
@@ -82,18 +77,6 @@ const HorariosPage = () => {
         }
     }, [activeTournament]);
 
-    const timeSlots = useMemo(() => {
-        const slots = [];
-        for (let h = 9; h < 22; h++) {
-            for (let m = 0; m < 60; m += 20) {
-                const time = new Date(`${selectedDate}T00:00:00`);
-                time.setHours(h, m);
-                slots.push(time);
-            }
-        }
-        return slots;
-    }, [selectedDate]);
-
     const filteredMatches = useMemo(() => {
         if (!allData.matches) return [];
         let filtered = allData.matches.filter(m => m.scheduled_start_time?.slice(0, 10) === selectedDate);
@@ -109,16 +92,28 @@ const HorariosPage = () => {
         return filtered.sort((a, b) => new Date(a.scheduled_start_time) - new Date(b.scheduled_start_time));
     }, [allData.matches, playerSearch, selectedDate]);
 
+    const timeSlots = useMemo(() => {
+        const slots = [];
+        for (let h = 9; h < 22; h++) {
+            for (let m = 0; m < 60; m += 20) {
+                const time = new Date(`${selectedDate}T00:00:00`);
+                time.setHours(h, m);
+                slots.push(time);
+            }
+        }
+        return slots;
+    }, [selectedDate]);
+
     const fmtHour = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
 
     const getCategoryTag = (category) => {
-        const baseClasses = "text-xs px-2 py-0.5 rounded-full font-semibold";
+        const baseClasses = "w-3 h-3 rounded-full";
         switch (category) {
-            case 'Avanzado': return <span className={`${baseClasses} bg-red-500/20 text-red-300`}>Avanzado</span>;
-            case 'Intermedio Fuerte': return <span className={`${baseClasses} bg-yellow-500/20 text-yellow-300`}>I. Fuerte</span>;
-            case 'Intermedio': return <span className={`${baseClasses} bg-blue-500/20 text-blue-300`}>Intermedio</span>;
-            case 'Femenino': return <span className={`${baseClasses} bg-pink-500/20 text-pink-300`}>Femenino</span>;
-            default: return <span className={`${baseClasses} bg-slate-700`}>{category}</span>;
+            case 'Avanzado': return <span className={`${baseClasses} bg-red-500`} title="Avanzado"></span>;
+            case 'Intermedio Fuerte': return <span className={`${baseClasses} bg-yellow-500`} title="Intermedio Fuerte"></span>;
+            case 'Intermedio': return <span className={`${baseClasses} bg-blue-500`} title="Intermedio"></span>;
+            case 'Femenino': return <span className={`${baseClasses} bg-pink-500`} title="Femenino"></span>;
+            default: return <span className={`${baseClasses} bg-slate-700`} title={category}></span>;
         }
     };
 
@@ -164,7 +159,7 @@ const HorariosPage = () => {
 
                             return (
                                 <div key={index} className="flex gap-4">
-                                    <div className="w-20 text-right text-slate-400 font-mono text-sm pt-1">
+                                    <div className="w-16 text-right text-slate-400 font-mono text-xs pt-1">
                                         {fmtHour(slot.toISOString())}
                                     </div>
                                     <div className="flex-1 border-l-2 border-slate-700 pl-4 space-y-2">
@@ -177,7 +172,7 @@ const HorariosPage = () => {
                                                     {getCategoryTag(m.category)}
                                                 </header>
                                                 <p className="font-semibold text-sm">{m.team1_name} vs {m.team2_name}</p>
-                                                <div className="text-[11px] text-slate-400 leading-tight mt-1">
+                                                <div className="text-[10px] text-slate-400 leading-tight mt-1">
                                                     <p><strong>{m.team1_name}:</strong> {m.team1_player1_name || "N/A"} / {m.team1_player2_name || "N/A"}</p>
                                                     <p><strong>{m.team2_name}:</strong> {m.team2_player1_name || "N/A"} / {m.team2_player2_name || "N/A"}</p>
                                                 </div>
