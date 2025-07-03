@@ -130,7 +130,9 @@ const HorariosPage = () => {
   /* ------------------------------------------------------------------ */
   /*  3.  Efectos de montaje / cambio de torneo / WebSocket             */
   /* ------------------------------------------------------------------ */
-  useEffect(fetchInitialData, [fetchInitialData]);
+  useEffect(() => {
+    fetchInitialData(); 
+  }, [fetchInitialData]);
 
   useEffect(() => {
     if (activeTournamentId) {
