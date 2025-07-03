@@ -40,9 +40,12 @@ function App() {
           } 
         />
 
-        {/* Redirección por defecto a una página pública */}
-        <Route path="*" element={<Navigate to="/scoreboard/michelob" replace />} />
+            {/* --- CORRECCIÓN --- */}
+        {/* Redirección por defecto a la página de Login */}
+        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
+    </BrowserRouter>
   );
 }
 
