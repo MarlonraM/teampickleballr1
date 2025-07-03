@@ -138,7 +138,6 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
     match.status !== "finalizado"
   );
 
-  // Sync on match change
   useEffect(() => {
     setCourtId(match.court_id || "");
     setScores({
@@ -148,15 +147,11 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
     setIsEditingScore(match.status !== "finalizado");
   }, [match]);
 
-  // Cambia el estado automáticamente al (des)asignar cancha
   useEffect(() => {
     if (!courtId && match.status === "asignado") {
-      // Si se desasigna, regresa a pendiente
       onSave(match.id, { court_id: null, status: "pendiente" }, true);
     }
-    // No cambiamos a 'asignado' aquí porque lo hacemos al guardar.
-    // eslint-disable-next-line
-  }, [courtId]);
+  }, [courtId]); // eslint-disable-line
 
   const handleScoreChange = (team, value) => {
     setScores((prev) => ({
@@ -169,7 +164,6 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
     const { team1, team2 } = scores;
     let payload = { team1_score: team1, team2_score: team2 };
 
-    // Si estaba finalizado pero score ya no es válido, revierte
     if (
       match.status === "finalizado" &&
       (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2)
@@ -298,7 +292,7 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
               {match.status === "finalizado" && !isEditingScore ? (
                 <button
                   onClick={() => setIsEditingScore(true)}
-                  className="w-full py-2 rounded-md font-bold bg-yellow-600 hover:bg-yellow-700 text-white text-base transition-colors"
+                  className="w-full py-2 rounded-md font-bold text-xs bg-yellow-600 hover:bg-yellow-700 text-white transition-colors"
                 >
                   Corregir Puntuación
                 </button>
@@ -306,14 +300,14 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
                 <div className="flex gap-3">
                   <button
                     onClick={handleSaveScore}
-                    className="flex-1 py-2 rounded-md font-bold bg-blue-600 hover:bg-blue-700 text-white text-base transition-colors"
+                    className="flex-1 py-2 rounded-md font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white transition-colors"
                     disabled={isSaving}
                   >
                     Guardar Cambios
                   </button>
                   <button
                     onClick={handleFinalize}
-                    className="flex-1 py-2 rounded-md font-bold bg-green-600 hover:bg-green-700 text-white text-base transition-colors"
+                    className="flex-1 py-2 rounded-md font-bold text-xs bg-green-600 hover:bg-green-700 text-white transition-colors"
                     disabled={isSaving}
                   >
                     Finalizar Partido
@@ -347,7 +341,7 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
             <div className="flex gap-3">
               <button
                 onClick={handleSaveCourt}
-                className="flex-1 py-2 rounded-md font-bold bg-cyan-600 hover:bg-cyan-700 text-white text-base transition-colors"
+                className="flex-1 py-2 rounded-md font-bold text-xs bg-cyan-600 hover:bg-cyan-700 text-white transition-colors"
                 disabled={isSaving}
               >
                 Guardar Cancha
@@ -356,14 +350,14 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
                 <Link
                   to={`/match/${match.id}`}
                   target="_blank"
-                  className="flex-1 py-2 rounded-md font-bold bg-sky-700 hover:bg-sky-800 text-white text-base transition-colors text-center"
+                  className="flex-1 py-2 rounded-md font-bold text-xs bg-sky-700 hover:bg-sky-800 text-white transition-colors text-center"
                 >
                   Scorekeeper
                 </Link>
               ) : (
                 <button
                   disabled
-                  className="flex-1 py-2 rounded-md font-bold bg-slate-700 text-white text-base opacity-70"
+                  className="flex-1 py-2 rounded-md font-bold text-xs bg-slate-700 text-white opacity-70"
                 >
                   Scorekeeper
                 </button>
