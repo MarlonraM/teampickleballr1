@@ -218,67 +218,185 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
 
     if (!match) return null;
 
+        return;
+    }
+    if (
+      window.confirm(
+        "¿Deseas marcar este partido como Finalizado? Esta acción es definitiva."
+      )
+    ) {
+      onSave(match.id, {
+        team1_score: scores.team1,
+        team2_score: scores.team2,
+        status: "finalizado",
+      });
+    }
+  };
+
+  // Estado para badge
+  const getStatusBadge = (status) => {
+    const color =
+      status === "finalizado"
+        ? "bg-green-700"
+        : status === "asignado"
+        ? "bg-yellow-600"
+        : status === "en_vivo"
+        ? "bg-red-600"
+        : "bg-slate-600";
     return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-lg relative">
-                <button onClick={onClose} className="absolute top-3 right-3 text-slate-400 hover:text-white"><X size={20}/></button>
-                <h2 className="text-xl font-bold text-cyan-400 mb-4">Partido #{match.id} <span className="text-xs text-yellow-300 bg-yellow-900/30 rounded px-2 py-1 ml-2">{match.status}</span></h2>
-                
-                <div className="flex flex-col md:flex-row gap-6">
-                    {/* Score */}
-                    <div className="flex-1 bg-slate-900/50 p-4 rounded-lg space-y-2">
-                        <p className="font-semibold text-center mb-1">{match.team1_name} vs {match.team2_name}</p>
-                        <div className="flex items-center justify-center gap-4">
-                            <input type="number" value={scores.team1} onChange={(e) => handleScoreChange('team1', e.target.value)} className="w-20 p-2 text-center text-3xl font-bold bg-slate-700 rounded border-slate-600 border" disabled={!isEditingScore} />
-                            <span className="text-2xl font-bold text-slate-500">-</span>
-                            <input type="number" value={scores.team2} onChange={(e) => handleScoreChange('team2', e.target.value)} className="w-20 p-2 text-center text-3xl font-bold bg-slate-700 rounded border-slate-600 border" disabled={!isEditingScore} />
-                        </div>
-                        <div className="text-xs text-slate-400 text-center mt-2">Estado: <span className="font-bold">{match.status}</span></div>
-                        {match.status === 'finalizado' && !isEditingScore ? (
-                            <div className="flex flex-col items-center mt-3 gap-2">
-                                <div className="text-amber-400 font-bold text-base flex items-center gap-1">
-                                    <Check className="text-amber-300" size={16}/> Ganador: {match.winner_id === match.team1_id ? match.team1_name : match.team2_name}
-                                </div>
-                                <button onClick={() => setIsEditingScore(true)} className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded-md font-semibold">Corregir Puntuación</button>
-                            </div>
-                        ) : (
-                            <div className="flex gap-2 mt-3">
-                                <button onClick={handleSaveScore} className="flex-1 bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded font-semibold" disabled={isSaving}>Guardar Cambios</button>
-                                <button onClick={handleFinalize} className="flex-1 bg-green-600 hover:bg-green-700 px-2 py-2 rounded font-semibold" disabled={isSaving}>Finalizar Partido</button>
-                            </div>
-                        )}
-                    </div>
-                    {/* Asignar cancha */}
-                    <div className="flex-1 bg-slate-900/50 p-4 rounded-lg space-y-2">
-                        <div>
-                            <label htmlFor="court-id" className="block text-xs font-medium text-slate-300">Asignar Cancha</label>
-                            <select
-                                id="court-id"
-                                value={courtId}
-                                onChange={e => setCourtId(e.target.value)}
-                                className="mt-1 w-full bg-slate-700 p-2 rounded-md border border-slate-600"
-                            >
-                                <option value="">-- Sin Cancha --</option>
-                                {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex gap-2 mt-4">
-                            <button onClick={handleSaveCourt} className="flex-1 bg-cyan-600 hover:bg-cyan-700 px-2 py-2 rounded font-semibold" disabled={isSaving}>
-                                {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
-                                Guardar Cancha
-                            </button>
-                            {courtId && (
-                                <Link to={`/match/${match.id}`} target="_blank" className="flex-1 text-center bg-cyan-800 hover:bg-cyan-700 p-2 rounded font-semibold transition-colors">Scorekeeper</Link>
-                            )}
-                        </div>
-                    </div>
-                </div>
-                <div className="mt-6 flex justify-end">
-                    <button onClick={onClose} className="bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded-md text-sm" disabled={isSaving}>Cerrar</button>
-                </div>
-            </div>
-        </div>
+      <span
+        className={`ml-2 px-3 py-1 rounded-full text-xs text-white font-bold ${color}`}
+      >
+        {status}
+      </span>
     );
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+      <div className="bg-[#212a36] border border-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-slate-400 hover:text-white"
+        >
+          <X size={24} />
+        </button>
+
+        {/* Header */}
+        <div className="flex items-center gap-2 mb-6">
+          <span className="text-cyan-400 font-extrabold text-2xl">
+            Partido #{match.id}
+          </span>
+          {getStatusBadge(match.status)}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Columna Score */}
+          <div className="bg-slate-900/60 rounded-xl p-5 flex flex-col items-center justify-between shadow-inner">
+            <div>
+              <p className="text-lg font-bold text-center mb-2">
+                {match.team1_name} vs {match.team2_name}
+              </p>
+              <div className="flex items-center justify-center gap-6 my-4">
+                <input
+                  type="number"
+                  min={0}
+                  value={scores.team1}
+                  onChange={(e) =>
+                    handleScoreChange("team1", e.target.value)
+                  }
+                  disabled={!isEditing}
+                  className="w-20 h-16 text-center text-4xl font-extrabold bg-slate-700 rounded-xl border border-slate-600 shadow-sm"
+                />
+                <span className="text-3xl font-extrabold text-slate-400">-</span>
+                <input
+                  type="number"
+                  min={0}
+                  value={scores.team2}
+                  onChange={(e) =>
+                    handleScoreChange("team2", e.target.value)
+                  }
+                  disabled={!isEditing}
+                  className="w-20 h-16 text-center text-4xl font-extrabold bg-slate-700 rounded-xl border border-slate-600 shadow-sm"
+                />
+              </div>
+              <p className="text-center text-sm mt-2">
+                Estado Actual:{" "}
+                <span className="font-bold text-slate-300">{match.status}</span>
+              </p>
+            </div>
+            {/* Botones de score */}
+            <div className="mt-8 flex flex-col gap-3 w-full">
+              {match.status === "finalizado" && !isEditing ? (
+                <button
+                  onClick={() => setIsEditing(true)}
+                  className="w-full py-2 rounded-md font-bold bg-yellow-600 hover:bg-yellow-700 text-white text-base transition-colors"
+                >
+                  Corregir Puntuación
+                </button>
+              ) : (
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleSaveScore}
+                    className="flex-1 py-2 rounded-md font-bold bg-blue-600 hover:bg-blue-700 text-white text-base transition-colors"
+                    disabled={isSaving}
+                  >
+                    Guardar Cambios
+                  </button>
+                  <button
+                    onClick={handleFinalize}
+                    className="flex-1 py-2 rounded-md font-bold bg-green-600 hover:bg-green-700 text-white text-base transition-colors"
+                    disabled={isSaving}
+                  >
+                    Finalizar Partido
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Columna Gestión de Cancha */}
+          <div className="bg-slate-900/60 rounded-xl p-5 flex flex-col shadow-inner">
+            <label
+              htmlFor="court-id"
+              className="block text-sm font-medium text-slate-300 mb-2"
+            >
+              Asignar Cancha
+            </label>
+            <select
+              id="court-id"
+              value={courtId}
+              onChange={(e) => setCourtId(e.target.value)}
+              className="mb-4 w-full bg-slate-700 p-3 rounded-lg border border-slate-600 text-base"
+            >
+              <option value="">-- Selecciona una Cancha --</option>
+              {courts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button
+                onClick={handleSaveCourt}
+                className="flex-1 py-2 rounded-md font-bold bg-cyan-600 hover:bg-cyan-700 text-white text-base transition-colors"
+                disabled={isSaving}
+              >
+                Guardar Cancha
+              </button>
+              {match.status !== "pendiente" ? (
+                <Link
+                  to={`/match/${match.id}`}
+                  target="_blank"
+                  className="flex-1 py-2 rounded-md font-bold bg-sky-700 hover:bg-sky-800 text-white text-base transition-colors text-center"
+                >
+                  Scorekeeper
+                </Link>
+              ) : (
+                <button
+                  disabled
+                  className="flex-1 py-2 rounded-md font-bold bg-slate-700 text-white text-base opacity-70"
+                >
+                  Scorekeeper
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Botón cerrar */}
+        <div className="mt-6 flex justify-end">
+          <button
+            onClick={onClose}
+            className="bg-slate-500 hover:bg-slate-700 px-6 py-2 rounded-xl text-white font-bold text-base transition-colors"
+            disabled={isSaving}
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // --- MODAL PARA EDITAR PARTIDO/HORARIO ---
