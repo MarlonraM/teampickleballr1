@@ -15,7 +15,7 @@ function App() {
   // CORRECCIÓN: Se elimina el <BrowserRouter> que envolvía todo.
   // El componente <Routes> debe ser el elemento de nivel superior.
   return (
-        <BrowserRouter> 
+
     <Routes>
     
         {/* RUTAS PÚBLICAS */}
@@ -47,7 +47,7 @@ function App() {
         <Route path="/" element={<Navigate to="/login" replace />} />
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
-    </BrowserRouter>
+ 
   );
 }
 
