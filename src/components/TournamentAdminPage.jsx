@@ -1717,7 +1717,7 @@ const fetchInitialData = useCallback(async () => {
                 </div>
 
                 <div className="pt-8">
-                    {editingMatch && <EditScoreModal match={editingMatch} courts={allData.courts} onClose={() => setEditingMatch(null)} onSave={handleSaveMatch} isSaving={isSaving} />}
+                    {editingMatch && <MatchEditModal match={editingMatch} courts={allData.courts} onClose={() => setEditingMatch(null)} onSave={handleSaveMatch} isSaving={isSaving} />}
                     {schedulingMatch && <ScheduleMatchModal match={schedulingMatch} courts={allData.courts} onClose={() => setSchedulingMatch(null)} onSave={handleSaveMatch} isSaving={isSaving} tournamentStartDate={activeTournament?.start_date} />}
                     
                     {loading ? ( <div className="flex justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8" /></div> ) : 
