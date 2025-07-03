@@ -7,7 +7,7 @@ import TournamentAdminPage from './components/TournamentAdminPage';
 import ScorekeeperPage from './components/ScorekeeperPage';
 import PublicScoreboard from './components/PublicScoreboard';
 import PublicScoreboardMichelob from './components/PublicScoreboardMichelob';
-import LoginPage from './components/LoginPage';
+import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import HorariosTentativosJuegos from './components/HorariosTentativosJuegos';
 
