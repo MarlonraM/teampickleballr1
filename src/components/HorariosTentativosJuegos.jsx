@@ -19,9 +19,52 @@ const HorariosPage = () => {
         tournaments.find(t => t.id === Number(activeTournamentId)),
     [tournaments, activeTournamentId]);
 
-    // --- LÓGICA DE CARGA DE DATOS (SIN CAMBIOS) ---
-    const fetchDataForTournament = useCallback(async (tournamentId) => { /* ... */ }, []);
-    const fetchInitialData = useCallback(async () => { /* ... */ }, []);
+    // --- LÓGICA DE CARGA DE DATOS ---
+    const fetchDataForTournament = useCallback(async (tournamentId) => {
+        if (!tournamentId) return;
+        try {
+            const matchesRes = await fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`);
+            if (!matchesRes.ok) throw new Error("No se pudieron cargar los partidos del torneo.");
+            const matchesData = await matchesRes.json();
+            setAllData(prev => ({...prev, matches: matchesData}));
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    const fetchInitialData = useCallback(async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const [tournamentsRes, courtsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/tournaments`),
+                fetch(`${API_BASE_URL}/api/courts`),
+            ]);
+            if (!tournamentsRes.ok || !courtsRes.ok) {
+                throw new Error("Error en la comunicación con el servidor.");
+            }
+
+            const tournamentsData = await tournamentsRes.json();
+            const courtsData = await courtsRes.json();
+            
+            setTournaments(tournamentsData);
+            setAllData(prev => ({...prev, courts: courtsData}));
+
+            if (tournamentsData.length > 0) {
+                const firstTournament = tournamentsData[0];
+                setActiveTournamentId(firstTournament.id);
+                setSelectedDate(firstTournament.start_date ? new Date(firstTournament.start_date).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10));
+            } else {
+                setLoading(false);
+            }
+        } catch (err) {
+            console.error("Error fetching initial data:", err);
+            setError("Error al cargar datos iniciales.");
+            setLoading(false);
+        }
+    }, []);
 
     useEffect(() => {
         fetchInitialData();
@@ -39,6 +82,17 @@ const HorariosPage = () => {
         }
     }, [activeTournament]);
 
+    const timeSlots = useMemo(() => {
+        const slots = [];
+        for (let h = 9; h < 22; h++) {
+            for (let m = 0; m < 60; m += 20) {
+                const time = new Date(`${selectedDate}T00:00:00`);
+                time.setHours(h, m);
+                slots.push(time);
+            }
+        }
+        return slots;
+    }, [selectedDate]);
 
     const filteredMatches = useMemo(() => {
         if (!allData.matches) return [];
@@ -54,18 +108,6 @@ const HorariosPage = () => {
         
         return filtered.sort((a, b) => new Date(a.scheduled_start_time) - new Date(b.scheduled_start_time));
     }, [allData.matches, playerSearch, selectedDate]);
-
-    const timeSlots = useMemo(() => {
-        const slots = [];
-        for (let h = 9; h < 22; h++) {
-            for (let m = 0; m < 60; m += 20) {
-                const time = new Date(`${selectedDate}T00:00:00`);
-                time.setHours(h, m);
-                slots.push(time);
-            }
-        }
-        return slots;
-    }, [selectedDate]);
 
     const fmtHour = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
 
@@ -84,7 +126,10 @@ const HorariosPage = () => {
         <div className="min-h-screen bg-slate-950 text-white flex flex-col">
             <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur p-3 flex flex-col gap-3 shadow-lg border-b border-slate-700">
                 <div className="flex justify-center items-center gap-3">
-                    <img src="/pickleball-logo.png" alt="Logo" className="h-8 w-8" />
+                <h1 className="text-center text-cyan-400 font-bold text-xl">Torneo de Verano TeamPickleballRD</h1>
+                </div>
+                <div className="flex justify-center items-center gap-3">
+                    <img src="/pickleball-logo.png" alt="Logo" className="h-8 w-8"/>
                     <h1 className="text-center text-cyan-400 font-bold text-xl">Horarios de Juegos</h1>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-2">
@@ -118,36 +163,34 @@ const HorariosPage = () => {
                                 return matchTime >= slot && matchTime < slotEnd;
                             });
 
-                            if (matchesInSlot.length === 0 && playerSearch.trim()) return null;
-                            if (matchesInSlot.length === 0) return null; // Opcional: Ocultar slots vacíos siempre
+                            if (matchesInSlot.length === 0) return null;
 
                             return (
-                                <div key={index} className="flex gap-2">
-                                    <div className="w-10 text-center text-slate-500 font-mono text-xs pt-1 flex items-center justify-center">
-                                        <span style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>
-                                            {fmtHour(slot.toISOString())}
-                                        </span>
+                                <div key={index} className="flex gap-4">
+                                    <div className="w-20 text-right text-slate-400 font-mono text-sm pt-1">
+                                        {fmtHour(slot.toISOString())}
                                     </div>
-                                    <div className="flex-1 border-l-2 border-slate-700 pl-3 space-y-2">
-                                        {matchesInSlot.length > 0 ? (
-                                            matchesInSlot.map((m) => (
-                                                <div key={m.id} className="bg-slate-800 p-3 rounded-lg shadow">
-                                                    <header className="flex justify-between items-center mb-2">
-                                                        <span className="bg-slate-700 text-xs px-2 py-1 rounded">
-                                                            {m.court_name || 'Pendiente'}
-                                                        </span>
-                                                        {getCategoryTag(m.category)}
-                                                    </header>
-                                                    <p className="font-semibold text-sm">{m.team1_name} vs {m.team2_name}</p>
-                                                    <div className="text-[11px] text-slate-400 leading-tight mt-1">
-                                                        <p><strong>{m.team1_name}:</strong> {m.team1_player1_name || "N/A"} / {m.team1_player2_name || "N/A"}</p>
-                                                        <p><strong>{m.team2_name}:</strong> {m.team2_player1_name || "N/A"} / {m.team2_player2_name || "N/A"}</p>
-                                                    </div>
+                                    <div className="flex-1 border-l-2 border-slate-700 pl-4 space-y-2">
+                                        {matchesInSlot.map((m) => (
+                                            <div key={m.id} className="bg-slate-800 p-3 rounded-lg shadow">
+                                                <header className="flex justify-between items-center mb-2">
+                                                    <span className="text-xs text-slate-400 flex items-center gap-2">
+                                                        <Clock size={15} /> {fmtHour(m.scheduled_start_time)}
+                                                    </span>
+                                                    {getCategoryTag(m.category)}
+                                                </header>
+                                                <p className="font-semibold text-sm">{m.team1_name} vs {m.team2_name}</p>
+                                                <div className="text-[11px] text-slate-400 leading-tight mt-1">
+                                                    <p><strong>{m.team1_name}:</strong> {m.team1_player1_name || "N/A"} / {m.team1_player2_name || "N/A"}</p>
+                                                    <p><strong>{m.team2_name}:</strong> {m.team2_player1_name || "N/A"} / {m.team2_player2_name || "N/A"}</p>
                                                 </div>
-                                            ))
-                                        ) : (
-                                            <div className="h-10"></div>
-                                        )}
+                                                <footer className="text-right mt-2">
+                                                    <span className="bg-slate-700 text-xs px-2 py-1 rounded">
+                                                        {m.court_name || 'Pendiente'}
+                                                    </span>
+                                                </footer>
+                                            </div>
+                                        ))}
                                     </div>
                                 </div>
                             );
