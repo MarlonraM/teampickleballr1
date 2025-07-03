@@ -29,8 +29,13 @@ const HorariosPage = () => {
     const [tournaments, setTournaments] = useState([]);
     const [activeTournamentId, setActiveTournamentId] = useState(null);
     const [allData, setAllData] = useState({ matches: [], courts: [] });
+    const [selectedDate, setSelectedDate] = useState('');
 
-    // --- LÓGICA DE CARGA DE DATOS CORREGIDA ---
+    const activeTournament = useMemo(() => 
+        tournaments.find(t => t.id === Number(activeTournamentId)),
+    [tournaments, activeTournamentId]);
+
+    // --- LÓGICA DE CARGA DE DATOS ---
     const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
         if (!tournamentId) {
             setLoading(false);
@@ -64,6 +69,9 @@ const HorariosPage = () => {
                 setTournaments(data);
                 if (data.length > 0) {
                     setActiveTournamentId(data[0].id);
+                    // Establece la fecha por defecto al cargar la lista de torneos
+                    const defaultTournamentDate = data[0].start_date ? new Date(data[0].start_date).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10);
+                    setSelectedDate(defaultTournamentDate);
                 } else {
                     setLoading(false);
                 }
@@ -80,35 +88,26 @@ const HorariosPage = () => {
             fetchDataForTournament(activeTournamentId);
         }
     }, [activeTournamentId, fetchDataForTournament]);
-
+    
+    // Actualiza la fecha seleccionada cuando cambia el torneo
     useEffect(() => {
-        if (!activeTournamentId) return;
-        const socket = new WebSocket(WS_URL);
-        socket.onopen = () => console.log("WebSocket conectado a Horarios.");
-        socket.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if ((message.type === "MATCH_UPDATE" || message.type === "SCORE_UPDATE") && Number(message.payload.tournament_id) === Number(activeTournamentId)) {
-                    fetchDataForTournament(activeTournamentId, true);
-                }
-            } catch (err) {
-                console.error("Mensaje WS inválido:", err);
-            }
-        };
-        return () => socket.close();
-    }, [activeTournamentId, fetchDataForTournament]);
+        if (activeTournament?.start_date) {
+            setSelectedDate(new Date(activeTournament.start_date).toISOString().substring(0, 10));
+        }
+    }, [activeTournament]);
+
 
     const timeSlots = useMemo(() => {
         const slots = [];
         for (let h = 7; h < 22; h++) {
             for (let m = 0; m < 60; m += 15) {
-                const time = new Date();
-                time.setHours(h, m, 0, 0);
+                const time = new Date(`${selectedDate}T00:00:00`);
+                time.setHours(h, m);
                 slots.push(time);
             }
         }
         return slots;
-    }, []);
+    }, [selectedDate]);
 
     const styles = {
         tableHeader: { padding: '12px', textAlign: 'left', fontWeight: 'bold', borderBottom: '2px solid #374151', backgroundColor: '#1f2937', color: '#9ca3af' },
@@ -124,19 +123,27 @@ const HorariosPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-            <header className="p-4 bg-slate-800 flex justify-between items-center">
+            <header className="p-4 bg-slate-800 flex justify-between items-center gap-4">
                 <h1 className="text-xl font-bold text-cyan-400">Horarios de Partidos</h1>
-                <select
-                    value={activeTournamentId ?? ""}
-                    onChange={(e) => setActiveTournamentId(e.target.value)}
-                    className="bg-slate-700 rounded px-2 py-1"
-                >
-                    {tournaments.map((t) => (
-                        <option key={t.id} value={t.id}>
-                            {t.name}
-                        </option>
-                    ))}
-                </select>
+                <div className="flex items-center gap-4">
+                    <select
+                        value={activeTournamentId ?? ""}
+                        onChange={(e) => setActiveTournamentId(e.target.value)}
+                        className="bg-slate-700 rounded px-2 py-1"
+                    >
+                        {tournaments.map((t) => (
+                            <option key={t.id} value={t.id}>
+                                {t.name}
+                            </option>
+                        ))}
+                    </select>
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="bg-slate-700 rounded px-2 py-1 border border-slate-600"
+                    />
+                </div>
             </header>
 
             {error && <p className="bg-red-800 text-center p-2 text-sm font-semibold">{error}</p>}
@@ -163,14 +170,14 @@ const HorariosPage = () => {
                                     </td>
                                     <td style={styles.tableCell}>
                                         {allData.matches
-                                            .filter(m => !m.court_id && m.scheduled_start_time && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000)
+                                            .filter(m => !m.court_id && m.scheduled_start_time && new Date(m.scheduled_start_time).toISOString().slice(0, 10) === selectedDate && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000)
                                             .map(match => <MatchBlock key={match.id} match={match} styles={styles} />)
                                         }
                                     </td>
                                     {allData.courts.map(court => (
                                         <td key={court.id} style={styles.tableCell}>
                                             {allData.matches
-                                                .filter(m => m.court_id === court.id && m.scheduled_start_time && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000)
+                                                .filter(m => m.court_id === court.id && m.scheduled_start_time && new Date(m.scheduled_start_time).toISOString().slice(0, 10) === selectedDate && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000)
                                                 .map(match => <MatchBlock key={match.id} match={match} styles={styles} />)
                                             }
                                         </td>
