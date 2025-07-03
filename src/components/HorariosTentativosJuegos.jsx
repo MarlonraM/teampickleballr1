@@ -1,6 +1,92 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { Calendar } from "lucide-react";
 
+const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
+        if (!tournamentId) { setLoading(false); return; }
+        if (!isSilent) setLoading(true);
+        try {
+            const [matchesRes, teamsRes, courtsRes, categoriesRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/teams/by-tournament/${tournamentId}`),
+                fetch(`${API_BASE_URL}/api/courts`),
+                fetch(`${API_BASE_URL}/api/categories`)
+            ]);
+            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok || !categoriesRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
+            const matchesData = await matchesRes.json();
+            const teamsData = await teamsRes.json();
+            const courtsData = await courtsRes.json();    
+            const categoriesData = await categoriesRes.json();
+            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData, categories: categoriesData});
+            setError(null);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            if (!isSilent) setLoading(false);
+        }
+    }, []);
+
+const fetchInitialData = useCallback(async () => {
+    try {
+        const [tournamentsRes, allTeamsRes, allPlayersRes, categoriesRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/tournaments`),
+            fetch(`${API_BASE_URL}/api/teams`),
+            fetch(`${API_BASE_URL}/api/players`),
+            fetch(`${API_BASE_URL}/api/categories`)
+        ]);
+        const tournamentsData = await tournamentsRes.json();
+        const allTeamsData = await allTeamsRes.json();
+        const allPlayersData = await allPlayersRes.json();
+        const categoriesData = await categoriesRes.json();
+
+        setTournaments(tournamentsData);
+        setAllTeamsForSelection(allTeamsData);
+        setAllPlayers(allPlayersData);
+
+        // Si quieres guardar las categorías también en allData
+        setAllData(prev => ({
+            ...prev,
+            categories: categoriesData
+        }));
+
+        if (tournamentsData.length > 0) {
+            if (!activeTournamentId) {
+                setActiveTournamentId(tournamentsData[0].id);
+            }
+        } else {
+            setLoading(false);
+        }
+    } catch (err) {
+        setError("Error al cargar datos iniciales.");
+        setLoading(false);
+    }
+}, [activeTournamentId]);
+
+    useEffect(() => {
+        fetchInitialData();
+    }, [fetchInitialData]);
+
+    useEffect(() => {
+        if (activeTournamentId) {
+            fetchDataForTournament(activeTournamentId);
+        }
+    }, [activeTournamentId, fetchDataForTournament]);
+
+    useEffect(() => {
+        if (!activeTournamentId) return;
+        const socket = new WebSocket(WS_URL);
+        socket.onmessage = (event) => {
+            try {
+                const message = JSON.parse(event.data);
+                if ((message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') && message.payload.tournament_id === parseInt(activeTournamentId)) {
+                    fetchDataForTournament(activeTournamentId, true);
+                }
+            } catch (error) {
+                console.error("Error procesando mensaje de WebSocket:", error);
+            }
+        };
+        return () => socket.close();
+    }, [activeTournamentId, fetchDataForTournament]);
+
 const HorariosTentativosJuegos = ({
   matches: rawMatches,
   allPlayers: rawPlayers,
