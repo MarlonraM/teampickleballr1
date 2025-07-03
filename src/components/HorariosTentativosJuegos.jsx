@@ -242,7 +242,7 @@ const HorariosTentativosJuegos = ({
 
     const pid = String(selectedPlayerId);
     return matches
-      .filter((m) => m.status === "pendiente")
+      //.filter((m) => m.status === "pendiente")
       .filter((m) =>
         [
           m.team1_player1_id,
