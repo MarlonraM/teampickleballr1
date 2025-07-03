@@ -282,21 +282,22 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
                   className="w-20 h-16 text-center text-4xl font-extrabold bg-slate-700 rounded-xl border border-slate-600 shadow-sm"
                 />
               </div>
-              <p className="text-center text-sm mt-2">
-                  Estado Actual:{" "}
-                  <span className="font-bold text-slate-300">{match.status === 'finalizado' ? 'Finalizado' : match.status}</span>
-                </p>
-                
-                {match.status === 'finalizado' && (
-                  <div className="flex flex-col items-center mt-4">
-                    <span className="text-amber-400 text-2xl font-extrabold flex items-center gap-2">
-                      🏆 Ganador:{" "}
-                      {match.team1_score > match.team2_score
-                        ? match.team1_name
-                        : match.team2_name}
-                      🏆
-                    </span>
-                  </div>
+             <p className="text-center text-sm mt-2">
+  Estado Actual:{" "}
+  <span className="font-bold text-slate-300">{match.status === 'finalizado' ? 'Finalizado' : match.status}</span>
+</p>
+
+{match.status === 'finalizado' && (
+  <div className="flex flex-col items-center mt-4">
+    <span className="text-amber-400 text-2xl font-extrabold flex items-center gap-2">
+      🏆 Ganador:{" "}
+      {match.team1_score > match.team2_score
+        ? match.team1_name
+        : match.team2_name}
+      🏆
+    </span>
+  </div>
+)}
             {/* Botones de score */}
             <div className="mt-8 flex flex-col gap-3 w-full">
               {match.status === "finalizado" && !isEditingScore ? (
