@@ -1,26 +1,9 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Calendar, Loader2 } from "lucide-react";
+import { Calendar, Loader2, Clock } from "lucide-react";
 
 // --- CONSTANTES ---
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const WS_URL = API_BASE_URL.replace(/^http/, "ws");
-
-// --- COMPONENTE DE BLOQUE DE PARTIDO ---
-const MatchBlock = ({ match, styles }) => {
-    const getStatusColor = (status) => {
-        if (status === 'finalizado') return styles.matchFinalizado;
-        if (status === 'en_vivo') return styles.matchEnVivo;
-        if (status === 'asignado') return styles.matchAsignado;
-        return styles.matchPendiente;
-    };
-
-    return (
-        <div style={{ ...styles.scheduleMatch, ...getStatusColor(match.status) }}>
-            <p style={styles.scheduleMatchText}>{match.team1_name} vs {match.team2_name}</p>
-            <p style={styles.scheduleMatchCategory}>{match.category}</p>
-        </div>
-    );
-};
 
 // --- COMPONENTE PRINCIPAL DE LA PÁGINA DE HORARIOS ---
 const HorariosPage = () => {
@@ -29,6 +12,8 @@ const HorariosPage = () => {
     const [tournaments, setTournaments] = useState([]);
     const [activeTournamentId, setActiveTournamentId] = useState(null);
     const [allData, setAllData] = useState({ matches: [], courts: [] });
+    const [allPlayers, setAllPlayers] = useState([]);
+    const [selectedPlayerId, setSelectedPlayerId] = useState("");
     const [selectedDate, setSelectedDate] = useState('');
 
     const activeTournament = useMemo(() => 
@@ -36,52 +21,56 @@ const HorariosPage = () => {
     [tournaments, activeTournamentId]);
 
     // --- LÓGICA DE CARGA DE DATOS ---
-    const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
-        if (!tournamentId) {
-            setLoading(false);
-            return;
-        }
-        if (!isSilent) setLoading(true);
+    const fetchInitialData = useCallback(async () => {
+        setLoading(true);
         try {
-            const [matchesRes, courtsRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
+            const [tournamentsRes, allPlayersRes, courtsRes] = await Promise.all([
+                fetch(`${API_BASE_URL}/api/tournaments`),
+                fetch(`${API_BASE_URL}/api/players`),
                 fetch(`${API_BASE_URL}/api/courts`),
             ]);
-            if (!matchesRes.ok || !courtsRes.ok) throw new Error("No se pudieron cargar los datos del torneo.");
-            
-            const matchesData = await matchesRes.json();
+            const tournamentsData = await tournamentsRes.json();
+            const allPlayersData = await allPlayersRes.json();
             const courtsData = await courtsRes.json();
-            setAllData({ matches: matchesData, courts: courtsData });
-            setError(null);
+            
+            setTournaments(tournamentsData);
+            setAllPlayers(allPlayersData);
+            setAllData(prev => ({...prev, courts: courtsData}));
+
+            if (allPlayersData.length > 0) {
+                setSelectedPlayerId(String(allPlayersData[0].id));
+            }
+
+            if (tournamentsData.length > 0) {
+                const firstTournament = tournamentsData[0];
+                setActiveTournamentId(firstTournament.id);
+                setSelectedDate(firstTournament.start_date ? new Date(firstTournament.start_date).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10));
+            } else {
+                setLoading(false);
+            }
         } catch (err) {
-            console.error(err);
+            setError("Error al cargar datos iniciales.");
+            setLoading(false);
+        }
+    }, []);
+    
+    const fetchDataForTournament = useCallback(async (tournamentId) => {
+        if (!tournamentId) return;
+        try {
+            const matchesRes = await fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`);
+            if (!matchesRes.ok) throw new Error("No se pudieron cargar los partidos del torneo.");
+            const matchesData = await matchesRes.json();
+            setAllData(prev => ({...prev, matches: matchesData}));
+        } catch (err) {
             setError(err.message);
         } finally {
-            if (!isSilent) setLoading(false);
+            setLoading(false);
         }
     }, []);
 
     useEffect(() => {
-        const fetchTournaments = async () => {
-            try {
-                const res = await fetch(`${API_BASE_URL}/api/tournaments`);
-                const data = await res.json();
-                setTournaments(data);
-                if (data.length > 0) {
-                    setActiveTournamentId(data[0].id);
-                    // Establece la fecha por defecto al cargar la lista de torneos
-                    const defaultTournamentDate = data[0].start_date ? new Date(data[0].start_date).toISOString().substring(0, 10) : new Date().toISOString().substring(0, 10);
-                    setSelectedDate(defaultTournamentDate);
-                } else {
-                    setLoading(false);
-                }
-            } catch (err) {
-                setError("Error al cargar la lista de torneos.");
-                setLoading(false);
-            }
-        };
-        fetchTournaments();
-    }, []);
+        fetchInitialData();
+    }, [fetchInitialData]);
 
     useEffect(() => {
         if (activeTournamentId) {
@@ -89,51 +78,43 @@ const HorariosPage = () => {
         }
     }, [activeTournamentId, fetchDataForTournament]);
     
-    // Actualiza la fecha seleccionada cuando cambia el torneo
     useEffect(() => {
         if (activeTournament?.start_date) {
             setSelectedDate(new Date(activeTournament.start_date).toISOString().substring(0, 10));
         }
     }, [activeTournament]);
 
+    const filteredMatches = useMemo(() => {
+        if (!selectedPlayerId || !allData.matches) return [];
+        const pid = String(selectedPlayerId);
+        
+        return allData.matches
+            .filter(m => {
+                const playerIds = [
+                    m.team1_player1_id, m.team1_player2_id,
+                    m.team2_player1_id, m.team2_player2_id
+                ].map(String);
+                return playerIds.includes(pid);
+            })
+            .filter(m => m.scheduled_start_time?.slice(0, 10) === selectedDate)
+            .sort((a, b) => new Date(a.scheduled_start_time) - new Date(b.scheduled_start_time));
+    }, [allData.matches, selectedPlayerId, selectedDate]);
 
-    const timeSlots = useMemo(() => {
-        const slots = [];
-        for (let h = 7; h < 22; h++) {
-            for (let m = 0; m < 60; m += 15) {
-                const time = new Date(`${selectedDate}T00:00:00`);
-                time.setHours(h, m);
-                slots.push(time);
-            }
-        }
-        return slots;
-    }, [selectedDate]);
-
-    const styles = {
-        tableHeader: { padding: '12px', textAlign: 'left', fontWeight: 'bold', borderBottom: '2px solid #374151', backgroundColor: '#1f2937', color: '#9ca3af' },
-        tableCell: { padding: '8px', verticalAlign: 'top', minHeight: '60px', border: '1px solid #374151' },
-        scheduleMatch: { backgroundColor: 'rgba(55, 65, 81, 0.5)', padding: '8px', borderRadius: '4px', fontSize: '0.8rem', borderLeft: '4px solid', marginBottom: '4px' },
-        scheduleMatchText: { fontWeight: '600', color: 'white', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
-        scheduleMatchCategory: { fontSize: '0.75rem', color: '#9ca3af' },
-        matchFinalizado: { borderLeftColor: '#22c55e' },
-        matchEnVivo: { borderLeftColor: '#ef4444' },
-        matchAsignado: { borderLeftColor: '#3b82f6' },
-        matchPendiente: { borderLeftColor: '#6b7280' },
-    };
+    const fmtHour = (iso) => iso ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "--:--";
 
     return (
         <div className="min-h-screen bg-slate-950 text-white flex flex-col">
-            <header className="p-4 bg-slate-800 flex justify-between items-center gap-4">
-                <h1 className="text-xl font-bold text-cyan-400">Horarios de Partidos</h1>
-                <div className="flex items-center gap-4">
+            <div className="sticky top-0 z-10 bg-slate-900/95 backdrop-blur p-3 flex flex-col gap-3 shadow-lg border-b border-slate-700">
+                <h1 className="text-center text-cyan-400 font-bold">Horarios de Juegos por Jugador</h1>
+                <div className="flex flex-col sm:flex-row gap-2">
                     <select
-                        value={activeTournamentId ?? ""}
-                        onChange={(e) => setActiveTournamentId(e.target.value)}
-                        className="bg-slate-700 rounded px-2 py-1"
+                        value={selectedPlayerId}
+                        onChange={(e) => setSelectedPlayerId(e.target.value)}
+                        className="flex-1 bg-slate-700 rounded px-2 py-2 border border-slate-600"
                     >
-                        {tournaments.map((t) => (
-                            <option key={t.id} value={t.id}>
-                                {t.name}
+                        {allPlayers.map((p) => (
+                            <option key={p.id} value={p.id}>
+                                {p.full_name ?? "Sin nombre"}
                             </option>
                         ))}
                     </select>
@@ -141,53 +122,43 @@ const HorariosPage = () => {
                         type="date"
                         value={selectedDate}
                         onChange={(e) => setSelectedDate(e.target.value)}
-                        className="bg-slate-700 rounded px-2 py-1 border border-slate-600"
+                        className="bg-slate-700 rounded px-2 py-2 border border-slate-600"
                     />
                 </div>
-            </header>
+            </div>
 
-            {error && <p className="bg-red-800 text-center p-2 text-sm font-semibold">{error}</p>}
-
-            {loading ? (
-                <div className="flex-1 flex justify-center items-center"><Loader2 className="animate-spin h-8 w-8" /></div>
-            ) : (
-                <div className="flex-1 overflow-auto">
-                    <table style={{ minWidth: `${120 + 200 * (allData.courts.length + 1)}px` }} className="w-full border-collapse">
-                        <thead>
-                            <tr>
-                                <th className="sticky left-0 z-10 bg-slate-800 p-2 border border-slate-700 w-24 text-sm">Hora</th>
-                                <th className="p-2 border border-slate-700 w-48 text-sm">Pendiente Asignar</th>
-                                {allData.courts.map(court => (
-                                    <th key={court.id} className="p-2 border border-slate-700 w-48 text-sm">{court.name}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {timeSlots.map((slot, index) => (
-                                <tr key={index}>
-                                    <td className="sticky left-0 bg-slate-800 p-2 border border-slate-700 text-center text-xs font-mono">
-                                        {slot.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </td>
-                                    <td style={styles.tableCell}>
-                                        {allData.matches
-                                            .filter(m => !m.court_id && m.scheduled_start_time && new Date(m.scheduled_start_time).toISOString().slice(0, 10) === selectedDate && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000)
-                                            .map(match => <MatchBlock key={match.id} match={match} styles={styles} />)
-                                        }
-                                    </td>
-                                    {allData.courts.map(court => (
-                                        <td key={court.id} style={styles.tableCell}>
-                                            {allData.matches
-                                                .filter(m => m.court_id === court.id && m.scheduled_start_time && new Date(m.scheduled_start_time).toISOString().slice(0, 10) === selectedDate && Math.abs(new Date(m.scheduled_start_time).getTime() - slot.getTime()) < 1000)
-                                                .map(match => <MatchBlock key={match.id} match={match} styles={styles} />)
-                                            }
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            )}
+            <div className="flex-1 overflow-y-auto px-2 py-4">
+                {loading ? (
+                    <div className="flex-1 flex justify-center items-center"><Loader2 className="animate-spin h-8 w-8" /></div>
+                ) : error ? (
+                    <p className="text-center text-red-400 mt-8">{error}</p>
+                ) : filteredMatches.length === 0 ? (
+                    <p className="text-center text-slate-400 mt-8">No hay partidos programados para este jugador en la fecha seleccionada.</p>
+                ) : (
+                    <ul className="space-y-3">
+                        {filteredMatches.map((m) => (
+                            <li key={m.id} className="bg-slate-800 border-l-4 border-cyan-400 p-3 rounded-lg shadow">
+                                <header className="flex justify-between items-center mb-1">
+                                    <span className="text-xs text-slate-400 flex items-center gap-2">
+                                        <Clock size={15} /> {fmtHour(m.scheduled_start_time)}
+                                    </span>
+                                    <span className="bg-slate-700 text-xs px-2 py-1 rounded">
+                                        {m.court_name || 'Pendiente'}
+                                    </span>
+                                </header>
+                                <p className="font-semibold text-sm">{m.team1_name} vs {m.team2_name}</p>
+                                <div className="text-[11px] text-slate-300 leading-tight mt-1">
+                                    <p><strong>{m.team1_name}:</strong> {m.team1_player1_name || "N/A"} / {m.team1_player2_name || "N/A"}</p>
+                                    <p><strong>{m.team2_name}:</strong> {m.team2_player1_name || "N/A"} / {m.team2_player2_name || "N/A"}</p>
+                                </div>
+                                <footer className="text-right mt-2">
+                                    <span className="text-xs text-slate-500">Partido #{m.id} - {m.category}</span>
+                                </footer>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
         </div>
     );
 };
