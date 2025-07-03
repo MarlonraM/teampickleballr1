@@ -1,4 +1,4 @@
-// 1. Crea un nuevo archivo: src/pages/LoginPage.jsx
+// 1. Crea un nuevo archivo: src/components/LoginPage.jsx
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
