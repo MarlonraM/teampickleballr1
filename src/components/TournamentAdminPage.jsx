@@ -1263,6 +1263,8 @@ const AvisosTab = ({ allData }) => {
     const assignedMatches = useMemo(() => 
         allData.matches.filter(m => m.status === 'asignado'), 
     [allData.matches]);
+
+    console.log(allData.matches.map(m => m.status));
     
     const handleSendGeneral = async () => {
         if (!manualMessage.trim()) return;
