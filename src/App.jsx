@@ -4,8 +4,8 @@ import React from 'react';
 // --- ¡CORRECCIÓN CLAVE! ---
 // Se asegura de que BrowserRouter y todos los componentes de rutas estén importados.
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import TournamentAdminPage from './pages/TournamentAdminPage';
-import ScorekeeperPage from './pages/ScorekeeperPage';
+import TournamentAdminPage from './components/TournamentAdminPage';
+import ScorekeeperPage from './components/ScorekeeperPage';
 import PublicScoreboard from './components/PublicScoreboard';
 import PublicScoreboardMichelob from './components/PublicScoreboardMichelob';
 import LoginPage from './pages/LoginPage';
@@ -41,3 +41,5 @@ function App() {
 }
 
 export default App;
+
+
