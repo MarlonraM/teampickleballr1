@@ -1755,6 +1755,12 @@ const fetchInitialData = useCallback(async () => {
     
     const handleSaveMatch = async (matchId, updateData) => {
         setIsSaving(true);
+        const token = localStorage.getItem('token'); // Obtiene el token
+        if (!token) {
+            alert("Sesión expirada. Por favor, inicie sesión de nuevo.");
+            setIsSaving(false);
+            return;
+        }
         try {
             await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
                 method: 'PUT',
