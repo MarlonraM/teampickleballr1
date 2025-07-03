@@ -128,113 +128,158 @@ const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, is
 };
 
 // --- MODAL PARA EDITAR PUNTUACIÓN Y ESTADO ---
-const EditScoreModal = ({ match, onClose, onSave, isSaving }) => {
+const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
+    const [courtId, setCourtId] = useState(match.court_id || '');
     const [scores, setScores] = useState({
-        team1: match.team1_score || 0,
-        team2: match.team2_score || 0
+        team1: match.team1_score ?? 0,
+        team2: match.team2_score ?? 0
     });
-    // Nuevo estado para controlar si se está en modo de edición
-    const [isEditing, setIsEditing] = useState(match.status !== 'finalizado');
+    const [isEditingScore, setIsEditingScore] = useState(match.status !== 'finalizado');
 
-    // Sincroniza el estado si el partido cambia
+    // Sync on match change
     useEffect(() => {
+        setCourtId(match.court_id || '');
         setScores({
-            team1: match.team1_score || 0,
-            team2: match.team2_score || 0
+            team1: match.team1_score ?? 0,
+            team2: match.team2_score ?? 0
         });
-        setIsEditing(match.status !== 'finalizado');
+        setIsEditingScore(match.status !== 'finalizado');
     }, [match]);
 
-    if (!match) return null;
-
-
-    const handleScoreChange = (team, value) => {
-        setScores(prev => ({ ...prev, [team]: parseInt(value, 10) || 0 }));
-    };
-
-    // --- FUNCIÓN handleSave MEJORADA ---
-    const handleSave = () => {
-        const score1 = scores.team1;
-        const score2 = scores.team2;
-        const maxScore = Math.max(score1, score2);
-        const diff = Math.abs(score1 - score2);
-
-        let updatePayload = {
-            team1_score: score1,
-            team2_score: score2,
-        };
-
-        // Si el partido estaba finalizado y la nueva puntuación ya no es válida para ganar,
-        // se revierte el estado del partido a 'en_vivo' Y se eliminan los puntos.
-        if (match.status === 'finalizado' && (maxScore < 11 || (maxScore >= 11 && diff < 2))) {
-            alert("El marcador ya no es válido para un partido finalizado. El estado del partido ha sido revertido a 'Pendiente' y los puntos de torneo han sido anulados.");
-            updatePayload.status = 'pendiente';
-            updatePayload.winner_id = null;
-            updatePayload.end_time = null;
-            updatePayload.court_id = null;
-            // --- CORRECCIÓN CLAVE ---
-            // Se reinician los puntos de torneo para este partido.
-            updatePayload.team1_tournament_points = 0;
-            updatePayload.team2_tournament_points = 0;
+    // ----- Cambia el estado automáticamente al (des)asignar cancha -----
+    useEffect(() => {
+        if (!courtId && match.status === 'asignado') {
+            // Si se desasigna, regresa a pendiente
+            onSave(match.id, { court_id: null, status: 'pendiente' }, true);
         }
-        
-        onSave(match.id, updatePayload);
+        // No cambiamos a 'asignado' aquí porque lo hacemos al guardar.
+    }, [courtId]); // eslint-disable-line
+
+    // ----- Manejo de score -----
+    const handleScoreChange = (team, value) => {
+        setScores(prev => ({
+            ...prev,
+            [team]: Math.max(0, parseInt(value, 10) || 0)
+        }));
     };
 
-    const handleFinalize = () => {
-        const score1 = scores.team1;
-        const score2 = scores.team2;
-        const maxScore = Math.max(score1, score2);
-        const diff = Math.abs(score1 - score2);
+    // Guardar solo score/cambios
+    const handleSaveScore = () => {
+        const { team1, team2 } = scores;
+        let payload = { team1_score: team1, team2_score: team2 };
 
-        if (maxScore < 11 || (maxScore >= 11 && diff < 2)) {
-            alert('Puntuación inválida para finalizar. El ganador debe tener al menos 11 puntos y una ventaja de 2.');
+        // Si estaba finalizado pero score ya no es válido, revierte
+        if (match.status === 'finalizado' && (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2)) {
+            alert("El marcador ya no es válido para un partido finalizado. Estado revertido a 'Pendiente'.");
+            payload = {
+                ...payload,
+                status: 'pendiente',
+                winner_id: null,
+                end_time: null,
+                court_id: null,
+                team1_tournament_points: 0,
+                team2_tournament_points: 0,
+            };
+        }
+        onSave(match.id, payload);
+    };
+
+    // Finalizar partido (verifica score válido)
+    const handleFinalize = () => {
+        const { team1, team2 } = scores;
+        if (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2) {
+            alert('Para finalizar, el ganador debe tener al menos 11 puntos y una ventaja de 2.');
             return;
         }
-        
-        if (window.confirm("¿Deseas marcar este partido como Finalizado? Esta acción es definitiva.")) {
+        if (window.confirm('¿Deseas marcar este partido como Finalizado? Esta acción es definitiva.')) {
             onSave(match.id, {
-                team1_score: scores.team1,
-                team2_score: scores.team2,
+                team1_score: team1,
+                team2_score: team2,
                 status: 'finalizado'
             });
         }
     };
-    
+
+    // Guardar asignación de cancha y cambia estado si corresponde
+    const handleSaveCourt = () => {
+        if (courtId) {
+            const newStatus = match.status === 'pendiente' ? 'asignado' : match.status;
+            onSave(match.id, {
+                court_id: parseInt(courtId, 10),
+                status: newStatus
+            });
+        } else {
+            onSave(match.id, {
+                court_id: null,
+                status: 'pendiente'
+            });
+        }
+    };
+
+    if (!match) return null;
+
     return (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
             <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-lg relative">
                 <button onClick={onClose} className="absolute top-3 right-3 text-slate-400 hover:text-white"><X size={20}/></button>
-                <h2 className="text-xl font-bold text-cyan-400 mb-4">Editar Partido #{match.id}</h2>
+                <h2 className="text-xl font-bold text-cyan-400 mb-4">Partido #{match.id} <span className="text-xs text-yellow-300 bg-yellow-900/30 rounded px-2 py-1 ml-2">{match.status}</span></h2>
                 
-                <div className="bg-slate-900/50 p-4 rounded-lg space-y-3">
-                    <p className="text-center font-semibold">{match.team1_name} vs {match.team2_name}</p>
-                    <div className="flex items-center justify-center gap-4">
-                        <input type="number" value={scores.team1} onChange={(e) => handleScoreChange('team1', e.target.value)} className="w-24 p-2 text-center text-4xl font-bold bg-slate-700 rounded-md border-slate-600 border disabled:opacity-50" disabled={!isEditing} />
-                        <span className="text-3xl font-bold text-slate-500">-</span>
-                        <input type="number" value={scores.team2} onChange={(e) => handleScoreChange('team2', e.target.value)} className="w-24 p-2 text-center text-4xl font-bold bg-slate-700 rounded-md border-slate-600 border disabled:opacity-50" disabled={!isEditing} />
-                    </div>
-                     <p className="text-center text-sm">Estado Actual: <span className="font-bold">{match.status}</span></p>
-                </div>
-
-                {match.status === 'finalizado' && !isEditing ? (
-                    <div className="mt-6 flex flex-col items-center gap-4">
-                        <div className="text-center text-amber-400 font-bold text-lg">
-                            🏆 Ganador: {match.winner_id === match.team1_id ? match.team1_name : match.team2_name}
+                <div className="flex flex-col md:flex-row gap-6">
+                    {/* Score */}
+                    <div className="flex-1 bg-slate-900/50 p-4 rounded-lg space-y-2">
+                        <p className="font-semibold text-center mb-1">{match.team1_name} vs {match.team2_name}</p>
+                        <div className="flex items-center justify-center gap-4">
+                            <input type="number" value={scores.team1} onChange={(e) => handleScoreChange('team1', e.target.value)} className="w-20 p-2 text-center text-3xl font-bold bg-slate-700 rounded border-slate-600 border" disabled={!isEditingScore} />
+                            <span className="text-2xl font-bold text-slate-500">-</span>
+                            <input type="number" value={scores.team2} onChange={(e) => handleScoreChange('team2', e.target.value)} className="w-20 p-2 text-center text-3xl font-bold bg-slate-700 rounded border-slate-600 border" disabled={!isEditingScore} />
                         </div>
-                        <button onClick={() => setIsEditing(true)} className="px-4 py-2 bg-yellow-600 hover:bg-yellow-700 rounded-md font-semibold">Corregir Puntuación</button>
+                        <div className="text-xs text-slate-400 text-center mt-2">Estado: <span className="font-bold">{match.status}</span></div>
+                        {match.status === 'finalizado' && !isEditingScore ? (
+                            <div className="flex flex-col items-center mt-3 gap-2">
+                                <div className="text-amber-400 font-bold text-base flex items-center gap-1">
+                                    <Check className="text-amber-300" size={16}/> Ganador: {match.winner_id === match.team1_id ? match.team1_name : match.team2_name}
+                                </div>
+                                <button onClick={() => setIsEditingScore(true)} className="px-3 py-1 bg-yellow-600 hover:bg-yellow-700 rounded-md font-semibold">Corregir Puntuación</button>
+                            </div>
+                        ) : (
+                            <div className="flex gap-2 mt-3">
+                                <button onClick={handleSaveScore} className="flex-1 bg-blue-600 hover:bg-blue-700 px-2 py-2 rounded font-semibold" disabled={isSaving}>Guardar Cambios</button>
+                                <button onClick={handleFinalize} className="flex-1 bg-green-600 hover:bg-green-700 px-2 py-2 rounded font-semibold" disabled={isSaving}>Finalizar Partido</button>
+                            </div>
+                        )}
                     </div>
-                ) : (
-                    <div className="mt-6 flex justify-end gap-4">
-                        <button onClick={handleSave} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-semibold" disabled={isSaving}>Guardar Cambios</button>
-                        <button onClick={handleFinalize} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md text-sm font-semibold" disabled={isSaving}>Marcar como Finalizado</button>
+                    {/* Asignar cancha */}
+                    <div className="flex-1 bg-slate-900/50 p-4 rounded-lg space-y-2">
+                        <div>
+                            <label htmlFor="court-id" className="block text-xs font-medium text-slate-300">Asignar Cancha</label>
+                            <select
+                                id="court-id"
+                                value={courtId}
+                                onChange={e => setCourtId(e.target.value)}
+                                className="mt-1 w-full bg-slate-700 p-2 rounded-md border border-slate-600"
+                            >
+                                <option value="">-- Sin Cancha --</option>
+                                {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                            </select>
+                        </div>
+                        <div className="flex gap-2 mt-4">
+                            <button onClick={handleSaveCourt} className="flex-1 bg-cyan-600 hover:bg-cyan-700 px-2 py-2 rounded font-semibold" disabled={isSaving}>
+                                {isSaving ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : null}
+                                Guardar Cancha
+                            </button>
+                            {courtId && (
+                                <Link to={`/match/${match.id}`} target="_blank" className="flex-1 text-center bg-cyan-800 hover:bg-cyan-700 p-2 rounded font-semibold transition-colors">Scorekeeper</Link>
+                            )}
+                        </div>
                     </div>
-                )}
+                </div>
+                <div className="mt-6 flex justify-end">
+                    <button onClick={onClose} className="bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded-md text-sm" disabled={isSaving}>Cerrar</button>
+                </div>
             </div>
         </div>
     );
 };
-
 
 // --- MODAL PARA EDITAR PARTIDO/HORARIO ---
 const ScheduleMatchModal = ({ match, courts, onClose, onSave, isSaving }) => {
