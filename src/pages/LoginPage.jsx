@@ -34,7 +34,7 @@ export default function LoginPage() {
     return (
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#1a1a1a' }}>
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', padding: '2rem', backgroundColor: '#282c34', borderRadius: '8px' }}>
-                <h2 style={{color: 'white', textAlign: 'center'}}>Iniciar Sesión</h2>
+                <h2 style={{color: 'white', textAlign: 'center'}}>Iniciar Sesión de Administrador</h2>
                 <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email" required style={{padding: '0.5rem'}} />
                 <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Contraseña" required style={{padding: '0.5rem'}} />
                 <button type="submit" style={{padding: '0.5rem', backgroundColor: '#61DAFB', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>Entrar</button>
