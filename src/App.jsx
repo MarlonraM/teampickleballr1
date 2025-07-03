@@ -15,7 +15,9 @@ function App() {
   // CORRECCIÓN: Se elimina el <BrowserRouter> que envolvía todo.
   // El componente <Routes> debe ser el elemento de nivel superior.
   return (
-      <Routes>
+        <BrowserRouter> 
+    <Routes>
+    
         {/* RUTAS PÚBLICAS */}
         <Route path="/login" element={<LoginPage />} />
         <Route path="/scoreboard" element={<PublicScoreboard />} />
