@@ -2,7 +2,7 @@
 
 import React from 'react';
 // CORRECCIÓN: Se elimina BrowserRouter de aquí, asumiendo que está en main.jsx
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import TournamentAdminPage from './components/TournamentAdminPage';
 import ScorekeeperPage from './components/ScorekeeperPage';
 import PublicScoreboard from './components/PublicScoreboard';
