@@ -289,8 +289,7 @@ const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
   {match.status === 'finalizado' && (
     <div className="flex flex-col items-center mt-4">
       <span className="text-amber-400 text-base font-extrabold flex items-center gap-2">
-        🏆 Ganador:{" "}
-        {match.team1_score > match.team2_score
+        🏆 {match.team1_score > match.team2_score
           ? match.team1_name
           : match.team2_name}
         🏆
