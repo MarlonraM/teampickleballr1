@@ -20,15 +20,34 @@ const HorariosPage = () => {
         tournaments.find(t => t.id === Number(activeTournamentId)),
     [tournaments, activeTournamentId]);
 
-    // --- LÓGICA DE CARGA DE DATOS ---
+    // --- LÓGICA DE CARGA DE DATOS CORREGIDA ---
+    const fetchDataForTournament = useCallback(async (tournamentId) => {
+        if (!tournamentId) return;
+        try {
+            const matchesRes = await fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`);
+            if (!matchesRes.ok) throw new Error("No se pudieron cargar los partidos del torneo.");
+            const matchesData = await matchesRes.json();
+            setAllData(prev => ({...prev, matches: matchesData}));
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
     const fetchInitialData = useCallback(async () => {
         setLoading(true);
+        setError(null);
         try {
             const [tournamentsRes, allPlayersRes, courtsRes] = await Promise.all([
                 fetch(`${API_BASE_URL}/api/tournaments`),
                 fetch(`${API_BASE_URL}/api/players`),
                 fetch(`${API_BASE_URL}/api/courts`),
             ]);
+            if (!tournamentsRes.ok || !allPlayersRes.ok || !courtsRes.ok) {
+                throw new Error("Error en la comunicación con el servidor.");
+            }
+
             const tournamentsData = await tournamentsRes.json();
             const allPlayersData = await allPlayersRes.json();
             const courtsData = await courtsRes.json();
@@ -49,24 +68,11 @@ const HorariosPage = () => {
                 setLoading(false);
             }
         } catch (err) {
+            console.error("Error fetching initial data:", err);
             setError("Error al cargar datos iniciales.");
             setLoading(false);
         }
-    }, []);
-    
-    const fetchDataForTournament = useCallback(async (tournamentId) => {
-        if (!tournamentId) return;
-        try {
-            const matchesRes = await fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`);
-            if (!matchesRes.ok) throw new Error("No se pudieron cargar los partidos del torneo.");
-            const matchesData = await matchesRes.json();
-            setAllData(prev => ({...prev, matches: matchesData}));
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setLoading(false);
-        }
-    }, []);
+    }, []); // CORRECCIÓN: Se elimina la dependencia de activeTournamentId para romper el bucle
 
     useEffect(() => {
         fetchInitialData();
@@ -93,7 +99,7 @@ const HorariosPage = () => {
                 const playerIds = [
                     m.team1_player1_id, m.team1_player2_id,
                     m.team2_player1_id, m.team2_player2_id
-                ].map(String);
+                ].map(pId => String(pId));
                 return playerIds.includes(pid);
             })
             .filter(m => m.scheduled_start_time?.slice(0, 10) === selectedDate)
