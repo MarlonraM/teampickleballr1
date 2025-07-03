@@ -3,6 +3,8 @@ import React from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import './App.css';
 import MatchList from './components/MatchList';
+import LoginPage from './pages/LoginPage';
+import ProtectedRoute from './components/ProtectedRoute';
 import ScorekeeperPage from './components/ScorekeeperPage';
 import PublicScoreboard from './components/PublicScoreboard';
 import HorariosTentativosJuegos from './components/HorariosTentativosJuegos';
@@ -37,23 +39,31 @@ function AdminDashboard() {
 }
 
 function App() {
-  return (
-    <div className="App">
-      <Routes>
-        {/* Rutas existentes */}
-        <Route path="/" element={<AdminDashboard />} />
-        {/* He ajustado la ruta a como la tienes tú: /match/:matchId */}
-        <Route path="/match/:matchId" element={<ScorekeeperPage />} />
-        <Route path="/scoreboard" element={<PublicScoreboard />} />
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* RUTAS PÚBLICAS */}
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/scoreboard" element={<PublicScoreboard />} />
         <Route path="/scoreboard/michelob" element={<PublicScoreboardMichelob />} />
-            <Route path="/HorariosTentativosJuegos" element={<HorariosTentativosJuegos />} />
+        
+        {/* RUTAS PROTEGIDAS */}
+        <Route path="/admin" element={
+          <ProtectedRoute>
+            <TournamentAdminPage />
+          </ProtectedRoute>
+        } />
+        <Route path="/scorekeeper/:matchId" element={
+          <ProtectedRoute>
+            <ScorekeeperPage />
+          </ProtectedRoute>
+        } />
 
-        {/* --- 2. AÑADE LA RUTA PARA EL NUEVO PANEL --- */}
-        <Route path="/admin" element={<TournamentAdminPage />} />
-
-      </Routes>
-    </div>
-  );
+        {/* Redirección por defecto */}
+        <Route path="*" element={<Navigate to="/scoreboard/michelob" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
