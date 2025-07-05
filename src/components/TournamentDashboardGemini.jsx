@@ -821,7 +821,7 @@ export default function TournamentHubPage() {
             ) {
                 // CORRECCIÓN: Se vuelve a cargar toda la información del torneo
                 // para asegurar consistencia total de los datos.
-                fetchData(true); // Actualización silenciosa
+                fetchTournamentData(activeTournamentId, true);   // ✔ recarga en modo “silencioso”
             }
             if (msg.type === "ANNOUNCEMENT_NEW") {
                 setAnnouncements(prev => [{ ...msg.payload, receivedAt: new Date() }, ...prev]);
