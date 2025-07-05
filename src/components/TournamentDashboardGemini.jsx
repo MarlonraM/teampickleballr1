@@ -690,7 +690,7 @@ const PlayerStats = ({ player, won, lost, pMatches }) => (
 );
 
 /* 5. Anuncios ------------------------------------------------------- */
-const FinalsView = ({ matches }) => {
+const FinalsView = ({ matches = [] }) => {
   const finished = useMemo(
     () => matches
       .filter((m) => m.status === "finalizado")
