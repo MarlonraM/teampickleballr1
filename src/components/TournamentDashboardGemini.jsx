@@ -249,14 +249,18 @@ function buildGroups(matches, teams) {
 
 
 /* 0. Bolitas de Quien esta Sirviendo -------------------------------------------------- */
-const ServiceDots = ({ isServing, s }) => (
-  <div style={s.serviceDotsContainer}>
-    <div style={{ ...s.serviceDot, ...(isServing ? s.serviceDotActive : s.inactiveDotStyle) }} />
-    <div style={{ ...s.serviceDot, ...(isServing ? s.serviceDotActive : s.inactiveDotStyle) }} />
-  </div>
-);
 
-
+const s = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
+        const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
+        const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
+        return (
+            // Reducimos el 'gap' y el tamaño de los puntos para hacerlos más compactos
+            <div className="flex gap-0.5 items-center"> 
+                <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+                <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+            </div>
+        );
+    };
 
 
 
@@ -408,6 +412,8 @@ const ScoreboardView = ({ matches }) => {
   return (
     <div style={s.grid}>
       {matches.map((m) => {
+      
+        const isFirstServeOfGame = !m.first_side_out_done;
         const isTeam1Serving = m.server_team_id === m.team1_id;
         const isTeam2Serving = m.server_team_id === m.team2_id;
 
@@ -427,7 +433,8 @@ const ScoreboardView = ({ matches }) => {
                   <p style={s.teamName}>{m.team1_name}</p>
                 </div>
                 <div style={s.rightSection}>
-                  <ServiceDots isServing={isTeam1Serving} s={s} />
+                  <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+                  <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
                   <div style={s.verticalDivider}></div>
                   <span style={s.score}>{m.team1_score}</span>
                 </div>
@@ -442,7 +449,8 @@ const ScoreboardView = ({ matches }) => {
                   <p style={s.teamName}>{m.team2_name}</p>
                 </div>
                 <div style={s.rightSection}>
-                  <ServiceDots isServing={isTeam2Serving} s={s} />
+                  <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+                  <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
                   <div style={s.verticalDivider}></div>
                   <span style={s.score}>{m.team2_score}</span>
                 </div>
