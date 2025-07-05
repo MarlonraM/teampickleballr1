@@ -250,11 +250,9 @@ function buildGroups(matches, teams) {
 
 /* 0. Bolitas de Quien esta Sirviendo -------------------------------------------------- */
 
-/ --- Componente ServiceDots (Puntos de Servicio) ---
+// --- Componente ServiceDots (Puntos de Servicio) ---
 const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame, s }) => {
-  // Siempre el primer punto se enciende si el equipo está sirviendo
   const firstDotActive = isServingTeam;
-  // El segundo punto se enciende si es el primer saque del juego o el segundo saque
   const secondDotActive = isServingTeam && (isFirstServeOfGame || serverNum === 2);
 
   // Acomoda los dots en fila y aprovecha los estilos de s
@@ -409,8 +407,6 @@ const ScoreboardView = ({ matches }) => {
   return (
     <div style={s.grid}>
       {matches.map((m) => {
-      
-        const isFirstServeOfGame = !m.first_side_out_done;
         const isTeam1Serving = m.server_team_id === m.team1_id;
         const isTeam2Serving = m.server_team_id === m.team2_id;
 
@@ -430,12 +426,7 @@ const ScoreboardView = ({ matches }) => {
                   <p style={s.teamName}>{m.team1_name}</p>
                 </div>
                 <div style={s.rightSection}>
-                  <d<ServiceDots
-  isServingTeam={isTeam1Serving}
-  serverNum={m.server_number}
-  isFirstServeOfGame={m.is_first_serve_of_game}
-  s={s}
-/>
+                  <ServiceDots isServing={isTeam1Serving} s={s} />
                   <div style={s.verticalDivider}></div>
                   <span style={s.score}>{m.team1_score}</span>
                 </div>
@@ -450,12 +441,7 @@ const ScoreboardView = ({ matches }) => {
                   <p style={s.teamName}>{m.team2_name}</p>
                 </div>
                 <div style={s.rightSection}>
-                  <ServiceDots
-  isServingTeam={isTeam2Serving}
-  serverNum={m.server_number}
-  isFirstServeOfGame={m.is_first_serve_of_game}
-  s={s}
-/>
+                  <ServiceDots isServing={isTeam2Serving} s={s} />
                   <div style={s.verticalDivider}></div>
                   <span style={s.score}>{m.team2_score}</span>
                 </div>
@@ -472,6 +458,7 @@ const ScoreboardView = ({ matches }) => {
     </div>
   );
 }
+
 
 /* 2. Standings ------------------------------------------------------ */
 const StandingsView = ({ groups }) => (
