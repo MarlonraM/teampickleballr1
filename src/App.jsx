@@ -11,6 +11,8 @@ import RegisterPage from './components/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import Horarios from './components/HorariosTentativosJuegos';
 import ProtectedRoute from './components/ProtectedRoute';
+import TournamentDashboard from './components/TournamentDashboard';
+import TournamentDashboardGemini from './components/TournamentDashboardGemini';
 
 
 function App() {
@@ -26,8 +28,11 @@ function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/scoreboard" element={<PublicScoreboard />} />
         <Route path="/scoreboard/michelob" element={<PublicScoreboardMichelob />} />
+        <Route path="/scoreboard/Dashboard" element={<TournamentDashboard />} />
+        <Route path="/scoreboard/gemini" element={<TournamentDashboardGemini />} />
         
-        
+
+
         {/* RUTAS PROTEGIDAS */}
         <Route 
           path="/admin" 
@@ -38,18 +43,18 @@ function App() {
           } 
         />
         <Route 
-          path="/scorekeeper/:matchId" 
+          path="/match/:matchId" 
           element={
             <ProtectedRoute>
               <ScorekeeperPage />
             </ProtectedRoute>
           } 
         />
-
+        
             {/* --- CORRECCIÓN --- */}
         {/* Redirección por defecto a la página de Login */}
         <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        
       </Routes>
  
   );
