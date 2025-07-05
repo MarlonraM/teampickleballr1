@@ -1320,17 +1320,17 @@ const JuegosEnCursoTab = ({ matches, courts }) => {
     // if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
 
     // --- Componente ServiceDots (Puntos de Servicio) ---
-    const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
-        const secondDotActive = isServingTeam && isFirstServeOfGame || isServingTeam && serverNum === 2;
-        const firstDotActive = isServingTeam || isServingTeam && serverNum === 1;
-        return (
-            // Reducimos el 'gap' y el tamaño de los puntos para hacerlos más compactos
-            <div className="flex gap-0.5 items-center"> 
-                <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
-                <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
-            </div>
-        );
-    };
+   const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
+  const firstDotActive  = isServingTeam && (isFirstServeOfGame || serverNum === 1);
+  const secondDotActive = isServingTeam && (isFirstServeOfGame ? false : serverNum === 2);
+
+  return (
+    <div className="flex gap-0.5 items-center">
+      <div className={`w-2 h-2 rounded-full ${firstDotActive  ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`} />
+      <div className={`w-2 h-2 rounded-full ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`} />
+    </div>
+  );
+};
 
 
 
