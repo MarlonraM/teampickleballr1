@@ -249,13 +249,14 @@ function buildGroups(matches, teams) {
 
 
 /* 0. Bolitas de Quien esta Sirviendo -------------------------------------------------- */
+const ServiceDots = ({ isServing, s }) => (
+  <div style={s.serviceDotsContainer}>
+    <div style={{ ...s.serviceDot, ...(isServing ? s.serviceDotActive : s.inactiveDotStyle) }} />
+    <div style={{ ...s.serviceDot, ...(isServing ? s.serviceDotActive : s.inactiveDotStyle) }} />
+  </div>
+);
 
-// --- Componente ServiceDots (Puntos de Servicio) ---
-const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame, s }) => {
-  const firstDotActive = isServingTeam;
-  const secondDotActive = isServingTeam && (isFirstServeOfGame || serverNum === 2);
 
-  // Acomoda los dots en fila y aprovecha los estilos de s
 
 
 
@@ -458,7 +459,6 @@ const ScoreboardView = ({ matches }) => {
     </div>
   );
 }
-
 
 /* 2. Standings ------------------------------------------------------ */
 const StandingsView = ({ groups }) => (
@@ -900,4 +900,3 @@ const NavBtn = ({ icon, label, view, active, setActive }) => (
     <span>{label}</span>
   </button>
 );
-
