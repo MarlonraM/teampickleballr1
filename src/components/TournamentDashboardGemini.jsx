@@ -692,12 +692,16 @@ const PlayerStats = ({ player, won, lost, pMatches }) => (
 /* 5. Anuncios ------------------------------------------------------- */
 const FinalsView = ({ matches = [] }) => {
   const finished = useMemo(
-    () => matches
+    () =>  {
+    return matches
       .filter((m) => m.status === "finalizado")
-      .sort((a, b) => new Date(b.end_time) - new Date(a.end_time))
-    [matches]
-  );
-  if (!finished.length) return <Placeholder>No hay partidos finalizados</Placeholder>;
+      .sort((a, b) => new Date(b.end_time) - new Date(a.end_time));
+  }, [matches]);  // ← aquí va la coma
+
+  if (finished.length === 0) {
+    return <Placeholder>No hay partidos finalizados</Placeholder>;
+  }
+
   // Reutilizamos ScoreboardView para renderizar las tarjetas
   return <ScoreboardView matches={finished} />;
 };
