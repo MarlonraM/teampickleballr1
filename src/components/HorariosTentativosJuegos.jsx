@@ -1,23 +1,29 @@
 import React, { useState, useMemo } from "react";
 import { Clock } from "lucide-react";
-import { statictournaments, staticcourts, staticmatches } from "../data/staticData";
+import {
+  tournaments as staticTournaments,
+  courts as staticCourts,
+  matches as staticMatches
+} from "../data/staticData";
 
 const HorariosPage = () => {
   // Estados de búsqueda y fecha
   const [playerSearch, setPlayerSearch] = useState("");
-  const [selectedDate, setSelectedDate] = useState(
-    statictournaments[0]?.start_date || new Date().toISOString().substring(0, 10)
-  );
-  // Fijamos el torneo activo al primero del array
-  const activeTournamentId = statictournaments[0]?.id;
+  // Inicializa la fecha con la del primer partido estático
+  const defaultDate = staticMatches[0]?.scheduled_start_time.slice(0, 10)
+    || new Date().toISOString().substring(0, 10);
+  const [selectedDate, setSelectedDate] = useState(defaultDate);
 
-  // Agrupamos datos estáticos
+  // Torneo activo fijo al primero del array (útil si usas staticTournaments)
+  const activeTournamentId = staticTournaments[0]?.id;
+
+  // Datos estáticos agrupados
   const allData = useMemo(
-    () => ({ staticmatches, staticcourts }),
+    () => ({ matches: staticMatches, courts: staticCourts }),
     []
   );
 
-  // Calcula slots de 20 minutos entre 9 y 22h
+  // Genera slots de 20 minutos entre 9:00 y 22:00
   const timeSlots = useMemo(() => {
     const slots = [];
     for (let h = 9; h < 22; h++) {
@@ -30,9 +36,9 @@ const HorariosPage = () => {
     return slots;
   }, [selectedDate]);
 
-  // Filtra partidos según fecha y búsqueda de jugador
-  const filteredstaticmatches = useMemo(() => {
-    let list = allData.staticmatches.filter(
+  // Filtra partidos por fecha y búsqueda de jugador
+  const filteredMatches = useMemo(() => {
+    let list = allData.matches.filter(
       m => m.scheduled_start_time.slice(0, 10) === selectedDate
     );
 
@@ -54,14 +60,15 @@ const HorariosPage = () => {
     return list.sort(
       (a, b) => new Date(a.scheduled_start_time) - new Date(b.scheduled_start_time)
     );
-  }, [allData.staticmatches, playerSearch, selectedDate]);
+  }, [allData.matches, playerSearch, selectedDate]);
 
-  // Formatea hora
-  const fmtHour = iso => iso
-    ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    : "--:--";
+  // Formatea la hora para display
+  const fmtHour = iso =>
+    iso
+      ? new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : "--:--";
 
-  // Etiqueta de categoría
+  // Renderiza etiqueta de categoría
   const getCategoryTag = category => {
     const base = "text-xs px-2 py-0.5 rounded-full font-semibold";
     switch (category) {
@@ -106,18 +113,18 @@ const HorariosPage = () => {
       <div className="flex-1 overflow-y-auto px-2 py-4 space-y-3">
         {timeSlots.map((slot, i) => {
           const slotEnd = new Date(slot.getTime() + 20 * 60000);
-          const inSlot = filteredstaticmatches.filter(m => {
+          const matchesInSlot = filteredMatches.filter(m => {
             const t = new Date(m.scheduled_start_time);
             return t >= slot && t < slotEnd;
           });
-          if (!inSlot.length) return null;
+          if (!matchesInSlot.length) return null;
           return (
             <div key={i} className="flex gap-4">
               <div className="w-20 text-right text-slate-400 font-mono text-sm pt-1">
                 {fmtHour(slot.toISOString())}
               </div>
               <div className="flex-1 border-l-2 border-slate-700 pl-4 space-y-2">
-                {inSlot.map(m => (
+                {matchesInSlot.map(m => (
                   <div key={m.id} className="bg-slate-800 p-3 rounded-lg shadow">
                     <header className="flex justify-between items-center mb-2">
                       <span className="text-xs text-slate-400 flex items-center gap-2">
@@ -142,7 +149,7 @@ const HorariosPage = () => {
           );
         })}
 
-        {!filteredstaticmatches.length && (
+        {!filteredMatches.length && (
           <p className="text-center text-slate-400 mt-8">
             No hay partidos para los filtros seleccionados.
           </p>
