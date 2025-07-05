@@ -1,1886 +1,471 @@
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { UserPlus, ShieldPlus, Users, Save, AlertTriangle, Loader2, ChevronsUpDown, Gamepad2, Settings, BarChart2, X, Trophy, Swords, MonitorPlay, ListOrdered, Clock, ExternalLink, Pencil, Megaphone, Send, Bell, Check, PlusCircle, Calendar } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import.meta.env.VITE_API_URL;
+const express = require('express');
+const router = express.Router();
+const db = require('../db');
+const WebSocket = require('ws');
+const auth = require('../middleware/auth'); // Middleware para proteger rutas
+// --- CONSULTA SQL MEJORADA Y CENTRALIZADA ---
+// Esta consulta es más robusta para obtener los jugadores correctos por categoría.
+const getScoreboardSql = `
+    WITH PlayerDetails AS (
+        SELECT
+            tp.team_id,
+            p.full_name,
+            p.category_id,
+            ROW_NUMBER() OVER(PARTITION BY tp.team_id, p.category_id ORDER BY p.id) as player_rank
+        FROM team_players tp
+        JOIN players p ON p.id = tp.player_id
+    )
+    SELECT
+        m.*,
+        t1.name AS team1_name,
+        t2.name AS team2_name,
+        c.name AS court_name,
+        p1.full_name AS team1_player1_name,
+        p2.full_name AS team1_player2_name,
+        p3.full_name AS team2_player1_name,
+        p4.full_name AS team2_player2_name
+    FROM matches m
+    JOIN teams t1 ON m.team1_id = t1.id
+    JOIN teams t2 ON m.team2_id = t2.id
+    LEFT JOIN courts c ON m.court_id = c.id
+    -- CORRECCIÓN: Se convierte m.category a texto para la comparación
+    LEFT JOIN categories cat ON cat.name = m.category::text
+    LEFT JOIN PlayerDetails p1 ON p1.team_id = m.team1_id AND p1.category_id = cat.id AND p1.player_rank = 1
+    LEFT JOIN PlayerDetails p2 ON p2.team_id = m.team1_id AND p2.category_id = cat.id AND p2.player_rank = 2
+    LEFT JOIN PlayerDetails p3 ON p3.team_id = m.team2_id AND p3.category_id = cat.id AND p3.player_rank = 1
+    LEFT JOIN PlayerDetails p4 ON p4.team_id = m.team2_id AND p4.category_id = cat.id AND p4.player_rank = 2
+`;
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
-// --- Componentes de UI Reutilizables ---
-const Card = ({ children, title, icon: Icon, titleClassName = 'text-cyan-400', extraHeaderContent }) => (
-    <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-lg">
-        <div className="p-4 border-b border-slate-700 flex justify-between items-center">
-            <h3 className={`text-lg font-semibold flex items-center ${titleClassName}`}>
-                {Icon && <Icon className="mr-3 h-5 w-5" />}
-                {title}
-            </h3>
-            {extraHeaderContent}
-        </div>
-        <div className="p-6">{children}</div>
-    </div>
-);
-
-const TabButton = ({ tabName, label, icon: Icon, activeTab, setActiveTab }) => (
-    <button onClick={() => setActiveTab(tabName)} className={`flex items-center px-5 py-3 text-sm font-medium transition-colors ${activeTab === tabName ? 'bg-slate-800 text-cyan-400 border-b-2 border-cyan-400' : 'text-slate-400 hover:text-white border-b-2 border-transparent'}`}>
-        <Icon className="mr-2 h-5 w-5" />{label}
-    </button>
-);
-
-// --- Modales ---
-const CreatePhaseModal = ({ isOpen, onClose, allTeams, tournaments, onCreate, isSaving }) => {
-    const [step, setStep] = useState(1);
-    const [creationType, setCreationType] = useState(null);
-    const [tournamentName, setTournamentName] = useState("");
-    const [phaseName, setPhaseName] = useState("");
-    const [startDate, setStartDate] = useState("");
-    const [parentTournamentId, setParentTournamentId] = useState("");
-    const [carryPoints, setCarryPoints] = useState(false);
-    const [selectedTeams, setSelectedTeams] = useState([]);
-    const [scoringFormat, setScoringFormat] = useState('traditional');
-    const [gamesFormat, setGamesFormat] = useState('single_game');
-    const [pointsToWin, setPointsToWin] = useState(11);
-
-    const parentTournamentTeams = useMemo(() => {
-        if (!parentTournamentId) return [];
-        return allTeams.filter(t => t.tournament_id === parseInt(parentTournamentId));
-    }, [parentTournamentId, allTeams]);
-
-    useEffect(() => {
-        setPointsToWin(scoringFormat === 'rally' ? 15 : 11);
-    }, [scoringFormat]);
-    
-    const handleTeamToggle = (teamId) => {
-        setSelectedTeams(prev => prev.includes(teamId) ? prev.filter(id => id !== teamId) : [...prev, teamId]);
-    };
-
-    const handleCreate = () => {
-        const finalPhaseName = creationType === 'new' ? `${tournamentName} - Round Robin` : phaseName;
-        if (!finalPhaseName || !startDate || (creationType === 'phase' && selectedTeams.length === 0)) {
-            alert("Por favor, completa todos los campos requeridos.");
-            return;
-        }
-        onCreate({
-            name: finalPhaseName,
-            start_date: new Date(startDate).toISOString(),
-            teams: creationType === 'new' ? allTeams : selectedTeams.map(id => allTeams.find(t => t.id === id)),
-            carry_points: carryPoints,
-            scoring_format: scoringFormat,
-            games_format: gamesFormat,
-            points_to_win: pointsToWin,
-            parent_tournament_id: parentTournamentId || null,
-        });
-    };
-    
-    if (!isOpen) return null;
-
-    return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-2xl">
-                <h2 className="text-xl font-bold text-cyan-400 mb-4">Crear Torneo o Fase</h2>
-                
-                {step === 1 && (
-                    <div className="flex gap-4">
-                        <button onClick={() => { setCreationType('new'); setStep(2); }} className="flex-1 p-4 bg-slate-700 rounded-lg text-center hover:bg-slate-600">Crear Torneo Nuevo</button>
-                        <button onClick={() => { setCreationType('phase'); setStep(2); }} className="flex-1 p-4 bg-slate-700 rounded-lg text-center hover:bg-slate-600">Crear Nueva Fase</button>
-                    </div>
-                )}
-
-                {step === 2 && (
-                    <div className="space-y-4">
-                        {creationType === 'new' && (
-                            <input type="text" value={tournamentName} onChange={(e) => setTournamentName(e.target.value)} placeholder="Nombre del Torneo" className="w-full bg-slate-700 p-2 rounded-md" />
-                        )}
-                        {creationType === 'phase' && (
-                            <>
-                                <select value={parentTournamentId} onChange={(e) => setParentTournamentId(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md">
-                                    <option value="">Selecciona un Torneo Existente</option>
-                                    {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                </select>
-                                <input type="text" value={phaseName} onChange={(e) => setPhaseName(e.target.value)} placeholder="Nombre de la nueva fase (ej. Semifinal)" className="w-full bg-slate-700 p-2 rounded-md" />
-                                <div className="flex items-center"><input type="checkbox" id="carry-points" checked={carryPoints} onChange={(e) => setCarryPoints(e.target.checked)} className="mr-2" /><label htmlFor="carry-points">Arrastrar puntos de la fase anterior</label></div>
-                                <div className="max-h-40 overflow-y-auto border border-slate-600 p-2 rounded-md">
-                                    <p className="font-semibold mb-2">Seleccionar Equipos que Avanzan:</p>
-                                    {parentTournamentTeams.map(team => (
-                                        <div key={team.id} className="flex items-center">
-                                            <input type="checkbox" id={`team-${team.id}`} checked={selectedTeams.includes(team.id)} onChange={() => handleTeamToggle(team.id)} className="mr-2" />
-                                            <label htmlFor={`team-${team.id}`}>{team.name} ({team.tournament_points || 0} pts)</label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </>
-                        )}
-                        <div><label className="block text-sm font-medium text-slate-300 mb-1">Fecha de Inicio de la Fase</label><input type="datetime-local" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md" /></div>
-                        
-                        <div className="grid grid-cols-3 gap-4 pt-4 border-t border-slate-700">
-                            <div><label className="text-sm">Formato</label><select value={scoringFormat} onChange={e => setScoringFormat(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md mt-1 text-sm"><option value="traditional">Tradicional</option><option value="rally">Rally Scoring</option></select></div>
-                            <div><label className="text-sm">Juegos</label><select value={gamesFormat} onChange={e => setGamesFormat(e.target.value)} className="w-full bg-slate-700 p-2 rounded-md mt-1 text-sm"><option value="single_game">1 Juego</option><option value="best_of_3">Mejor de 3</option></select></div>
-                            <div><label className="text-sm">Puntos a Ganar</label><input type="number" value={pointsToWin} onChange={(e) => setPointsToWin(parseInt(e.target.value))} className="w-full bg-slate-700 p-2 rounded-md mt-1 text-sm" /></div>
-                        </div>
-
-                        <div className="mt-6 flex justify-between">
-                            <button onClick={() => setStep(1)} className="px-4 py-2 bg-slate-600 rounded-md">Atrás</button>
-                            <button onClick={handleCreate} className="px-4 py-2 bg-green-600 rounded-md" disabled={isSaving}>Crear</button>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
-    );
-};
-
-// --- MODAL PARA EDITAR PUNTUACIÓN, ESTADO Y CANCHA ---
-const MatchEditModal = ({ match, courts, onClose, onSave, isSaving }) => {
-  const [courtId, setCourtId] = useState(match.court_id || "");
-  const [scores, setScores] = useState({
-    team1: match.team1_score ?? 0,
-    team2: match.team2_score ?? 0,
-  });
-  const [isEditingScore, setIsEditingScore] = useState(
-    match.status !== "finalizado"
-  );
-
-  useEffect(() => {
-    setCourtId(match.court_id || "");
-    setScores({
-      team1: match.team1_score ?? 0,
-      team2: match.team2_score ?? 0,
-    });
-    setIsEditingScore(match.status !== "finalizado");
-  }, [match]);
-
-  useEffect(() => {
-    if (!courtId && match.status === "asignado") {
-      onSave(match.id, { court_id: null, status: "pendiente" }, true);
-    }
-  }, [courtId]); // eslint-disable-line
-
-  const handleScoreChange = (team, value) => {
-    setScores((prev) => ({
-      ...prev,
-      [team]: Math.max(0, parseInt(value, 10) || 0),
-    }));
-  };
-
-  const handleSaveScore = () => {
-    const { team1, team2 } = scores;
-    let payload = { team1_score: team1, team2_score: team2 };
-
-    if (
-      match.status === "finalizado" &&
-      (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2)
-    ) {
-      alert(
-        "El marcador ya no es válido para un partido finalizado. Estado revertido a 'Pendiente'."
-      );
-      payload = {
-        ...payload,
-        status: "pendiente",
-        winner_id: null,
-        end_time: null,
-        court_id: null,
-        team1_tournament_points: 0,
-        team2_tournament_points: 0,
-      };
-    }
-    onSave(match.id, payload);
-  };
-
-  const handleFinalize = () => {
-    const { team1, team2 } = scores;
-    if (Math.max(team1, team2) < 11 || Math.abs(team1 - team2) < 2) {
-      alert(
-        "Para finalizar, el ganador debe tener al menos 11 puntos y una ventaja de 2."
-      );
-      return;
-    }
-    if (
-      window.confirm(
-        "¿Deseas marcar este partido como Finalizado? Esta acción es definitiva."
-      )
-    ) {
-      onSave(match.id, {
-        team1_score: team1,
-        team2_score: team2,
-        status: "finalizado",
-      });
-    }
-  };
-
-  const handleSaveCourt = () => {
-    if (courtId) {
-      const newStatus = match.status === "pendiente" ? "asignado" : match.status;
-      onSave(match.id, {
-        court_id: parseInt(courtId, 10),
-        status: newStatus,
-      });
-    } else {
-      onSave(match.id, {
-        court_id: null,
-        status: "pendiente",
-      });
-    }
-  };
-
-  const getStatusBadge = (status) => {
-    const color =
-      status === "finalizado"
-        ? "bg-green-700"
-        : status === "asignado"
-        ? "bg-yellow-600"
-        : status === "en_vivo"
-        ? "bg-red-600"
-        : "bg-slate-600";
-    return (
-      <span className={`ml-2 px-3 py-1 rounded-full text-xs text-white font-bold ${color}`}>
-        {status}
-      </span>
-    );
-  };
-
-  if (!match) return null;
-
-  return (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-[#212a36] border border-slate-800 rounded-2xl shadow-2xl p-6 w-full max-w-2xl relative">
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white"
-        >
-          <X size={24} />
-        </button>
-
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-6">
-          <span className="text-cyan-400 font-extrabold text-2xl">
-            Partido #{match.id}
-          </span>
-          {getStatusBadge(match.status)}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Columna Score */}
-          <div className="bg-slate-900/60 rounded-xl p-5 flex flex-col items-center justify-between shadow-inner">
-            <div>
-              <p className="text-lg font-bold text-center mb-2">
-                {match.team1_name} vs {match.team2_name}
-              </p>
-              <div className="flex items-center justify-center gap-6 my-4">
-                <input
-                  type="number"
-                  min={0}
-                  value={scores.team1}
-                  onChange={(e) => handleScoreChange("team1", e.target.value)}
-                  disabled={!isEditingScore}
-                  className="w-20 h-16 text-center text-4xl font-extrabold bg-slate-700 rounded-xl border border-slate-600 shadow-sm"
-                />
-                <span className="text-3xl font-extrabold text-slate-400">-</span>
-                <input
-                  type="number"
-                  min={0}
-                  value={scores.team2}
-                  onChange={(e) => handleScoreChange("team2", e.target.value)}
-                  disabled={!isEditingScore}
-                  className="w-20 h-16 text-center text-4xl font-extrabold bg-slate-700 rounded-xl border border-slate-600 shadow-sm"
-                />
-              </div>
-             <p className="text-center text-sm mt-2">
-  Estado Actual:{" "}
-    <span className="font-bold text-slate-300">{match.status === 'finalizado' ? 'Finalizado' : match.status}</span>
-  </p>
-  {match.status === 'finalizado' && (
-    <div className="flex flex-col items-center mt-4">
-      <span className="text-amber-400 text-base font-extrabold flex items-center gap-2">
-        🏆 {match.team1_score > match.team2_score
-          ? match.team1_name
-          : match.team2_name}
-        🏆
-      </span>
-    </div>
-  )}
-</div>
-            {/* Botones de score */}
-            <div className="mt-8 flex flex-col gap-3 w-full">
-              {match.status === "finalizado" && !isEditingScore ? (
-                <button
-                  onClick={() => setIsEditingScore(true)}
-                  className="w-full py-2 rounded-md font-bold text-xs bg-yellow-600 hover:bg-yellow-700 text-white transition-colors"
-                >
-                  Corregir Puntuación
-                </button>
-              ) : (
-                <div className="flex gap-3">
-                  <button
-                    onClick={handleSaveScore}
-                    className="flex-1 py-2 rounded-md font-bold text-xs bg-blue-600 hover:bg-blue-700 text-white transition-colors"
-                    disabled={isSaving}
-                  >
-                    Guardar Cambios
-                  </button>
-                  <button
-                    onClick={handleFinalize}
-                    className="flex-1 py-2 rounded-md font-bold text-xs bg-green-600 hover:bg-green-700 text-white transition-colors"
-                    disabled={isSaving}
-                  >
-                    Finalizar Partido
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Columna Gestión de Cancha */}
-          <div className="bg-slate-900/60 rounded-xl p-5 flex flex-col shadow-inner">
-            <label
-              htmlFor="court-id"
-              className="block text-sm font-medium text-slate-300 mb-2"
-            >
-              Asignar Cancha
-            </label>
-            <select
-              id="court-id"
-              value={courtId}
-              onChange={(e) => setCourtId(e.target.value)}
-              className="mb-4 w-full bg-slate-700 p-3 rounded-lg border border-slate-600 text-base"
-            >
-              <option value="">-- Selecciona una Cancha --</option>
-              {courts.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-            <div className="flex gap-3">
-              <button
-                onClick={handleSaveCourt}
-                className="flex-1 py-2 rounded-md font-bold text-xs bg-cyan-600 hover:bg-cyan-700 text-white transition-colors"
-                disabled={isSaving}
-              >
-                Guardar Cancha
-              </button>
-              {match.status !== "pendiente" ? (
-                <Link
-                  to={`/match/${match.id}`}
-                  target="_blank"
-                  className="flex-1 py-2 rounded-md font-bold text-xs bg-sky-700 hover:bg-sky-800 text-white transition-colors text-center"
-                >
-                  Scorekeeper
-                </Link>
-              ) : (
-                <button
-                  disabled
-                  className="flex-1 py-2 rounded-md font-bold text-xs bg-slate-700 text-white opacity-70"
-                >
-                  Scorekeeper
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Botón cerrar */}
-        <div className="mt-6 flex justify-end">
-          <button
-            onClick={onClose}
-            className="bg-slate-500 hover:bg-slate-700 px-6 py-2 rounded-xl text-white font-bold text-base transition-colors"
-            disabled={isSaving}
-          >
-            Cerrar
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// --- MODAL PARA EDITAR PARTIDO/HORARIO ---
-const ScheduleMatchModal = ({ match, courts, onClose, onSave, isSaving }) => {
-    const [courtId, setCourtId] = useState(match.court_id || '');
-    const [scheduledTime, setScheduledTime] = useState(
-        match.scheduled_start_time ? new Date(match.scheduled_start_time).toISOString().substring(0, 16) : ''
-    );
-
-    const handleSave = () => {
-        const updateData = {
-            court_id: courtId ? parseInt(courtId, 10) : null,
-            scheduled_start_time: scheduledTime ? new Date(scheduledTime).toISOString() : null,
-        };
-        onSave(match.id, updateData);
-    };
-
-    return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-md relative">
-                <button onClick={onClose} className="absolute top-3 right-3 text-slate-400 hover:text-white"><X size={20}/></button>
-                <h2 className="text-xl font-bold text-cyan-400 mb-4">Programar Partido #{match.id}</h2>
-                <div className="space-y-4">
-                    <p><span className="font-semibold">{match.team1_name}</span> vs <span className="font-semibold">{match.team2_name}</span></p>
-                    <p className="text-sm text-slate-400">Categoría: {match.category}</p>
-                    <div><label htmlFor="court-select" className="block text-sm font-medium text-slate-300">Asignar Cancha</label><select id="court-select" value={courtId} onChange={e => setCourtId(e.target.value)} className="mt-1 w-full bg-slate-700 p-2 rounded-md border border-slate-600"><option value="">Pendiente</option>{courts.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
-                    <div><label htmlFor="time-select" className="block text-sm font-medium text-slate-300">Asignar Hora</label><input type="datetime-local" id="time-select" value={scheduledTime} onChange={e => setScheduledTime(e.target.value)} className="mt-1 w-full bg-slate-700 p-2 rounded-md border border-slate-600" /></div>
-                </div>
-                <div className="mt-6 flex justify-end gap-4">
-                    <button onClick={onClose} className="bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded-md text-sm" disabled={isSaving}>Cancelar</button>
-                    <button onClick={handleSave} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md text-sm font-semibold" disabled={isSaving}>{isSaving ? 'Guardando...' : 'Guardar Horario'}</button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-
-
-
-// --- MODAL PARA GESTIONAR PARTIDO ---
-const MatchManagementModal = ({ matchData, courts, onClose, onSave, isSaving }) => {
-    const [courtId, setCourtId] = useState(matchData.court_id || '');
-    const isLinkActive = matchData.status !== 'pendiente';
-
-    if (!matchData) return null;
-
-    const handleSaveAndActivate = () => {
-        if (!courtId) { alert("Por favor, selecciona una cancha."); return; }
-        onSave(matchData.id, { 
-            court_id: parseInt(courtId, 10),
-            status: matchData.status === 'pendiente' ? 'asignado' : matchData.status
-        });
-    };
-    
-    return (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl p-6 w-full max-w-md relative">
-                <button onClick={onClose} className="absolute top-2 right-2 text-slate-400 hover:text-white"><X size={20}/></button>
-                <h2 className="text-xl font-bold text-cyan-400 mb-4">Gestionar Partido #{matchData.id}</h2>
-                <div className="space-y-4">
-                    <p><span className="font-semibold">{matchData.team1_name}</span> vs <span className="font-semibold">{matchData.team2_name}</span></p>
-                    <p className="text-sm text-slate-400">Categoría: {matchData.category}</p>
-                    <div><label htmlFor="court-id" className="block text-sm font-medium text-slate-300">Asignar Cancha</label><select id="court-id" value={courtId} onChange={e => setCourtId(e.target.value)} className="mt-1 w-full bg-slate-700 p-2 rounded-md border border-slate-600"><option value="">-- Selecciona una Cancha --</option>{courts.map(c => (<option key={c.id} value={c.id}>{c.name}</option>))}</select></div>
-                    <p className="text-sm">Estado: <span className="font-semibold px-2 py-1 bg-yellow-900/50 text-yellow-300 rounded-full">{matchData.status}</span></p>
-                    {isLinkActive ? (<Link to={`/match/${matchData.id}`} target="_blank" className="block w-full text-center bg-blue-600 hover:bg-blue-700 p-3 rounded-md font-semibold transition-colors">Ir al Scorekeeper</Link>) : (<button disabled className="block w-full text-center bg-slate-600 p-3 rounded-md font-semibold cursor-not-allowed">Asigne una cancha para activar</button>)}
-                </div>
-                <div className="mt-6 flex justify-end gap-4">
-                    <button onClick={onClose} className="bg-slate-600 hover:bg-slate-700 px-4 py-2 rounded-md text-sm" disabled={isSaving}>Cerrar</button>
-                    <button onClick={handleSaveAndActivate} className="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-md text-sm font-semibold flex items-center" disabled={isSaving}>
-                        {isSaving && <Loader2 className="animate-spin mr-2 h-4 w-4" />}
-                        {isSaving ? 'Guardando...' : 'Guardar y Activar'}
-                    </button>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- PESTAÑA 1: PARTIDOS (NUEVA PESTAÑA PRINCIPAL) ---
-const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingMatch, openScheduleModal }) => {    
-    const [matches, setMatches] = useState(initialMatches);
-    const [filters, setFilters] = useState({ id: '', teams: '', players: '', category: '', status: '', court: '' });
-    const [sortConfig, setSortConfig] = useState({ key: 'status', direction: 'ascending' });
-    const [editingScore, setEditingScore] = useState(null);
-
-    useEffect(() => {
-        setMatches(initialMatches);
-    }, [initialMatches]);
-
-   const handleFilterChange = (e) => {
-        const { name, value } = e.target;
-        setFilters(prev => ({ ...prev, [name]: value }));
-    };
-
-    const requestSort = (key) => {
-        let direction = 'ascending';
-        if (sortConfig.key === key && sortConfig.direction === 'ascending') {
-            direction = 'descending';
-        }
-        setSortConfig({ key, direction });
-    };
-
-    const sortedAndFilteredMatches = useMemo(() => {
-        let sortableItems = [...initialMatches];
-
-        // Filtrado
-        sortableItems = sortableItems.filter(match => {
-            const playerFilter = filters.players.toLowerCase();
-            const playersString = [match.team1_player1_name, match.team1_player2_name, match.team2_player1_name, match.team2_player2_name]
-                .filter(Boolean).join(' ').toLowerCase();
-
-            return (
-                match.id.toString().includes(filters.id) &&
-                ((match.team1_name || '').toLowerCase().includes(filters.teams.toLowerCase()) || (match.team2_name || '').toLowerCase().includes(filters.teams.toLowerCase())) &&
-                (playersString.includes(playerFilter)) &&
-                ((match.category || '').toLowerCase().includes(filters.category.toLowerCase())) &&
-                ((match.status || '').toLowerCase().includes(filters.status.toLowerCase())) &&
-                (filters.court === '' || match.court_id === parseInt(filters.court))
-            );
-        });
-
-        // Ordenación
-        if (sortConfig.key !== null) {
-            const statusOrder = { 'en_vivo': 1, 'asignado': 2, 'pendiente': 3, 'finalizado': 4 };
-            
-            sortableItems.sort((a, b) => {
-                let aValue = a[sortConfig.key];
-                let bValue = b[sortConfig.key];
-                
-                if (sortConfig.key === 'status') {
-                    aValue = statusOrder[a.status] || 99;
-                    bValue = statusOrder[b.status] || 99;
-                } else if (sortConfig.key === 'scheduled_start_time') {
-                    aValue = a.scheduled_start_time ? new Date(a.scheduled_start_time).getTime() : 0;
-                    bValue = b.scheduled_start_time ? new Date(b.scheduled_start_time).getTime() : 0;
-                }
-                
-                if (aValue < bValue) { return sortConfig.direction === 'ascending' ? -1 : 1; }
-                if (aValue > bValue) { return sortConfig.direction === 'ascending' ? 1 : -1; }
-                return 0;
-            });
-        }
-        return sortableItems;
-    }, [initialMatches, filters, sortConfig]);
-
-
-    const SortableHeader = ({ sortKey, children, className = '' }) => {
-        const isSorted = sortConfig.key === sortKey;
-        const icon = isSorted ? (sortConfig.direction === 'ascending' ? '▲' : '▼') : '↕';
-        return (
-            <th className={`p-3 cursor-pointer select-none ${className}`} onClick={() => requestSort(sortKey)}>
-                <div className="flex items-center gap-2">
-                    {children} <span className="text-cyan-400">{icon}</span>
-                </div>
-            </th>
-        );
-    };
-
-    const getStatusTag = (status) => {
-        const baseClasses = "px-2 py-1 text-xs font-semibold rounded-full";
-        switch (status) {
-            case 'finalizado': return <span className={`${baseClasses} bg-green-500/20 text-green-300`}>Finalizado</span>;
-            case 'en_vivo': return <span className={`${baseClasses} bg-red-500/20 text-red-300`}>En Vivo</span>;
-            case 'asignado': return <span className={`${baseClasses} bg-blue-500/20 text-blue-300`}>Asignado</span>;
-            default: return <span className={`${baseClasses} bg-slate-600/50 text-slate-300`}>Pendiente</span>;
-        }
-    };
-    
-    const formatScheduledTime = (time) => {
-        if (!time) return '-';
-        return new Date(time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-
-    const handleCourtChange = async (matchId, courtId) => {
-        try {
-            await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
-                method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ court_id: courtId ? parseInt(courtId, 10) : null })
-            });
-        //    refreshData();
-        } catch (error) {
-            console.error("Error al asignar cancha:", error);
-        }
-    };
-
-    return (
-        <Card title="Lista Completa de Partidos" icon={ListOrdered}>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                    <thead className="bg-slate-700/50">
-                        <tr>
-                            <SortableHeader sortKey="id" className="w-16">ID</SortableHeader>
-                            <th className="p-3 w-1/6">Equipos</th>
-                            <th className="p-3 w-1/6">Jugadores</th>
-                            <th className="p-3 w-28">Categoría</th>
-                            <SortableHeader sortKey="status" className="w-28">Estado</SortableHeader>
-                            <th className="p-3 w-32">Cancha</th>
-                            <SortableHeader sortKey="scheduled_start_time" className="w-32">Hr. Prog.</SortableHeader>
-                            <th className="p-3 w-28">Marcador</th>
-                            <th className="p-3 w-32">Scorekeeper</th>
-                        </tr>
-                        <tr>
-                            <th className="p-2"><input name="id" value={filters.id} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2"><input name="teams" value={filters.teams} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2"><input name="players" value={filters.players} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2"><input name="category" value={filters.category} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2"><input name="status" value={filters.status} onChange={handleFilterChange} placeholder="Filtrar..." className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs"/></th>
-                            <th className="p-2">
-                                <select name="court" value={filters.court} onChange={handleFilterChange} className="w-full bg-slate-800 p-1 rounded-md border border-slate-600 text-xs">
-                                    <option value="">Todas</option>
-                                    {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                </select>
-                            </th>
-                            <th colSpan="3"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {sortedAndFilteredMatches.map(match => (
-                            <tr key={match.id} className="border-b border-slate-700 hover:bg-slate-800/50">
-                                <td className="p-3 font-mono">{match.id}</td>
-                                <td className="p-3 font-semibold">{match.team1_name} vs {match.team2_name}</td>
-                                <td className="p-3 text-slate-400 text-xs">
-                                    <div>{match.team1_player1_name || 'N/A'} / {match.team1_player2_name || 'N/A'}</div>
-                                    <div>{match.team2_player1_name || 'N/A'} / {match.team2_player2_name || 'N/A'}</div>
-                                </td>
-                                <td className="p-3">{match.category}</td>
-                                <td className="p-3">{getStatusTag(match.status)}</td>
-                                <td className="p-3">
-                                    <select value={match.court_id || ''} onChange={(e) => handleCourtChange(match.id, e.target.value)} className="w-full bg-slate-700 p-1 rounded-md border border-slate-600 text-xs">
-                                        <option value="">Sin Asignar</option>
-                                        {courts.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
-                                </td>
-                                <td className="p-3">
-                                    <div onClick={() => openScheduleModal(match)} className="bg-slate-700/50 hover:bg-slate-700 p-2 rounded-md cursor-pointer flex items-center justify-center gap-2 font-mono">
-                                        <Clock size={14} />
-                                        <span>{formatScheduledTime(match.scheduled_start_time)}</span>
-                                    </div>
-                                </td>
-                                <td className="p-3">
-                                    <div className="flex items-center gap-2 font-mono">
-                                        <span>{match.team1_score ?? '-'} / {match.team2_score ?? '-'}</span>
-                                        <button onClick={() => setEditingMatch(match)} className="text-slate-400 hover:text-white">
-                                            <Pencil size={14} />
-                                        </button>
-                                    </div>
-                                </td>
-                                <td className="p-3">
-                                    <Link to={`/match/${match.id}`} target="_blank">
-                                        <button className="px-2 py-1 text-xs bg-cyan-600 hover:bg-cyan-700 rounded-md flex items-center gap-1"><ExternalLink size={14}/> Scorekeeper</button>
-                                    </Link>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </Card>
-    );
-};
-
-
-// --- PESTAÑA 1: CONFIGURACIÓN DE TORNEO ---
-const ConfiguracionPanel = ({ allPlayers, initialData, onGenerationComplete, activeTournamentId, refreshData, onClose }) => {
-  const [players, setPlayers] = useState(allPlayers || []);
-  const [categoryList, setCategoryList] = useState([]);
-  const [isSavingPlayer, setIsSavingPlayer] = useState(false);
-  const [newPlayer, setNewPlayer] = useState({ fullName: '', email: '', categoryId: null });
-  const [loading, setLoading] = useState(true);
-  const [teams, setTeams] = useState(initialData.teams || []);
-  const [isSaving, setIsSaving] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [numberOfGroups, setNumberOfGroups] = useState(2);
-  const [schedulingMatch, setSchedulingMatch] = useState(null); // <-- Estado para el nuevo modal
-  const [tournamentGroups, setTournamentGroups] = useState([]); // Nuevo estado para los grupos del torneo
-  
-    const [error, setError] = useState(null); 
-  useEffect(() => {
-        setPlayers(allPlayers || []);
-        setTeams(initialData.teams || []);
-        setLoading(false);
-    }, [initialData, allPlayers]);
-
-    // Carga los grupos existentes para el torneo activo
-    const fetchGroupsForTournament = useCallback(async () => {
-        if (!activeTournamentId) return;
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/tournaments/${activeTournamentId}/groups`);
-            if (!response.ok) throw new Error('No se pudieron cargar los grupos.');
-            const data = await response.json();
-            setTournamentGroups(data);
-        } catch (err) {
-            console.error(err);
-        }
-    }, [activeTournamentId]);
-
-    useEffect(() => {
-        fetchGroupsForTournament();
-    }, [fetchGroupsForTournament]);
-  
-
-
-  useEffect(() => {
-    setPlayers(allPlayers || []);
-    setLoading(false);
-  }, [allPlayers]);
-
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/categories`);
-        if (!res.ok) throw new Error('Error al cargar categorías');
-        const cats = await res.json();
-        setCategoryList(cats);
-      } catch (err) {
-        alert(err.message);
-      }
-    }
-    fetchCategories();
-  }, []);
-
-    const handleCreateGroups = async () => {
-        setIsSaving(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/tournaments/${activeTournamentId}/groups`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ numberOfGroups })
-                
-            });
-            if (!response.ok) throw new Error('Error al crear los grupos.');
-            await fetchGroupsForTournament(); // Refresca la lista de grupos
-            alert(`${numberOfGroups} grupos creados exitosamente.`);
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    
-  const handleAddPlayer = async (e) => {
-    e.preventDefault();
-    if (!newPlayer.fullName.trim() || newPlayer.categoryId === null) {
-      alert('Por favor completa el nombre y selecciona una categoría');
-      return;
-    }
-    setIsSavingPlayer(true);
+// Ruta para el Public Scoreboard (todos los partidos 'en_vivo')
+router.get('/scoreboard', async (req, res) => {
     try {
-      const res = await fetch(`${API_BASE_URL}/api/players`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          full_name: newPlayer.fullName.trim(),
-          email: newPlayer.email || null,
-          category_id: newPlayer.categoryId
-        })
-      });
-      if (!res.ok) throw new Error('Error al guardar jugador');
-      setNewPlayer({ fullName: '', email: '', categoryId: null });
-      onGenerationComplete();
+        const sql = `${getScoreboardSql} WHERE m.status = 'en_vivo' ORDER BY m.court_id, m.id;`;
+        const result = await db.query(sql);
+        res.json(result.rows);
     } catch (err) {
-      alert(err.message);
-    } finally {
-      setIsSavingPlayer(false);
+        console.error("Error en la ruta /scoreboard:", err.message);
+        res.status(500).send('Error en el servidor');
     }
-  };
+});
 
-   //Esta función sirve para asignar un equipo a un jugador (localmente en el estado del componente).
-    //Cuando esta Seleccionando Equipos en el Modal de configuracion.
-    //Agarra los Players que llegaron y Clona el listado, Mapiando el Playerid especifico
-    const handleAssignTeamToPlayer = (playerId, teamId) => { 
-        setPlayers(
-            players.map(p => 
-                p.id === playerId 
-                ? { ...p, teamId: teamId ? parseInt(teamId, 10) : null } 
-                : p
-            )
-        ); 
-    };
-
-    const handleAddTeam = async (e) => {
-        e.preventDefault();
-        if (!newTeamName || !activeTournamentId) {
-            alert("No hay un torneo activo seleccionado.");
-            return;
-        }
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/teams`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: newTeamName, tournament_id: activeTournamentId }),
-            });
-            if (!response.ok) throw new Error('Error al registrar equipo.');
-            onGenerationComplete(); // Llama a la función del padre para refrescar los datos
-            setNewTeamName('');
-        } catch (err) {
-            alert(err.message);
-        }
-    };
-    const handleSaveGroups = async () => { 
-        const groupAssignments = teams.map(team => ({ id: team.id, group_id: team.groupId })); 
-        try { 
-            const response = await fetch(`${import.meta.env.VITE_API_URL}/api/teams/assign-groups`, { 
-                method: 'PUT', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(groupAssignments) 
-            }); 
-            if (!response.ok) throw new Error('Error al guardar los grupos.'); 
-            alert('Grupos guardados exitosamente!'); 
-        } catch (err) { 
-            console.error(err); 
-            alert(err.message);
-        } 
-    };
-
-
-const savePlayerAssignments = async () => {
-  // Genera un array con la forma que espera el backend
-  const updates = players
-    .filter(p => p.teamId)
-    .map(p => ({ player_id: p.id, team_id: p.teamId }));
-
-  if (updates.length === 0) return;
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/api/players/assign-teams`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updates) // <- NO lo envuelvas en {players: updates}
-    });
-    if (!response.ok) throw new Error('Error al asignar jugadores a equipos.');
-  } catch (err) {
-    alert(err.message);
-    throw err; // Opcional
-  }
-};
-const handleSaveAndGenerateMatches = async () => {
-    if (!activeTournamentId) {
-        alert("Por favor, selecciona un torneo válido primero.");
-        return;
-    }
-
-    setIsSaving(true);
+// Ruta para el panel de admin (todos los partidos de un torneo)
+router.get('/scoreboard/:tournamentId', async (req, res) => {
+    const { tournamentId } = req.params;
     try {
-        await handleSaveGroups();              // Guarda los grupos
-        await savePlayerAssignments();         // Guarda asignaciones de jugadores a equipos
-
-        const generateResponse = await fetch(`${API_BASE_URL}/api/matches/generate-round-robin`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ tournament_id: activeTournamentId })
-        });
-
-        if (!generateResponse.ok) throw new Error('Error en el servidor al generar los partidos.');
-        
-        alert('¡Partidos generados exitosamente!');
-        onGenerationComplete();
-        onClose();
+        const sql = `${getScoreboardSql} WHERE m.tournament_id = $1 ORDER BY m.id;`;
+        const result = await db.query(sql, [tournamentId]);
+        res.json(result.rows);
     } catch (err) {
-        alert(err.message);
-    } finally {
-        setIsSaving(false);
+        console.error("Error en la ruta /scoreboard/:tournamentId:", err.message);
+        res.status(500).send('Error en el servidor');
     }
-};
-    
- const handleAssignGroupToTeam = (teamId, groupId) => {
-        setTeams(teams.map(t => t.id === teamId ? { ...t, groupId: groupId ? parseInt(groupId, 10) : null } : t));
-    };
-    
-    const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
-    const groupOptions = useMemo(() => Array.from({ length: numberOfGroups }, (_, i) => i + 1), [numberOfGroups]);
-    const idealTeamsPerGroup = useMemo(() => numberOfGroups > 0 ? Math.ceil(teams.length / numberOfGroups) : 0, [teams.length, numberOfGroups]);
-    const groupSummary = useMemo(() => { const summary = {}; groupOptions.forEach(groupNum => { const groupLetter = getGroupLetter(groupNum); if (groupLetter) { summary[groupLetter] = teams.filter(t => t.groupId === groupNum).map(t => t.name); }}); return summary; }, [teams, groupOptions]);
-    const teamsPerGroup = useMemo(() => { const counts = {}; groupOptions.forEach(groupNum => { counts[groupNum] = teams.filter(t => t.groupId === groupNum).length; }); return counts; }, [teams, groupOptions]);
-    const categoryValidation = useMemo(() => { const validation = {}; teams.forEach(team => { const teamPlayers = players.filter(p => p.teamId === team.id); const categoryCount = teamPlayers.reduce((acc, player) => { acc[player.category] = (acc[player.category] || 0) + 1; return acc; }, {}); validation[team.id] = { isValid: Object.values(categoryCount).every(count => count <= 2), counts: categoryCount }; }); return validation; }, [players, teams]);
-    
-    
-    if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando datos...</span></div>;
-    if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
-    
-  return (
-    <div className="space-y-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <Card title="Registrar Jugador" icon={UserPlus}>
-                 <form onSubmit={handleAddPlayer} className="space-y-4">
-                    <input
-                      required
-                      type="text"
-                      placeholder="Nombre completo"
-                      value={newPlayer.fullName}
-                      onChange={e => setNewPlayer({ ...newPlayer, fullName: e.target.value })}
-                      className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 outline-none"
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email del jugador (opcional)"
-                      value={newPlayer.email}
-                      onChange={e => setNewPlayer({ ...newPlayer, email: e.target.value })}
-                      className="w-full bg-slate-700 p-3 rounded-md border border-slate-600"
-                    />
-                    <select
-                      value={newPlayer.categoryId ?? ''}
-                      onChange={e => setNewPlayer({ ...newPlayer, categoryId: e.target.value ? Number(e.target.value) : null })}
-                      className="w-full bg-slate-700 p-3 rounded-md border border-slate-600"
-                    >
-                      <option value="">Selecciona categoría</option>
-                      {categoryList.map(cat => (
-                        <option key={cat.id} value={cat.id}>{cat.name || '-'}</option>
-                      ))}
-                    </select>
-                    <button
-                      type="submit"
-                      disabled={isSavingPlayer}
-                      className="w-full bg-cyan-600 hover:bg-cyan-700 text-white py-2 rounded-md font-semibold transition-colors disabled:opacity-50"
-                    >
-                      {isSavingPlayer ? <Loader2 className="animate-spin mr-2 inline-block" /> : 'Guardar Jugador'}
-                    </button>
-                  </form>
-   </Card>
-                <Card title="Registrar Equipo" icon={ShieldPlus}><form onSubmit={handleAddTeam} className="space-y-4">
-                    <input required type="text" placeholder="Nombre del Equipo" value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} className="w-full bg-slate-700 p-3 rounded-md border border-slate-600 focus:ring-2 focus:ring-cyan-500 focus:border-cyan-500 outline-none" />
-                        <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 p-3 rounded-md flex items-center justify-center font-semibold transition-colors">
-                            Registrar
-                        </button>
-                </form>
-                </Card>
-            </div>
-             <Card title="Asignación de Grupos (Round Robin)" icon={Users}>
-                <div className="bg-slate-900/50 p-4 rounded-md mb-4 space-y-3">
-                    <div className="flex items-center gap-2">
-                        <label>Crear</label>
-                        <input type="number" min="1" max="26" value={numberOfGroups} onChange={(e) => setNumberOfGroups(parseInt(e.target.value))} className="w-16 bg-slate-700 p-2 rounded text-center border border-slate-600"/>
-                        <label>grupos para este torneo:</label>
-                        <button onClick={handleCreateGroups} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-semibold" disabled={isSaving}>Crear Grupos</button>
-                    </div>
-                    <p className="text-xs text-slate-400">Grupos existentes: {tournamentGroups.map(g => g.name).join(', ') || 'Ninguno'}</p>
-                </div>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-700/50">
-                            <tr className="border-b border-slate-600">
-                                <th className="p-3 text-sm font-semibold">Equipo</th>
-                                <th className="p-3 text-sm font-semibold">Grupo Asignado</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {teams.map(team => (
-                                <tr key={team.id} className="border-b border-slate-700">
-                                    <td className="p-3">{team.name}</td>
-                                    <td className="p-3">
-                                        <select value={team.groupId || ''} onChange={(e) => handleAssignGroupToTeam(team.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600">
-                                            <option value="">Sin Grupo</option>
-                                            {tournamentGroups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                                        </select>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-                <div className="mt-6 flex justify-end">
-                    <button onClick={handleSaveGroups} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold">
-                        <Save className="mr-2 h-5 w-5" /> Guardar Asignación de Grupos
-                    </button>
-                </div>
-            </Card>
-            
-            <Card title="Asignación de Jugadores a Equipos" icon={UserPlus}>
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left">
-                        <thead className="bg-slate-700/50">
-                            <tr className="border-b border-slate-600">
-                                <th className="p-3 text-sm font-semibold text-slate-300">Jugador</th>
-                                <th className="p-3 text-sm font-semibold text-slate-300">Categoría</th>
-                                <th className="p-3 text-sm font-semibold text-slate-300">Email</th>
-                                <th className="p-3 text-sm font-semibold text-slate-300">Asignar Equipo</th>
-                                <th className="p-3 text-sm font-semibold text-slate-300">Grupo</th>
-                                <th className="p-3 text-sm font-semibold text-slate-300">Validación</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {players.map(player => { 
-                                const assignedTeam = teams.find(t => t.id === player.teamId); 
-                                const validationInfo = assignedTeam ? categoryValidation[assignedTeam.id] : null; 
-                                const isInvalid = validationInfo && !validationInfo.isValid; 
-                                return (
-                                    <tr key={player.id} className={`border-b border-slate-700 hover:bg-slate-800 transition-colors ${isInvalid ? 'bg-red-900/20' : ''}`}>
-                                        <td className="p-3">{player.fullName}</td>
-                                        <td className="p-3">{player.category}</td>
-                                        <td className="p-3">{player.email}</td>
-                                        <td className="p-3">
-                                            <select 
-                                                value={player.teamId || ''} 
-                                                onChange={(e) => handleAssignTeamToPlayer(player.id, e.target.value)} className="bg-slate-700 p-2 rounded border border-slate-600"
-                                                >
-                                                <option value="">Sin Equipo</option>{
-                                                teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                                            </select>
-                                        </td>
-                                        <td className="p-3 font-mono">{assignedTeam?.groupId ? `Grupo ${getGroupLetter(assignedTeam.groupId)}` : '—'}</td>
-                                        <td className="p-3">
-                                            {isInvalid && (
-                                        <span className="text-red-400 flex items-center text-xs">
-                                            <AlertTriangle size={14} className="mr-1" /> Límite excedido
-                                        </span>
-                                            )}
-                                        </td>
-                                    </tr>
-                                )})}
-                        </tbody>
-                    </table>
-                </div>
-                <div className="mt-6 flex justify-end">
-                    <button onClick={handleSaveAndGenerateMatches} className="bg-green-600 hover:bg-green-700 p-3 px-6 rounded-md flex items-center font-semibold transition-colors">
-                        <Save className="mr-2 h-5 w-5" /> Guardar Asignaciones y Generar Partidos
-                    </button>
-                </div>
-            </Card>
-        </div>);
-};
+});
 
-    
-// --- PESTAÑA 2: GESTIÓN DE TORNEO ---
-const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount, setModalData, refreshData }) => {
-    const { teams, matches } = allData;
-    const [expandedRows, setExpandedRows] = useState({});
-    const [showTiebreakers, setShowTiebreakers] = useState(false);
-    const [isSaving, setIsSaving] = useState(false);
-    // Función para cargar todos los datos
-      
-     const handleGenerateTiebreakers = async (tiedTeams, category) => {
-        const team_ids = tiedTeams.map(t => t.id);
-        setIsSaving(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/matches/generate-tiebreakers`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ team_ids, category, tournament_id: 1 }) // Asumimos un tournament_id por ahora
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.msg || 'Error al generar juegos de desempate.');
-            }
-            alert('Juegos de desempate generados. La tabla se actualizará.');
-            await refreshData();
-        } catch(err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-
-    const matchesByGroup = useMemo(() => matches.reduce((acc, match) => { const group = match.group_id; if (group && !match.is_tiebreaker) { if (!acc[group]) acc[group] = []; acc[group].push(match); } return acc; }, {}), [matches]);
-    
-    const calculateStats = (matches, teamId) => {
-        return matches.reduce((acc, match) => {
-            if (match.status !== 'finalizado') return acc;
-            const isTeam1 = match.team1_id === teamId;
-            const myScore = isTeam1 ? match.team1_score : match.team2_score;
-            const opponentScore = isTeam1 ? match.team2_score : match.team1_score;
-            if (myScore > opponentScore) { acc.G += 1; } else { acc.P += 1; }
-            acc.GF += myScore; acc.GC += opponentScore;
-            // Suma los puntos de torneo desde el partido
-            acc.TournamentPoints += isTeam1 ? (match.team1_tournament_points || 0) : (match.team2_tournament_points || 0);
-            return acc;
-        }, { G: 0, P: 0, GF: 0, GC: 0, TournamentPoints: 0 });
-    };
-
-    const tiebreakerInfo = useMemo(() => {
-        const tiebreakers = {};
-        const teamsWithPoints = teams.map(team => ({...team, tournament_points: team.tournament_points || 0}));
-        const teamsByGroup = teamsWithPoints.reduce((acc, team) => {
-            const group = team.groupId;
-            if (group) { if (!acc[group]) acc[group] = []; acc[group].push(team); }
-            return acc;
-        }, {});
-        for (const groupId in teamsByGroup) {
-            const groupTeams = teamsByGroup[groupId];
-            const pointsMap = groupTeams.reduce((acc, team) => {
-                const points = team.tournament_points;
-                if (!acc[points]) acc[points] = [];
-                acc[points].push(team);
-                return acc;
-            }, {});
-            tiebreakers[groupId] = Object.values(pointsMap).filter(teams => teams.length > 1 && teams[0].tournament_points > 0);
-        }
-        return tiebreakers;
-    }, [teams]);
-
-    const toggleRow = (teamId) => setExpandedRows(prev => ({ ...prev, [teamId]: !prev[teamId] }));
-    
-    return (
-        <div className="space-y-8">
-            {Object.keys(matchesByGroup).length > 0 ? (
-                Object.entries(matchesByGroup).map(([groupId, groupMatches]) => {
-                    const groupTeams = [...new Map(groupMatches.flatMap(m => [[m.team1_id, {id: m.team1_id, name: m.team1_name}], [m.team2_id, {id: m.team2_id, name: m.team2_name}]])).values()].sort((a,b) => a.id - b.id);
-                    const groupStandings = groupTeams.map(team => {
-                        const teamMatches = groupMatches.filter(m => m.team1_id === team.id || m.team2_id === team.id);
-                        const stats = calculateStats(teamMatches, team.id);
-                        return { ...team, stats, tournament_points: stats.TournamentPoints, diff: stats.GF - stats.GC };
-                    }).sort((a,b) => b.tournament_points - a.tournament_points || b.diff - a.diff);
-
-                    const numToEliminate = eliminationCount[groupId] || 0;
-                    const eliminatedTeamIds = (numToEliminate > 0) ? groupStandings.slice(-numToEliminate).map(t => t.id) : [];
-                    const groupLetter = String.fromCharCode(64 + parseInt(groupId));
-
-                    return (
-                       <Card key={groupId} title={`Round Robin - Grupo ${groupLetter}`} icon={BarChart2}
-                            extraHeaderContent={<div className="flex items-center gap-2 text-sm"><label htmlFor={`elim-${groupId}`} className="text-slate-400">Eliminar últimos:</label><input id={`elim-${groupId}`} type="number" min="0" max={groupTeams.length -1} value={eliminationCount[groupId] || 0} onChange={(e) => onEliminationCountChange({...eliminationCount, [groupId]: parseInt(e.target.value, 10) || 0})} className="w-16 bg-slate-700 p-1 rounded text-center border border-slate-600"/></div>}
-                        >
-                            <div className="overflow-x-auto">
-                                <table className="w-full text-left text-sm table-fixed">
-                                    <thead className="bg-slate-700/50">
-                                        <tr className="border-b border-slate-600">
-                                            <th className="p-3 font-semibold text-slate-300 w-[220px]">Equipo</th>
-                                            {groupTeams.map(team => <th key={team.id} className="p-3 font-semibold text-slate-300 text-center" title={team.name}>vs {team.name.substring(0,3).toUpperCase()}</th>)}
-                                            <th className="p-3 font-semibold text-slate-300 text-center w-16">G/P</th>
-                                            <th className="p-3 font-semibold text-slate-300 text-center w-24">Pts (F/C)</th>
-                                            <th className="p-3 font-semibold text-slate-300 text-center w-20">Dif.</th>
-                                            <th className="p-3 font-semibold text-slate-300 text-center w-28">Puntos Torneo</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {groupTeams.map(team => {
-                                            const teamStats = calculateStats(groupMatches, team.id);
-                                            const teamData = teams.find(t => t.id === team.id) || {};
-                                            const isEliminated = eliminatedTeamIds.includes(team.id);
-
-                                            return(
-                                            <React.Fragment key={team.id}>
-                                                <tr className={`border-b border-slate-700 transition-colors ${isEliminated ? 'bg-red-900/40' : 'hover:bg-slate-800/50'}`}>
-                                                    <td className="p-3 font-semibold cursor-pointer" onClick={() => toggleRow(team.id)}>
-                                                        <div className="text-base">{team.name}</div>
-                                                        <div className="text-xs text-slate-400 font-normal flex items-center">Desplegar Partidos <ChevronsUpDown size={14} className={`inline-block ml-1 transition-transform ${expandedRows[team.id] ? 'rotate-180' : ''}`} /></div>
-                                                    </td>
-                                                    {groupTeams.map(opponent => {
-                                                        if (opponent.id === team.id) return <td key={opponent.id} className="p-1 bg-slate-700/30 text-center align-middle">-</td>;
-                                                        const relevantMatches = groupMatches.filter(m => m.status === 'finalizado' && ((m.team1_id === team.id && m.team2_id === opponent.id) || (m.team1_id === opponent.id && m.team2_id === team.id)));
-                                                        const gamesWon = relevantMatches.filter(m => m.winner_id === team.id).length;
-                                                        return <td key={opponent.id} className="p-1 text-center font-mono text-base align-middle">{relevantMatches.length > 0 ? `${gamesWon}/${relevantMatches.length}`: '-'}</td>;
-                                                    })}
-                                                    <td className="p-3 text-center font-mono align-middle">{teamStats.G}/{teamStats.P}</td>
-                                                    <td className="p-3 text-center font-mono align-middle">{teamStats.GF}/{teamStats.GC}</td>
-                                                    <td className="p-3 text-center font-semibold text-lg align-middle">{teamStats.GF - teamStats.GC}</td>
-                                                    <td className="p-3 text-center font-semibold text-lg text-cyan-400 align-middle">{teamData.tournament_points || 0}</td>
-                                                </tr>
-                                                {expandedRows[team.id] && (
-                                                    <>
-                                                        {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenina'].map(category => {
-                                                            const categoryMatches = groupMatches.filter(m => m.category === category);
-                                                            const categoryStats = calculateStats(categoryMatches, team.id);
-                                                            return (
-                                                                <tr key={category} className="bg-slate-800/40 text-xs">
-                                                                    <td className="py-2 px-3 pl-8 text-slate-400 font-semibold">{category}</td>
-                                                                    {groupTeams.map(opponent => {
-                                                                        if (opponent.id === team.id) return <td key={opponent.id} className="py-2 px-3 text-center">-</td>;
-                                                                        const match = categoryMatches.find(m => (m.team1_id === team.id && m.team2_id === opponent.id) || (m.team1_id === opponent.id && m.team2_id === team.id));
-                                                                        const score1 = match ? (match.team1_id === team.id ? match.team1_score : match.team2_score) : null;
-                                                                        const score2 = match ? (match.team1_id === team.id ? match.team2_score : match.team1_score) : null;
-                                                                        return ( <td key={opponent.id} className="p-1 text-center">{match ? (<div onClick={() => setModalData(match)} className="bg-slate-700/50 hover:bg-slate-700 rounded-md p-2 cursor-pointer relative font-mono text-base">{score1 !== null ? `${score1}/${score2}` : '-'}<span className="absolute bottom-0 right-1 text-[8px] text-slate-500">ID:{match.id}</span></div>) : <div className="p-2">-</div>}</td> )
-                                                                    })}
-                                                                    <td className="py-2 px-3 text-center font-mono">{categoryStats.G}/{categoryStats.P}</td>
-                                                                    <td className="py-2 px-3 text-center font-mono">{categoryStats.GF}/{categoryStats.GC}</td>
-                                                                    <td className="py-2 px-3 text-center font-semibold">{categoryStats.GF - categoryStats.GC}</td>
-                                                                    <td className="py-2 px-3"></td>
-                                                                </tr>
-                                                            )
-                                                        })}
-                                                    </>
-                                                )}
-                                            </React.Fragment>
-                                        )})}
-                                    </tbody>
-                                </table>
-                            </div>
-                        </Card>
-                    )
-                })
-            ) : ( <Card title="Gestión de Torneo" icon={Gamepad2}><div className="text-center text-slate-400 py-8"><p>No se encontraron partidos.</p></div></Card> )}
-            
-             <Card title="Juegos de Desempate (Tie-Breaks)" icon={Swords} titleClassName="text-amber-400">
-                <button onClick={() => setShowTiebreakers(!showTiebreakers)} className="text-sm text-slate-300 flex items-center">{showTiebreakers ? 'Ocultar Desempates' : 'Mostrar Desempates'} <ChevronsUpDown size={16} className="ml-2" /></button>
-                {showTiebreakers && (
-                    <div className="mt-4 space-y-4">
-                        {Object.entries(tiebreakerInfo).map(([groupId, ties]) => (
-                            ties.length > 0 && (
-                                <div key={groupId}>
-                                    <h4 className="font-bold mb-2">Grupo {String.fromCharCode(64 + parseInt(groupId))}</h4>
-                                    {ties.map((tiedTeams, index) => (
-                                        <div key={index} className="bg-slate-900/50 p-3 rounded-lg mb-2">
-                                            <p className="text-sm font-semibold">Empate en {tiedTeams[0].tournament_points} puntos entre: <span className="text-amber-400">{tiedTeams.map(t => t.name).join(', ')}</span></p>
-                                            <div className="mt-2 text-xs space-y-1">
-                                                <p className="font-bold">Generar partidos de desempate por categoría:</p>
-                                                <div className="flex gap-2">
-                                                    {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenina'].map(category => (
-                                                        <button key={category} onClick={() => handleGenerateTiebreakers(tiedTeams, category)} className="bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded-md text-xs">{category}</button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )
-                        ))}
-                         {Object.values(tiebreakerInfo).every(v => v.length === 0) && <p className="text-sm text-slate-500">No hay empates que requieran desempate en este momento.</p>}
-                    </div>
-                )}
-             </Card>
-        </div>
-    );
-};
- 
-// --- PESTAÑA 3: STANDING (CORREGIDA) ---
-const StandingTab = ({ teams, matches, eliminationCount }) => {
-    const calculateStats = (teamMatches, teamId) => {
-        return teamMatches.reduce((acc, match) => {
-            if (match.status !== 'finalizado' || match.is_tiebreaker) return acc;
-            
-            const isTeam1 = match.team1_id === teamId;
-            if (isTeam1) {
-                acc.GF += match.team1_score;
-                acc.GC += match.team2_score;
-                acc.TournamentPoints += match.team1_tournament_points || 0;
-            } else {
-                acc.GF += match.team2_score;
-                acc.GC += match.team1_score;
-                acc.TournamentPoints += match.team2_tournament_points || 0;
-            }
-            if (match.winner_id === teamId) acc.G += 1; else acc.P += 1;
-            return acc;
-        }, { G: 0, P: 0, GF: 0, GC: 0, TournamentPoints: 0 });
-    };
-
-    const standingsByGroup = useMemo(() => {
-        if (!teams || !matches) return [];
-        
-        const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
-        
-        const groups = teams.reduce((acc, team) => {
-            const groupKey = team.groupId;
-            if (groupKey) {
-                if (!acc[groupKey]) {
-                    acc[groupKey] = { name: `Grupo ${getGroupLetter(groupKey)}`, id: groupKey, teams: [] };
-                }
-                const teamMatches = matches.filter(m => !m.is_tiebreaker && (m.team1_id === team.id || m.team2_id === team.id));
-                const stats = calculateStats(teamMatches, team.id);
-                acc[groupKey].teams.push({ ...team, stats, diff: stats.GF - stats.GC, tournament_points: stats.TournamentPoints });
-            }
-            return acc;
-        }, {});
-
-        for(const groupKey in groups) {
-            groups[groupKey].teams.sort((a, b) => {
-                if (b.tournament_points !== a.tournament_points) return b.tournament_points - a.tournament_points;
-                if (b.diff !== a.diff) return b.diff - a.diff;
-                return b.stats.GF - a.stats.GF;
-            });
-        }
-        return Object.values(groups);
-    }, [teams, matches]);
-
-    return (
-        <div className="space-y-8">
-            {standingsByGroup.length > 0 ? standingsByGroup.map(group => {
-                if (!group.teams || group.teams.length === 0) return null;
-                const numToEliminate = eliminationCount[group.id] || 0;
-                return (
-                    <Card key={group.name} title={`Clasificación - ${group.name}`} icon={ListOrdered}>
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left text-sm">
-                                <thead className="bg-slate-700/50">
-                                    <tr className="border-b border-slate-600">
-                                        <th className="p-3 font-semibold text-slate-300 w-10 text-center">#</th>
-                                        <th className="p-3 font-semibold text-slate-300">Equipo</th>
-                                        <th className="p-3 font-semibold text-slate-300 text-center">G/P</th>
-                                        <th className="p-3 font-semibold text-slate-300 text-center">Pts (F/C)</th>
-                                        <th className="p-3 font-semibold text-slate-300 text-center">Dif.</th>
-                                        <th className="p-3 font-semibold text-slate-300 text-center">Puntos Torneo</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {group.teams.map((team, index) => {
-                                        const isEliminated = numToEliminate > 0 && index >= group.teams.length - numToEliminate;
-                                        return (
-                                            <tr key={team.id} className={`border-b border-slate-700 transition-colors ${isEliminated ? 'bg-red-900/40 text-red-300' : ''}`}>
-                                                <td className="p-3 text-center font-bold">{index + 1}</td>
-                                                <td className="p-3 font-semibold text-base">{team.name}</td>
-                                                <td className="p-3 text-center font-mono">{team.stats.G}/{team.stats.P}</td>
-                                                <td className="p-3 text-center font-mono">{team.stats.GF}/{team.stats.GC}</td>
-                                                <td className="p-3 text-center font-semibold text-lg">{team.diff}</td>
-                                                <td className="p-3 text-center font-semibold text-lg text-cyan-400">{team.tournament_points}</td>
-                                            </tr>
-                                        )
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    </Card>
-                )
-            }) : <Card title="Standing"><p className="text-slate-400 text-center">No hay grupos definidos o partidos jugados en esta fase del torneo.</p></Card>}
-        </div>
-    );
-};
-// --- PESTAÑA 3: JUEGOS EN CURSO (DISEÑO ACTUALIZADO) ---
-const JuegosEnCursoTab = ({ matches, courts }) => {
-    const [loading, setLoading] = useState(true); 
-    const [error, setError] = useState(null); 
-    const matchesByCourt = useMemo(() => {
-        const data = {};
-        if (!courts || !matches) return data;
-        
-        courts.forEach(court => {
-            const courtMatches = matches.filter(m => m.court_id === court.id);
-            data[court.id] = {
-                name: court.name,
-                live: courtMatches.filter(m => m.status === 'en_vivo'),
-                upcoming: courtMatches.filter(m => m.status === 'asignado'),
-                played: courtMatches
-                    .filter(m => m.status === 'finalizado')
-                    .sort((a,b) => new Date(b.end_time) - new Date(a.end_time))
-                    .slice(0, 3)
-            };
-        });
-        return data;
-    }, [matches, courts]);
-  
-   // if (loading) return <div className="flex justify-center items-center p-10 text-slate-400"><Loader2 className="animate-spin h-8 w-8" /> <span className="ml-3">Cargando estado de las canchas...</span></div>;
-    // if (error) return <div className="text-red-400 text-center p-10 bg-red-900/20 rounded-lg">{error}</div>;
-
-    // --- Componente ServiceDots (Puntos de Servicio) ---
-   const ServiceDots = ({ isServingTeam, serverNum, isFirstServeOfGame }) => {
-  const firstDotActive  = isServingTeam && (isFirstServeOfGame || serverNum === 1);
-  const secondDotActive = isServingTeam && (isFirstServeOfGame ? false : serverNum === 2);
-
-  return (
-    <div className="flex gap-0.5 items-center">
-      <div className={`w-2 h-2 rounded-full ${firstDotActive  ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`} />
-      <div className={`w-2 h-2 rounded-full ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`} />
-    </div>
-  );
-};
-
-
-
-
-
-    
-    // --- Componente MatchCard (Tarjeta de Partido) ---
-    const MatchCard = ({ match }) => {
-        const winner = match.winner_id ? (match.winner_id === match.team1_id ? 'team1' : 'team2') : null;
-        const isFirstServeOfGame = !match.first_side_out_done;
-        return (
-            <div className={`bg-slate-800 p-2.5 rounded-lg border border-slate-700`}>
-                <div className="text-center text-xs font-bold text-cyan-400 mb-2">{match.category}</div>
-                <div className="space-y-1.5">
-                     <div className={`flex items-center rounded-md ${winner === 'team1' ? 'bg-green-800/30' : ''}`}>
-                        <div className="flex-grow min-w-0">
-                            <div className={`text-sm font-semibold ${winner === 'team1' ? 'text-amber-400' : ''}`}>
-                                {winner === 'team1' && '🏆 '}{match.team1_name}
-                            </div>
-                            <div className="text-xs text-slate-400 truncate">{match.team1_player1_name} / {match.team1_player2_name}</div>
-                        </div>
-                        <div className="flex items-center justify-end gap-1 flex-shrink-0">
-                          <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
-                            <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
-                           <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
-                           <span className="font-mono font-bold text-base w-6 text-right">{match.team1_score ?? '-'}</span>
-                        </div>
-                    </div>
-                    <div className={`flex items-center rounded-md ${winner === 'team2' ? 'bg-green-800/30' : ''}`}>
-                        <div className="flex-grow min-w-0">
-                           <div className={`text-sm font-semibold ${winner === 'team2' ? 'text-amber-400' : ''}`}>
-                               {winner === 'team2' && '🏆 '}{match.team2_name}
-                           </div>
-                           <div className="text-xs text-slate-400 truncate">{match.team2_player1_name} / {match.team2_player2_name}</div>
-                        </div>
-                        <div className="flex items-center justify-end gap-1 flex-shrink-0">
-                          
-                        <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
-                        <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
-           
-                           <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
-                           <span className="font-mono font-bold text-base w-6 text-right">{match.team2_score ?? '-'}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-    
-    const Section = ({ title, children }) => (
-        <div>
-            <h4 className="font-bold text-slate-400 text-base mb-1.5 uppercase tracking-wider">{title}</h4>
-            <div className="space-y-1.5">{children}</div>
-        </div>
-    );
-
-    return (
-        //<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
-          <div className="grid gap-6 grid-cols-[repeat(auto-fit,minmax(280px,1fr))]">
-            {courts.map(court => {
-                const data = matchesByCourt[court.id] || { live: [], upcoming: [], played: [] };
-                return (
-                    <div key={court.id} className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 flex flex-col space-y-4">
-                        <h3 className="font-bold text-lg text-center mb-3">{court.name}</h3>
-                        <div className="space-y-4">
-                            <Section title="En Vivo">
-                                {data.live.length > 0 ? data.live.map(m => <MatchCard key={m.id} match={m} />) : <div className="bg-slate-800 p-2.5 rounded-lg border border-slate-700 min-h-[106px] flex items-center justify-center text-slate-500 text-sm">
-  VACIA
-</div>}
-                            </Section>
-                            <Section title="Próximos">
-                                {data.upcoming.length > 0 ? data.upcoming.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos próximos.</p>}
-                            </Section>
-                            <Section title="Jugados Recientemente">
-                               {data.played.length > 0 ? data.played.map(m => <MatchCard key={m.id} match={m} />) : <p className="text-xs text-slate-500 text-center">No hay juegos recientes.</p>}
-                            </Section>
-                        </div>
-                    </div>
-                )
-            })}
-        </div>
-    );
-};
-const AvisosTab = ({ allData }) => {
-    const [manualMessage, setManualMessage] = useState("");
-    const [isSending, setIsSending] = useState(false);
-    const [sentWhatsApp, setSentWhatsApp] = useState({});
-
-    const assignedMatches = useMemo(() => 
-        allData.matches.filter(m => m.status === 'asignado'), 
-    [allData.matches]);
-
-    console.log(allData.matches.map(m => m.status));
-    
-    const handleSendGeneral = async () => {
-        if (!manualMessage.trim()) return;
-        setIsSending(true);
-        try {
-            await fetch(`${API_BASE_URL}/api/announcements/general`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: manualMessage })
-            });
-            setManualMessage("");
-        } catch (err) {
-            alert('Error al enviar el aviso.');
-        } finally {
-            setIsSending(false);
-        }
-    };
-    
-    // --- FUNCIÓN CORREGIDA ---
-    // Ahora solo envía el ID del partido al endpoint correcto.
-    const handleAnnounceGame = async (matchId) => {
-        try {
-            await fetch(`${API_BASE_URL}/api/matches/${matchId}/announce`, {
-                method: 'POST',
-            });
-            // El backend se encarga de todo. El WebSocket actualizará el estado del botón.
-        } catch (err) {
-            alert('Error al anunciar el partido.');
-            console.error(err);
-        }
-    };
-
-    const handleSendWhatsApp = (playerName, match) => {
-        const court = allData.courts.find(c => c.id === match.court_id);
-        const message = `El juego No. ${match.id} entre ${match.team1_name} y ${match.team2_name} va a comenzar en la ${court?.name || `Cancha #${match.court_id}`}, favor presentarte.`;
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
-        setSentWhatsApp(prev => ({...prev, [`${match.id}-${playerName}`]: true}));
-    };
-
-    return (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-1 space-y-8">
-                <Card title="Aviso General" icon={Megaphone}>
-                    <div className="space-y-3">
-                        <textarea value={manualMessage} onChange={(e) => setManualMessage(e.target.value)} placeholder="Escribe un mensaje para mostrar en el tablero público..." className="w-full bg-slate-700 p-2 rounded-md border border-slate-600 min-h-[80px]"></textarea>
-                        <button onClick={handleSendGeneral} disabled={isSending} className="w-full flex items-center justify-center p-2 bg-blue-600 hover:bg-blue-700 rounded-md font-semibold text-sm">
-                            <Send className="mr-2 h-4 w-4" /> Enviar Aviso
-                        </button>
-                    </div>
-                </Card>
-            </div>
-
-            <div className="lg:col-span-2 space-y-8">
-                <Card title="Anunciar Partidos Asignados" icon={Bell}>
-                    <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                        {assignedMatches.length > 0 ? assignedMatches.map(match => {
-                            const wasAnnounced = match.is_announced;
-                            return (
-                                <div key={match.id} className="bg-slate-800/50 p-2 rounded-lg flex justify-between items-center">
-                                    <div>
-                                        <p className="font-semibold text-sm">{match.team1_name} vs {match.team2_name}</p>
-                                        <p className="text-xs text-slate-400">Categoría: {match.category} - Cancha: {match.court_id}</p>
-                                    </div>
-                                    <button onClick={() => handleAnnounceGame(match.id)} className={`px-3 py-1 text-xs rounded-md flex items-center transition-colors ${wasAnnounced ? 'bg-green-700 hover:bg-green-800' : 'bg-cyan-600 hover:bg-cyan-700'}`}>
-                                        {wasAnnounced ? <Check className="mr-2 h-4 w-4"/> : <Bell className="mr-2 h-4 w-4"/>}
-                                        {wasAnnounced ? 'Anunciado' : 'Anunciar'}
-                                    </button>
-                                </div>
-                            )
-                        }) : <p className="text-slate-400 text-center text-sm">No hay partidos asignados para anunciar.</p>}
-                    </div>
-                </Card>
-                <Card title="Notificar Jugadores vía WhatsApp" icon={Users}>
-                     <div className="space-y-4 max-h-[400px] overflow-y-auto">
-                         {assignedMatches.length > 0 ? assignedMatches.map(match => (
-                            <div key={`wa-${match.id}`} className="bg-slate-800/50 p-3 rounded-lg">
-                               <p className="font-semibold mb-2 text-sm">{match.team1_name} vs {match.team2_name}</p>
-                               <div className="grid grid-cols-2 gap-2 text-sm">
-                                   <div className="space-y-2">
-                                       <p className="font-bold">{match.team1_name}</p>
-                                       {[match.team1_player1_name, match.team1_player2_name].map(name => {
-                                           if (!name) return null;
-                                           const wasSent = sentWhatsApp[`${match.id}-${name}`];
-                                           return <button key={name} onClick={() => handleSendWhatsApp(name, match)} className={`w-full text-left px-2 py-1 rounded flex items-center justify-between text-xs ${wasSent ? 'bg-green-800/70' : 'bg-slate-700 hover:bg-slate-600'}`}>{name} {wasSent ? <Check size={14}/> : <Send size={14}/>}</button>
-                                       })}
-                                   </div>
-                                   <div className="space-y-2">
-                                       <p className="font-bold">{match.team2_name}</p>
-                                        {[match.team2_player1_name, match.team2_player2_name].map(name => {
-                                           if (!name) return null;
-                                           const wasSent = sentWhatsApp[`${match.id}-${name}`];
-                                           return <button key={name} onClick={() => handleSendWhatsApp(name, match)} className={`w-full text-left px-2 py-1 rounded flex items-center justify-between text-xs ${wasSent ? 'bg-green-800/70' : 'bg-slate-700 hover:bg-slate-600'}`}>{name} {wasSent ? <Check size={14}/> : <Send size={14}/>}</button>
-                                       })}
-                                   </div>
-                               </div>
-                            </div>
-                         )) : <p className="text-slate-400 text-center text-sm">No hay partidos asignados para notificar.</p>}
-                    </div>
-                </Card>
-            </div>
-        </div>
-    );
-};
-
-const HorariosTab = ({ matches, courts, openScheduleModal, tournamentStartDate }) => {
-  // 1. Obtén fecha por defecto: startDate (de torneo) o hoy
-  const defaultDate = useMemo(() => {
-    let date = new Date();
-    if (tournamentStartDate) {
-      const base = new Date(tournamentStartDate);
-      if (!isNaN(base.getTime())) date = base;
+router.post('/generate-round-robin', async (req, res) => {
+    const { tournament_id } = req.body;
+    if (!tournament_id) {
+        return res.status(400).json({ msg: "Se requiere un ID de torneo." });
     }
-    // Regresa yyyy-mm-dd
-    return date.toISOString().substring(0, 10);
-  }, [tournamentStartDate]);
 
-  // 2. Estado para el DatePicker
-  const [selectedDate, setSelectedDate] = useState(defaultDate);
-
-  // 3. Slots del día seleccionado
-  const timeSlots = useMemo(() => {
-    const slots = [];
-    const [year, month, day] = selectedDate.split('-').map(Number);
-    for (let h = 9; h < 22; h++) {
-      for (let m = 0; m < 60; m += 20) {
-        const slot = new Date(year, month - 1, day, h, m, 0, 0);
-        slots.push(slot);
-      }
-    }
-    return slots;
-  }, [selectedDate]);
-
-  // 4. Función color por estado
-  const getStatusColor = (status) => {
-    if (status === 'finalizado') return 'border-green-500 bg-green-500/20';
-    if (status === 'en_vivo') return 'border-red-500 bg-red-500/20';
-    if (status === 'asignado') return 'border-blue-500 bg-blue-500/20';
-    return 'border-slate-600 bg-slate-700/50';
-  };
-
-  // 5. Componente visual partido
-  const MatchBlock = ({ match }) => (
-  <div
-    onClick={() => openScheduleModal(match)}
-    className={`p-2 rounded-md cursor-pointer hover:scale-105 transition-transform border-l-4 mb-1 ${getStatusColor(match.status)}`}
-  >
-    <p className="text-xs font-bold truncate">{match.team1_name} vs {match.team2_name}</p>
-    <div className="text-slate-400 text-xs leading-tight mt-1 mb-1">
-      <div>{match.team1_player1_name || 'N/A'} / {match.team1_player2_name || 'N/A'}</div>
-      <div>{match.team2_player1_name || 'N/A'} / {match.team2_player2_name || 'N/A'}</div>
-    </div>
-    <p className="text-xs text-slate-400">{match.category}</p>
-  </div>
-);
-  // 6. Render
-  return (
-    <>
-      <div className="mb-4 flex items-center gap-4">
-        <label htmlFor="fecha-horarios" className="font-semibold flex items-center gap-2">
-          <Calendar size={18} /> Día:
-        </label>
-        <input
-          id="fecha-horarios"
-          type="date"
-          value={selectedDate}
-          onChange={e => setSelectedDate(e.target.value)}
-          className="bg-slate-700 text-white rounded-md px-2 py-1 border border-slate-600"
-        />
-      </div>
-      <Card title="Calendario de Partidos" icon={Calendar}>
-        <div className="overflow-x-auto">
-          <table style={{ minWidth: `${120 + 200 * (courts.length + 1)}px` }} className="w-full border-collapse">
-            <thead>
-              <tr className="bg-slate-700/50">
-                <th className="sticky left-0 bg-slate-700 p-2 border border-slate-600 w-24 text-sm">Hora</th>
-                <th className="p-2 border border-slate-600 w-48 text-sm">Pendiente Asignar</th>
-                {courts.map(court => (
-                  <th key={court.id} className="p-2 border border-slate-600 w-48 text-sm">{court.name}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {timeSlots.map((slot, index) => (
-                <tr key={index}>
-                  <td className="sticky left-0 bg-slate-800 p-2 border border-slate-700 text-center text-xs font-mono">
-                    {slot.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </td>
-                  <td className="p-1 border border-slate-700 align-top">
-                    {matches.filter(m => {
-                      if (m.court_id) return false;
-                      if (!m.scheduled_start_time) return false;
-                      const matchDate = new Date(m.scheduled_start_time);
-                      return (
-                        matchDate.getFullYear() === slot.getFullYear() &&
-                        matchDate.getMonth() === slot.getMonth() &&
-                        matchDate.getDate() === slot.getDate() &&
-                        matchDate.getHours() === slot.getHours() &&
-                        matchDate.getMinutes() === slot.getMinutes()
-                      );
-                    }).map(match => <MatchBlock key={match.id} match={match} />)}
-                  </td>
-                  {courts.map(court => (
-                    <td key={court.id} className="p-1 border border-slate-700 align-top">
-                      {matches.filter(m => {
-                        if (m.court_id !== court.id) return false;
-                        if (!m.scheduled_start_time) return false;
-                        const matchDate = new Date(m.scheduled_start_time);
-                        return (
-                          matchDate.getFullYear() === slot.getFullYear() &&
-                          matchDate.getMonth() === slot.getMonth() &&
-                          matchDate.getDate() === slot.getDate() &&
-                          matchDate.getHours() === slot.getHours() &&
-                          matchDate.getMinutes() === slot.getMinutes()
-                        );
-                      }).map(match => <MatchBlock key={match.id} match={match} />)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </>
-  );
-};
-
-// --- COMPONENTE PRINCIPAL ---
-export default function TournamentAdminPage() {
-    const [activeTab, setActiveTab] = useState('partidos');
-    const [tournaments, setTournaments] = useState([]);
-    const [activeTournamentId, setActiveTournamentId] = useState(null);
-    const [allData, setAllData] = useState({ matches: [], teams: [], courts: [] });
-    const [allTeamsForSelection, setAllTeamsForSelection] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
-    const [eliminationCount, setEliminationCount] = useState({});
-    const [allPlayers, setAllPlayers] = useState([]);
-    const [isConfigOpen, setIsConfigOpen] = useState(false);
-    const [isCreatePhaseOpen, setIsCreatePhaseOpen] = useState(false);
-    const [editingMatch, setEditingMatch] = useState(null);
-    const [schedulingMatch, setSchedulingMatch] = useState(null);
-    const [isSaving, setIsSaving] = useState(false);
-    const [allCategories, setAllCategories] = useState([]);
-
-
-     const fetchDataForTournament = useCallback(async (tournamentId, isSilent = false) => {
-        if (!tournamentId) { setLoading(false); return; }
-        if (!isSilent) setLoading(true);
-        try {
-            const [matchesRes, teamsRes, courtsRes, categoriesRes] = await Promise.all([
-                fetch(`${API_BASE_URL}/api/matches/scoreboard/${tournamentId}`),
-                fetch(`${API_BASE_URL}/api/teams/by-tournament/${tournamentId}`),
-                fetch(`${API_BASE_URL}/api/courts`),
-                fetch(`${API_BASE_URL}/api/categories`)
-            ]);
-            if (!matchesRes.ok || !teamsRes.ok || !courtsRes.ok || !categoriesRes.ok) throw new Error('No se pudieron cargar los datos del torneo.');
-            const matchesData = await matchesRes.json();
-            const teamsData = await teamsRes.json();
-            const courtsData = await courtsRes.json();    
-            const categoriesData = await categoriesRes.json();
-            setAllData({ matches: matchesData, teams: teamsData, courts: courtsData, categories: categoriesData});
-            setError(null);
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            if (!isSilent) setLoading(false);
-        }
-    }, []);
-
-const fetchInitialData = useCallback(async () => {
+    const client = await db.connect();
     try {
-        const [tournamentsRes, allTeamsRes, allPlayersRes, categoriesRes] = await Promise.all([
-            fetch(`${API_BASE_URL}/api/tournaments`),
-            fetch(`${API_BASE_URL}/api/teams`),
-            fetch(`${API_BASE_URL}/api/players`),
-            fetch(`${API_BASE_URL}/api/categories`)
-        ]);
-        const tournamentsData = await tournamentsRes.json();
-        const allTeamsData = await allTeamsRes.json();
-        const allPlayersData = await allPlayersRes.json();
-        const categoriesData = await categoriesRes.json();
+        await client.query('BEGIN');
 
-        setTournaments(tournamentsData);
-        setAllTeamsForSelection(allTeamsData);
-        setAllPlayers(allPlayersData);
+        // 1. Obtener equipos del torneo y sus grupos
+        const teamsRes = await client.query(`
+            SELECT id, name, group_id
+            FROM teams
+            WHERE tournament_id = $1 AND group_id IS NOT NULL
+        `, [tournament_id]);
+        const teams = teamsRes.rows;
 
-        // Si quieres guardar las categorías también en allData
-        setAllData(prev => ({
-            ...prev,
-            categories: categoriesData
+        if (teams.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ msg: 'No hay equipos asignados a grupos para este torneo.' });
+        }
+
+        // 2. Obtener todas las categorías presentes por equipo
+        const teamCategoriesRes = await client.query(`
+            SELECT tp.team_id, c.id as category_id, c.name as category
+            FROM team_players tp
+            JOIN players p ON tp.player_id = p.id
+            JOIN categories c ON p.category_id = c.id
+            WHERE tp.team_id IN (${teams.map(t => t.id).join(',')})
+            GROUP BY tp.team_id, c.id, c.name
+        `);
+
+        // Mapear: groupId -> { categoryName -> [teamId, ...] }
+        const teamsByGroupAndCategory = {};
+        teams.forEach(team => {
+            if (!teamsByGroupAndCategory[team.group_id]) teamsByGroupAndCategory[team.group_id] = {};
+        });
+
+        teamCategoriesRes.rows.forEach(row => {
+            const team = teams.find(t => t.id === row.team_id);
+            if (!team) return;
+            const groupMap = teamsByGroupAndCategory[team.group_id];
+            if (!groupMap[row.category]) groupMap[row.category] = [];
+            groupMap[row.category].push(team.id);
+        });
+
+        // 3. Generar round robin por cada grupo y categoría con al menos 2 equipos
+        const generatedMatches = [];
+        for (const groupId in teamsByGroupAndCategory) {
+            const categoriesMap = teamsByGroupAndCategory[groupId];
+            for (const categoryName in categoriesMap) {
+                const groupTeamIds = categoriesMap[categoryName];
+                if (groupTeamIds.length < 2) continue; // Skip si no hay mínimo dos equipos
+
+                // Round robin entre esos equipos para esta categoría
+                for (let i = 0; i < groupTeamIds.length; i++) {
+                    for (let j = i + 1; j < groupTeamIds.length; j++) {
+                        const team1_id = groupTeamIds[i];
+                        const team2_id = groupTeamIds[j];
+                        const sql = `
+                            INSERT INTO matches (tournament_id, team1_id, team2_id, category, status, group_id)
+                            VALUES ($1, $2, $3, $4, 'pendiente', $5)
+                            RETURNING *;
+                        `;
+                        const result = await client.query(sql, [tournament_id, team1_id, team2_id, categoryName, groupId]);
+                        generatedMatches.push(result.rows[0]);
+                    }
+                }
+            }
+        }
+
+        await client.query('COMMIT');
+        res.status(201).json({ message: 'Partidos generados exitosamente.', matches: generatedMatches });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Error al generar partidos:", err.message);
+        res.status(500).send('Error en el servidor al generar partidos.');
+    } finally {
+        client.release();
+    }
+});
+
+
+router.post('/generate-tiebreakers', async (req, res) => {
+    const { team_ids, tournament_id = 1, category_id } = req.body;
+
+    if (!team_ids || team_ids.length < 2 || !category_id) {
+        return res.status(400).json({ msg: 'Se requiere una lista de IDs de equipos y un category_id.' });
+    }
+
+    const client = await db.connect();
+    try {
+        // Traer el nombre de la categoría para referencia visual
+        const categoryRes = await client.query('SELECT name FROM categories WHERE id = $1', [category_id]);
+        const category = categoryRes.rows[0]?.name || '';
+
+        await client.query('BEGIN');
+        const generatedMatches = [];
+
+        for (let i = 0; i < team_ids.length; i++) {
+            for (let j = i + 1; j < team_ids.length; j++) {
+                const team1_id = team_ids[i];
+                const team2_id = team_ids[j];
+                const sql = `
+                  INSERT INTO matches
+                    (tournament_id, team1_id, team2_id, category, category_id, status, is_tiebreaker)
+                  VALUES ($1, $2, $3, $4, $5, 'pendiente', TRUE)
+                  RETURNING *;
+                `;
+                const result = await client.query(sql, [
+                    tournament_id,
+                    team1_id,
+                    team2_id,
+                    category,       // nombre de categoría para mostrar (puedes quitar si no usas)
+                    category_id
+                ]);
+                generatedMatches.push(result.rows[0]);
+            }
+        }
+        await client.query('COMMIT');
+        res.status(201).json({ message: 'Partidos de desempate generados exitosamente.', matches: generatedMatches });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Error al generar partidos de desempate:", err.message);
+        res.status(500).send('Error en el servidor.');
+    } finally {
+        client.release();
+    }
+});
+
+
+
+// --- OTRAS RUTAS ---
+router.get('/:id/details', async (req, res) => { 
+    try {
+        const { id } = req.params;
+        const matchRes = await db.query('SELECT * FROM matches WHERE id = $1', [id]);
+        if (matchRes.rows.length === 0) {
+            return res.status(404).json({ msg: 'Partido no encontrado' });
+        }
+        const match = matchRes.rows[0];
+
+        const teamsRes = await db.query('SELECT * FROM teams WHERE id = ANY($1::int[])', [[match.team1_id, match.team2_id]]);
+        const teamsData = teamsRes.rows;
+
+        const playersRes = await db.query(
+            `SELECT p.id, p.full_name, p.category, tp.team_id 
+             FROM players p 
+             JOIN team_players tp ON p.id = tp.player_id 
+             WHERE tp.team_id = ANY($1::int[])`,
+            [[match.team1_id, match.team2_id]]
+        );
+        const playersData = playersRes.rows;
+
+        const team1 = teamsData.find(t => t.id === match.team1_id);
+        team1.players = playersData.filter(p => p.team_id === match.team1_id);
+
+        const team2 = teamsData.find(t => t.id === match.team2_id);
+        team2.players = playersData.filter(p => p.team_id === match.team2_id);
+
+        res.json({ match, team1, team2 });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send('Error en el servidor');
+    }
+});
+
+
+
+// --- RUTA base para obtener todos los partidos, mostrando category y category_id
+router.get('/', async (req, res) => {
+    try {
+        const result = await db.query(`
+            SELECT m.*, c.name AS category_name
+            FROM matches m
+            LEFT JOIN categories c ON m.category_id = c.id
+            ORDER BY m.id
+        `);
+        const matches = result.rows.map(row => ({
+            ...row,
+            categoryId: row.category_id, // asegúrate que existe category_id en matches
+            category: row.category_name  // así tienes el nombre legible
         }));
-
-        if (tournamentsData.length > 0) {
-            if (!activeTournamentId) {
-                setActiveTournamentId(tournamentsData[0].id);
-            }
-        } else {
-            setLoading(false);
-        }
+        res.json(matches);
     } catch (err) {
-        setError("Error al cargar datos iniciales.");
-        setLoading(false);
+        console.error(err.message);
+        res.status(500).send('Error en el servidor');
     }
-}, [activeTournamentId]);
+});
 
-    useEffect(() => {
-        fetchInitialData();
-    }, [fetchInitialData]);
 
-    useEffect(() => {
-        if (activeTournamentId) {
-            fetchDataForTournament(activeTournamentId);
-        }
-    }, [activeTournamentId, fetchDataForTournament]);
-
-    useEffect(() => {
-        if (!activeTournamentId) return;
-        const socket = new WebSocket(WS_URL);
-        socket.onmessage = (event) => {
-            try {
-                const message = JSON.parse(event.data);
-                if ((message.type === 'MATCH_UPDATE' || message.type === 'SCORE_UPDATE') && message.payload.tournament_id === parseInt(activeTournamentId)) {
-                    fetchDataForTournament(activeTournamentId, true);
-                }
-            } catch (error) {
-                console.error("Error procesando mensaje de WebSocket:", error);
-            }
-        };
-        return () => socket.close();
-    }, [activeTournamentId, fetchDataForTournament]);
+// Actualizar un partido específico
+router.put('/:id', async (req, res) => {
+    const { id } = req.params;
+    const updates = req.body;
     
-    const handleSaveMatch = async (matchId, updateData) => {
-        setIsSaving(true);
-        const token = localStorage.getItem('token'); // Obtiene el token
-        if (!token) {
-            alert("Sesión expirada. Por favor, inicie sesión de nuevo.");
-            setIsSaving(false);
-            return;
-        }
-        try {
-            await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(updateData)
-            });
-            setEditingMatch(null);
-            setSchedulingMatch(null);
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
-   
-// CORRECCIÓN: Ahora esta función recarga todo
-    const handleGenerationComplete = () => {
-        fetchInitialData();
-        fetchDataForTournament(activeTournamentId);
-    };
-
-     const handleCreatePhase = async (phaseData) => {
-        setIsSaving(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/tournaments/create_phase`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(phaseData)
-            });
-            const newTournament = await response.json();
-            if (!response.ok) throw new Error(newTournament.msg || "Error al crear la fase");
-            
-            await fetchInitialData();
-            setActiveTournamentId(newTournament.id);
-            setIsCreatePhaseOpen(false);
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
+    const allowedColumns = [ 
+        'court_id', 'status', 'team1_score', 'team2_score', 
+        'server_team_id', 'server_number', 'start_time', 'end_time',
+        'first_side_out_done', 'player_positions', 'winner_id',
+        'team1_tournament_points', 'team2_tournament_points', 'is_announced',
+        'scheduled_start_time'
+    ];
     
-    const activeTournament = tournaments.find(t => t.id === parseInt(activeTournamentId));
-
-    return (
-        <div className="bg-slate-900 text-white min-h-screen p-4 sm:p-6 lg:p-8">
-            <div className="max-w-screen-2xl mx-auto">
-                <div className="flex justify-between items-center mb-6">
-                    <h1 className="text-3xl font-bold text-cyan-400">Panel de Control</h1>
-                    <div className="flex items-center gap-4">
-                        <select
-                            value={activeTournamentId || ''}
-                            onChange={(e) => setActiveTournamentId(parseInt(e.target.value))}
-                            className="bg-slate-700 border border-slate-600 rounded-md p-2"
-                        >
-                            {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                        </select>
-                        <button onClick={() => setIsCreatePhaseOpen(true)} className="p-2 rounded-full hover:bg-slate-700" title="Crear Nueva Fase"><PlusCircle /></button>
-                        <button onClick={() => setIsConfigOpen(true)} className="p-2 rounded-full hover:bg-slate-700" title="Configuración General"><Settings /></button>
-                    </div>
-                </div>
-                
-                <div className="flex border-b border-slate-700 overflow-x-auto">
-                    <TabButton tabName="partidos" label="Partidos" icon={BarChart2} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <TabButton tabName="horarios" label="Horarios" icon={Calendar} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <TabButton tabName="grupos" label="Grupos" icon={Users} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <TabButton tabName="standing" label="Standing" icon={ListOrdered} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <TabButton tabName="juegos" label="En Vivo" icon={MonitorPlay} activeTab={activeTab} setActiveTab={setActiveTab} />
-                    <TabButton tabName="avisos" label="Avisos" icon={Megaphone} activeTab={activeTab} setActiveTab={setActiveTab} />
-                </div>
-
-                <div className="pt-8">
-                    {editingMatch && <MatchEditModal match={editingMatch} courts={allData.courts} onClose={() => setEditingMatch(null)} onSave={handleSaveMatch} isSaving={isSaving} />}
-                    {schedulingMatch && <ScheduleMatchModal match={schedulingMatch} courts={allData.courts} onClose={() => setSchedulingMatch(null)} onSave={handleSaveMatch} isSaving={isSaving} tournamentStartDate={activeTournament?.start_date} />}
-                    
-                    {loading ? ( <div className="flex justify-center items-center p-10"><Loader2 className="animate-spin h-8 w-8" /></div> ) : 
-                    error ? (<div className="text-red-400 text-center p-10">{error}</div>) : (
-                        <div key={activeTournamentId}>
-                           {activeTab === 'partidos' && <PartidosTab matches={allData.matches} courts={allData.courts} refreshData={() => fetchDataForTournament(activeTournamentId)} setEditingMatch={setEditingMatch} openScheduleModal={setSchedulingMatch}/>}
-                           {activeTab === 'horarios' && <HorariosTab matches={allData.matches} courts={allData.courts} openScheduleModal={setSchedulingMatch} />}
-                           {activeTab === 'grupos' && <GestionTorneoTab allData={allData} onEliminationCountChange={setEliminationCount} eliminationCount={eliminationCount} setModalData={setEditingMatch} />}
-                           {activeTab === 'standing' && <StandingTab teams={allData.teams} matches={allData.matches} eliminationCount={eliminationCount} />}
-                           {activeTab === 'juegos' && <JuegosEnCursoTab matches={allData.matches} courts={allData.courts} />}
-                           {activeTab === 'avisos' && <AvisosTab allData={allData} />}
-                        </div>
-                    )}
-                </div>
-                
-                <CreatePhaseModal 
-                    isOpen={isCreatePhaseOpen} 
-                    onClose={() => setIsCreatePhaseOpen(false)} 
-                    allTeams={allTeamsForSelection} 
-                    tournaments={tournaments}
-                    onCreate={handleCreatePhase} 
-                    isSaving={isSaving}
-                />
-                {isConfigOpen && (
-                    <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 pt-20">
-                        <div className="bg-slate-800 border border-slate-700 rounded-lg shadow-xl w-full max-w-6xl max-h-[85vh] flex flex-col">
-                            <header className="p-4 border-b border-slate-700 flex justify-between items-center flex-shrink-0">
-                                <h2 className="text-xl font-bold text-cyan-400 flex items-center"><Settings className="mr-3" />Configuración General del Torneo</h2>
-                                <button onClick={() => setIsConfigOpen(false)} className="text-slate-400 hover:text-white"><X /></button>
-                            </header>
-                            <main className="p-6 overflow-y-auto">
-                                <ConfiguracionPanel 
-                                    initialData={allData}
-                                    allPlayers={allPlayers}
-                                    onGenerationComplete={handleGenerationComplete} 
-                                    activeTournamentId={activeTournamentId}
-                                    onClose={() => setIsConfigOpen(false)}
-                                />
-                            </main>
-                        </div>
-                    </div>
-                )}
-            </div>
-        </div>
+    // CORRECCIÓN: Se filtran las claves que no tienen un valor definido (undefined)
+    const validUpdateKeys = Object.keys(updates).filter(key => 
+        allowedColumns.includes(key) && updates[key] !== undefined
     );
-}
+
+    if (validUpdateKeys.length === 0) {
+        return res.status(400).json({ msg: 'No se proporcionaron campos válidos para actualizar.' });
+    }
+    
+    // Se convierten las cadenas vacías a null para la base de datos
+    validUpdateKeys.forEach(key => {
+        if (updates[key] === '') {
+            updates[key] = null;
+        }
+    });
+
+    try {
+        if (updates.status === 'en_vivo') {
+            let courtId = updates.court_id;
+            if (!courtId) {
+                const matchRes = await db.query('SELECT court_id FROM matches WHERE id = $1', [id]);
+                if (matchRes.rows.length > 0) {
+                    courtId = matchRes.rows[0].court_id;
+                }
+            }
+            if (courtId) {
+                const checkLiveSql = 'SELECT id FROM matches WHERE court_id = $1 AND status = $2 AND id != $3';
+                const liveMatchRes = await db.query(checkLiveSql, [courtId, 'en_vivo', id]);
+                if (liveMatchRes.rows.length > 0) {
+                    return res.status(409).json({ msg: `La cancha #${courtId} ya está ocupada por el partido #${liveMatchRes.rows[0].id}.` });
+                }
+            }
+        }
+        
+        // --- UPDATE PRINCIPAL ---
+        const setClause = validUpdateKeys.map((key, index) => `"${key}" = $${index + 1}`).join(', ');
+        const values = validUpdateKeys.map(key => updates[key]);
+        values.push(id);
+        const sql = `UPDATE matches SET ${setClause} WHERE id = $${values.length} RETURNING *`;
+        const result = await db.query(sql, values);
+        if (result.rows.length === 0) return res.status(404).json({ msg: 'Partido no encontrado' });
+        let updatedMatch = result.rows[0];
+
+        // --- LOGICA DE PUNTOS DE TORNEO ---
+        if (updates.status === 'finalizado') {
+            // Lee los scores si vinieron en la petición, sino usa los actuales
+            let team1_score = typeof updates.team1_score === 'number' ? updates.team1_score : updatedMatch.team1_score;
+            let team2_score = typeof updates.team2_score === 'number' ? updates.team2_score : updatedMatch.team2_score;
+
+            let team1_points = 0, team2_points = 0;
+            if (team1_score > team2_score) {
+                team1_points = 3; team2_points = 0;
+            } else if (team2_score > team1_score) {
+                team2_points = 3; team1_points = 0;
+            } else {
+                team1_points = 1; team2_points = 1; // Empate (opcional)
+            }
+
+            // Asigna puntos (esto puede ir en la misma tabla o tabla de standings según tu modelo)
+            const ptsRes = await db.query(
+                `UPDATE matches SET team1_tournament_points = $1, team2_tournament_points = $2 WHERE id = $3 RETURNING *`,
+                [team1_points, team2_points, id]
+            );
+            updatedMatch = ptsRes.rows[0];
+        } else if (updates.status === 'pendiente' || updates.status === 'asignado') {
+            // Si el partido deja de ser finalizado, resetea los puntos
+            const ptsRes = await db.query(
+                `UPDATE matches SET team1_tournament_points = 0, team2_tournament_points = 0 WHERE id = $1 RETURNING *`,
+                [id]
+            );
+            updatedMatch = ptsRes.rows[0];
+        }
+
+        // --- WEBSOCKET ---
+        const wss = req.app.get('wss');
+        if (wss) {
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'MATCH_UPDATE', payload: updatedMatch }));
+                }
+            });
+        }
+        
+        res.json(updatedMatch);
+
+    } catch (err) {
+        console.error('Error al actualizar el partido:', err.message);
+        res.status(500).send('Error en el servidor');
+    }
+});
+
+router.post('/:id/finalize', async (req, res) => {
+    const { id } = req.params;
+    const { team1_score, team2_score } = req.body;
+
+    if (team1_score === undefined || team2_score === undefined) {
+        return res.status(400).json({ msg: 'Se requieren las puntuaciones de ambos equipos.' });
+    }
+
+    const client = await db.connect();
+    try {
+        await client.query('BEGIN');
+        const matchRes = await client.query('SELECT team1_id, team2_id, is_tiebreaker FROM matches WHERE id = $1', [id]);
+        if (matchRes.rows.length === 0) throw new Error('Partido no encontrado');
+        
+        const { team1_id, team2_id, is_tiebreaker } = matchRes.rows[0];
+        const winner_id = team1_score > team2_score ? team1_id : team2_id;
+        const team1_points = winner_id === team1_id ? 200 : 100;
+        const team2_points = winner_id === team2_id ? 200 : 100;
+        const final_team1_points = is_tiebreaker ? 0 : team1_points;
+        const final_team2_points = is_tiebreaker ? 0 : team2_points;
+
+        const updateMatchSql = `
+            UPDATE matches 
+            SET team1_score = $1, team2_score = $2, winner_id = $3, status = 'finalizado', 
+                end_time = NOW(), team1_tournament_points = $4, team2_tournament_points = $5
+            WHERE id = $6 RETURNING *;
+        `;
+        const updatedMatch = await client.query(updateMatchSql, [team1_score, team2_score, winner_id, final_team1_points, final_team2_points, id]);
+        
+        await client.query('COMMIT');
+        
+        // Se añade la notificación WebSocket también al finalizar un partido.
+        const wss = req.app.get('wss');
+        if (wss) {
+            wss.clients.forEach(client => {
+                if (client.readyState === WebSocket.OPEN) {
+                    client.send(JSON.stringify({ type: 'MATCH_UPDATE', payload: updatedMatch.rows[0] }));
+                }
+            });
+        }
+
+        res.status(200).json(updatedMatch.rows[0]);
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error("Error al finalizar el partido:", err.message);
+        res.status(500).send('Error en el servidor al finalizar el partido.');
+    } finally {
+        client.release();
+    }
+});
+
+// --- NUEVA RUTA PARA ANUNCIAR UN PARTIDO ---
+router.post('/:id/announce', async (req, res) => {
+    const { id } = req.params;
+    const wss = req.app.get('wss');
+
+    try {
+        // 1. Marcar el partido como anunciado en la BD
+        await db.query('UPDATE matches SET is_announced = TRUE WHERE id = $1', [id]);
+
+        // 2. Obtener los detalles completos del partido para el anuncio
+        const matchDetailsRes = await db.query(`
+            SELECT 
+                m.id, m.court_id, m.category, 
+                t1.name AS team1_name, t2.name AS team2_name, c.name AS court_name,
+                (SELECT p.full_name FROM players p JOIN team_players tp ON p.id = tp.player_id WHERE tp.team_id = m.team1_id ORDER BY p.id LIMIT 1) AS team1_player1_name,
+                (SELECT p.full_name FROM players p JOIN team_players tp ON p.id = tp.player_id WHERE tp.team_id = m.team1_id ORDER BY p.id OFFSET 1 LIMIT 1) AS team1_player2_name,
+                (SELECT p.full_name FROM players p JOIN team_players tp ON p.id = tp.player_id WHERE tp.team_id = m.team2_id ORDER BY p.id LIMIT 1) AS team2_player1_name,
+                (SELECT p.full_name FROM players p JOIN team_players tp ON p.id = tp.player_id WHERE tp.team_id = m.team2_id ORDER BY p.id OFFSET 1 LIMIT 1) AS team2_player2_name
+            FROM matches m
+            JOIN teams t1 ON m.team1_id = t1.id
+            JOIN teams t2 ON m.team2_id = t2.id
+            LEFT JOIN courts c ON m.court_id = c.id
+            WHERE m.id = $1;
+        `, [id]);
+        
+        if (matchDetailsRes.rows.length === 0) {
+            return res.status(404).json({ msg: 'Partido no encontrado.' });
+        }
+        const match = matchDetailsRes.rows[0];
+
+        // 3. Construir y enviar el anuncio por WebSocket
+        const announcementPayload = {
+            id: Date.now(),
+            type: 'game',
+            courtName: match.court_name || `Cancha #${match.court_id}`,
+            team1Name: match.team1_name,
+            team2Name: match.team2_name,
+            team1Players: [match.team1_player1_name, match.team1_player2_name].filter(Boolean),
+            team2Players: [match.team2_player1_name, match.team2_player2_name].filter(Boolean),
+            category: match.category,
+        };
+
+        wss.clients.forEach(client => {
+            if (client.readyState === WebSocket.OPEN) {
+                client.send(JSON.stringify({ type: 'ANNOUNCEMENT_NEW', payload: announcementPayload }));
+                // También enviamos una actualización de partido para refrescar el estado del botón
+                client.send(JSON.stringify({ type: 'MATCH_UPDATE', payload: { id: match.id, is_announced: true } }));
+            }
+        });
+        
+        res.status(200).json({ msg: 'Anuncio enviado y partido marcado.' });
+
+    } catch (err) {
+        console.error("Error al anunciar el partido:", err.message);
+        res.status(500).send('Error en el servidor.');
+    }
+});
+
+
+module.exports = router;
