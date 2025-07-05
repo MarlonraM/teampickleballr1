@@ -1,21 +1,21 @@
 import React, { useState, useMemo } from "react";
 import { Clock } from "lucide-react";
-import {statictournaments, staticcourts, staticmatches} from "../data/staticData";
+import {statictournaments, staticcourts, statictmatches} from "../data/staticData";
 
 const HorariosPage = () => {
   // Estados de búsqueda y fecha
   const [playerSearch, setPlayerSearch] = useState("");
   // Inicializa la fecha con la del primer partido estático
-  const defaultDate = staticMatches[0]?.scheduled_start_time.slice(0, 10)
+  const defaultDate = staticmatches[0]?.scheduled_start_time.slice(0, 10)
     || new Date().toISOString().substring(0, 10);
   const [selectedDate, setSelectedDate] = useState(defaultDate);
 
-  // Torneo activo fijo al primero del array (útil si usas staticTournaments)
-  const activeTournamentId = staticTournaments[0]?.id;
+  // Torneo activo fijo al primero del array (útil si usas statictournaments)
+  const activeTournamentId = statictournaments[0]?.id;
 
   // Datos estáticos agrupados
   const allData = useMemo(
-    () => ({ matches: staticMatches, courts: staticCourts }),
+    () => ({ matches: staticmatches, courts: staticcourts }),
     []
   );
 
