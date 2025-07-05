@@ -6,14 +6,14 @@ const HorariosPage = () => {
   // Estados de búsqueda y fecha
   const [playerSearch, setPlayerSearch] = useState("");
   const [selectedDate, setSelectedDate] = useState(
-    tournaments[0]?.start_date || new Date().toISOString().substring(0, 10)
+    statictournaments[0]?.start_date || new Date().toISOString().substring(0, 10)
   );
   // Fijamos el torneo activo al primero del array
-  const activeTournamentId = tournaments[0]?.id;
+  const activeTournamentId = statictournaments[0]?.id;
 
   // Agrupamos datos estáticos
   const allData = useMemo(
-    () => ({ matches, courts }),
+    () => ({ staticmatches, staticcourts }),
     []
   );
 
@@ -31,8 +31,8 @@ const HorariosPage = () => {
   }, [selectedDate]);
 
   // Filtra partidos según fecha y búsqueda de jugador
-  const filteredMatches = useMemo(() => {
-    let list = allData.matches.filter(
+  const filteredstaticmatches = useMemo(() => {
+    let list = allData.staticmatches.filter(
       m => m.scheduled_start_time.slice(0, 10) === selectedDate
     );
 
@@ -54,7 +54,7 @@ const HorariosPage = () => {
     return list.sort(
       (a, b) => new Date(a.scheduled_start_time) - new Date(b.scheduled_start_time)
     );
-  }, [allData.matches, playerSearch, selectedDate]);
+  }, [allData.staticmatches, playerSearch, selectedDate]);
 
   // Formatea hora
   const fmtHour = iso => iso
@@ -106,7 +106,7 @@ const HorariosPage = () => {
       <div className="flex-1 overflow-y-auto px-2 py-4 space-y-3">
         {timeSlots.map((slot, i) => {
           const slotEnd = new Date(slot.getTime() + 20 * 60000);
-          const inSlot = filteredMatches.filter(m => {
+          const inSlot = filteredstaticmatches.filter(m => {
             const t = new Date(m.scheduled_start_time);
             return t >= slot && t < slotEnd;
           });
@@ -142,7 +142,7 @@ const HorariosPage = () => {
           );
         })}
 
-        {!filteredMatches.length && (
+        {!filteredstaticmatches.length && (
           <p className="text-center text-slate-400 mt-8">
             No hay partidos para los filtros seleccionados.
           </p>
