@@ -1,10 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { Clock } from "lucide-react";
-import {
-  tournaments as staticTournaments,
-  courts as staticCourts,
-  matches as staticMatches
-} from "../data/staticData";
+import {staticTournaments, staticCourts, staticMatches} from "../data/staticData";
 
 const HorariosPage = () => {
   // Estados de búsqueda y fecha
