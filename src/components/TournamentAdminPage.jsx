@@ -568,7 +568,7 @@ const PartidosTab = ({ matches: initialMatches, courts, refreshData, setEditingM
             await fetch(`${API_BASE_URL}/api/matches/${matchId}`, {
                 method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ court_id: courtId ? parseInt(courtId, 10) : null })
             });
-            refreshData();
+        //    refreshData();
         } catch (error) {
             console.error("Error al asignar cancha:", error);
         }
