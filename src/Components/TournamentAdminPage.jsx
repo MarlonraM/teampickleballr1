@@ -528,7 +528,7 @@ const JuegosEnCursoTab = () => {
             data[court.id] = {
                 name: court.name,
                 live: courtMatches.filter(m => m.status === 'en_vivo'),
-                upcoming: courtMatches.filter(m => m.status === 'asignado'),
+                upcoming: courtMatches.filter(m => m.status === 'pendiente'),
                 played: courtMatches.filter(m => m.status === 'finalizado').sort((a,b) => new Date(b.end_time) - new Date(a.end_time)).slice(0, 4)
             };
         });
