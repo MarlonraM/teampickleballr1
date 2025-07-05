@@ -11,7 +11,7 @@ import {
   Users,
   Megaphone,
   MonitorPlay,
-  Loader2,
+  Loader2,CheckCircle,
   X,
 } from "lucide-react";
 
@@ -690,18 +690,17 @@ const PlayerStats = ({ player, won, lost, pMatches }) => (
 );
 
 /* 5. Anuncios ------------------------------------------------------- */
-const AnnouncementsView = ({ announcements }) => (
-  announcements.length ? (
-    <ul className="space-y-2">
-      {announcements.map((a) => (
-        <li key={a.id} className="border-l-4 p-2" style={{ borderColor: c.red }}>
-          <p className="text-[10px] text-gray-500">{new Date(a.receivedAt || a.created_at).toLocaleString()}</p>
-          <p className="text-sm" style={{ color: c.navy }}>{a.text}</p>
-        </li>
-      ))}
-    </ul>
-  ) : <Placeholder>Sin anuncios</Placeholder>
-);
+const FinalsView = ({ matches }) => {
+  const finished = useMemo(
+    () => matches
+      .filter((m) => m.status === "finalizado")
+      .sort((a, b) => new Date(b.end_time) - new Date(a.end_time))
+    [matches]
+  );
+  if (!finished.length) return <Placeholder>No hay partidos finalizados</Placeholder>;
+  // Reutilizamos ScoreboardView para renderizar las tarjetas
+  return <ScoreboardView matches={finished} />;
+};
 
 /* ------------------------------------------------------------------ */
 /*  Componente principal                                              */
@@ -851,7 +850,7 @@ export default function TournamentHubPage() {
       case "standings":     return <StandingsView groups={groups} />;
       case "schedule":      return <ScheduleView  matches={matches} />;
       case "my-team":       return <MyTeamView    teams={teams} matches={matches} />;
-      case "announcements": return <AnnouncementsView announcements={announcements} />;
+      case "finals":        return <FinalsView     matches={matches} />;
       default:              return (
         <ScoreboardView
           matches={matches.filter(
@@ -880,8 +879,7 @@ export default function TournamentHubPage() {
                   active={activeView} setActive={setActiveView} />
           <NavBtn icon={<Users size={20} />}      label="Mi Equipo" view="my-team"
                   active={activeView} setActive={setActiveView} />
-          <NavBtn icon={<Megaphone size={20} />}  label="Anuncios"  view="announcements"
-                  active={activeView} setActive={setActiveView} />
+          <NavBtn icon={<CheckCircle    size={20} />} label="Finales"    view="finals"        active={activeView} setActive={setActiveView} />
         </nav>
       </header>
 
