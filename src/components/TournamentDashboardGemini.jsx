@@ -404,8 +404,7 @@ const ScoreboardView = ({ matches }) => {
   const isMobile = window.innerWidth < 768; // Ajusta el breakpoint según tus necesidades
   const s = scoreboardStyles(isMobile);
   if (!matches.length) return <p style={{ textAlign: "center", color: "#051638", fontStyle: "italic" }}>Sin partidos en vivo</p>;
-  const courtLabel = matches.court_name ?? matches.court?.name ?? (matches.court_id ? `CANCHA #${matches.court_id}` : 'Cancha N/A');
-  return (
+    return (
     <div style={s.grid}>
       {matches.map((m) => {
         const isTeam1Serving = m.server_team_id === m.team1_id;
