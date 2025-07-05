@@ -1353,7 +1353,8 @@ const JuegosEnCursoTab = ({ matches, courts }) => {
                             <div className="text-xs text-slate-400 truncate">{match.team1_player1_name} / {match.team1_player2_name}</div>
                         </div>
                         <div className="flex items-center justify-end gap-1 flex-shrink-0">
-                           <ServiceDots isServingTeam={match.server_team_id === match.team1_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
+                          <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+                            <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
                            <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
                            <span className="font-mono font-bold text-base w-6 text-right">{match.team1_score ?? '-'}</span>
                         </div>
@@ -1366,7 +1367,10 @@ const JuegosEnCursoTab = ({ matches, courts }) => {
                            <div className="text-xs text-slate-400 truncate">{match.team2_player1_name} / {match.team2_player2_name}</div>
                         </div>
                         <div className="flex items-center justify-end gap-1 flex-shrink-0">
-                           <ServiceDots isServingTeam={match.server_team_id === match.team2_id} serverNum={match.server_number} isFirstServeOfGame={isFirstServeOfGame} />
+                          
+                        <div className={`w-2 h-2 rounded-full transition-all ${firstDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+                        <div className={`w-2 h-2 rounded-full transition-all ${secondDotActive ? 'bg-yellow-400 shadow-[0_0_6px_yellow]' : 'bg-slate-600'}`}></div>
+           
                            <div className="w-px h-5 bg-slate-600 mx-0.5"></div>
                            <span className="font-mono font-bold text-base w-6 text-right">{match.team2_score ?? '-'}</span>
                         </div>
