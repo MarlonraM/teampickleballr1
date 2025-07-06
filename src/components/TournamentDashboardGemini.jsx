@@ -500,131 +500,167 @@ const ScoreboardView = ({ matches }) => {
 }
 
 /* 2. Standings ------------------------------------------------------ */
+/* 2. Standings ------------------------------------------------------ */
 const StandingsView = ({ allTeams, allMatches, tournaments }) => {
-    const [activeTournamentId, setActiveTournamentId] = useState(null);
+  const [activeTournamentId, setActiveTournamentId] = useState(null);
 
-    useEffect(() => {
-        if (tournaments && tournaments.length > 0 && !activeTournamentId) {
-            setActiveTournamentId(tournaments[0].id);
-        }
-    }, [tournaments, activeTournamentId]);
+  /* 🔸 Valor seguro cuando aún no hay brackets */
+  const EMPTY_BRACKETS = { semifinals: [], bronze: [], gold: [] };
 
-    const { standingsByGroup, playoffMatches } = useMemo(() => {
-        if (!activeTournamentId || !allTeams || !allMatches) return { standingsByGroup: [], playoffMatches: {} };
-        
-        const teamsOfTournament = allTeams.filter(t => t.tournament_id === activeTournamentId);
-        const matchesOfTournament = allMatches.filter(m => m.tournament_id === activeTournamentId);
-        
-        const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
-        
-        const groups = teamsOfTournament.reduce((acc, team) => {
-            const groupKey = team.groupId;
-            if (groupKey) {
-                if (!acc[groupKey]) {
-                    acc[groupKey] = { name: `Grupo ${getGroupLetter(groupKey)}`, id: groupKey, teams: [] };
-                }
-                const teamMatches = matchesOfTournament.filter(m => !m.is_tiebreaker && (m.team1_id === team.id || m.team2_id === team.id));
-                const stats = teamMatches.reduce((s, match) => {
-                    if (match.status !== 'finalizado') return s;
-                    const isTeam1 = match.team1_id === team.id;
-                    const myScore = isTeam1 ? (match.team1_score || 0) : (match.team2_score || 0);
-                    const opponentScore = isTeam1 ? (match.team2_score || 0) : (match.team1_score || 0);
-                    s.GF += myScore; s.GC += opponentScore;
-                    if (myScore > opponentScore) s.G += 1; else s.P += 1;
-                    return s;
-                }, { G: 0, P: 0, GF: 0, GC: 0 });
-                acc[groupKey].teams.push({ ...team, stats, diff: stats.GF - stats.GC, tournament_points: team.tournament_points || 0 });
-            }
-            return acc;
-        }, {});
+  /* Selecciona por defecto el 1.er torneo recibido */
+  useEffect(() => {
+    if (tournaments?.length && !activeTournamentId) {
+      setActiveTournamentId(tournaments[0].id);
+    }
+  }, [tournaments, activeTournamentId]);
 
-        for(const groupKey in groups) {
-            groups[groupKey].teams.sort((a, b) => {
-                if (b.tournament_points !== a.tournament_points) return b.tournament_points - a.tournament_points;
-                if (b.diff !== a.diff) return b.diff - a.diff;
-                return b.stats.GF - a.stats.GF;
-            });
-        }
-        
-        const playoffMatches = {
-            semifinals: matchesOfTournament.filter(m => m.match_type === 'semifinal'),
-            bronze: matchesOfTournament.filter(m => m.match_type === 'final_bronce'),
-            gold: matchesOfTournament.filter(m => m.match_type === 'final_oro')
-        };
+  /* Calcula tabla y posibles playoffs */
+  const { standingsByGroup, playoffMatches } = useMemo(() => {
+    if (!activeTournamentId || !allTeams || !allMatches) {
+      return { standingsByGroup: [], playoffMatches: EMPTY_BRACKETS };
+    }
 
-        return { standingsByGroup: Object.values(groups), playoffMatches };
-    }, [activeTournamentId, allTeams, allMatches]);
+    const teamsOfTournament   = allTeams.filter(t => t.tournament_id === activeTournamentId);
+    const matchesOfTournament = allMatches.filter(m => m.tournament_id === activeTournamentId);
 
-    const BracketMatch = ({ match, title }) => (
-        <div style={styles.bracketMatch}>
-            <p style={{fontSize: '0.7rem', fontWeight: 'bold', color: '#64748B', marginBottom: '0.5rem'}}>{title}</p>
-            <div style={{...styles.bracketTeam, ...(match?.winner_id === match?.team1_id && styles.bracketWinner)}}>
-                <span>{match?.team1_name || '??'}</span>
-                <span>{match?.team1_score ?? '-'}</span>
-            </div>
-            <hr style={{margin: '0.25rem 0', borderColor: '#E2E8F0'}}/>
-            <div style={{...styles.bracketTeam, ...(match?.winner_id === match?.team2_id && styles.bracketWinner)}}>
-                <span>{match?.team2_name || '??'}</span>
-                <span>{match?.team2_score ?? '-'}</span>
-            </div>
+    /* ---------- Helpers ---------- */
+    const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
+
+    /* Agrupar equipos y computar stats -------------------------------- */
+    const groups = teamsOfTournament.reduce((acc, team) => {
+      const groupKey = team.groupId;
+      if (!groupKey) return acc;
+
+      if (!acc[groupKey]) {
+        acc[groupKey] = { name: `Grupo ${getGroupLetter(groupKey)}`, id: groupKey, teams: [] };
+      }
+
+      const teamMatches = matchesOfTournament.filter(
+        m => !m.is_tiebreaker && (m.team1_id === team.id || m.team2_id === team.id)
+      );
+
+      const stats = teamMatches.reduce((s, match) => {
+        if (match.status !== 'finalizado') return s;
+        const isTeam1      = match.team1_id === team.id;
+        const myScore      = isTeam1 ? (match.team1_score ?? 0) : (match.team2_score ?? 0);
+        const opponentScore= isTeam1 ? (match.team2_score ?? 0) : (match.team1_score ?? 0);
+        s.GF += myScore;  s.GC += opponentScore;
+        if (myScore > opponentScore) s.G++; else s.P++;
+        return s;
+      }, { G:0, P:0, GF:0, GC:0 });
+
+      acc[groupKey].teams.push({
+        ...team,
+        stats,
+        diff: stats.GF - stats.GC,
+        tournament_points: team.tournament_points ?? 0,
+      });
+      return acc;
+    }, {});
+
+    /* Ordenar dentro de cada grupo ----------------------------------- */
+    Object.values(groups).forEach(g => {
+      g.teams.sort((a,b) =>
+        b.tournament_points - a.tournament_points ||
+        b.diff              - a.diff              ||
+        b.stats.GF          - a.stats.GF
+      );
+    });
+
+    /* Partidos de playoff (si existen) -------------------------------- */
+    const playoffMatches = {
+      semifinals: matchesOfTournament.filter(m => m.match_type === 'semifinal'),
+      bronze:     matchesOfTournament.filter(m => m.match_type === 'final_bronce'),
+      gold:       matchesOfTournament.filter(m => m.match_type === 'final_oro'),
+    };
+
+    return { standingsByGroup: Object.values(groups), playoffMatches };
+  }, [activeTournamentId, allTeams, allMatches]);
+
+  /* Siempre tendremos arrays, nunca undefined */
+  const {
+    semifinals = [],
+    bronze     = [],
+    gold       = [],
+  } = playoffMatches ?? EMPTY_BRACKETS;
+
+  /* ---- Pequeño componente para pintar cada partido del bracket ---- */
+  const BracketMatch = ({ match, title }) => (
+    <div style={styles.bracketMatch}>
+      <p style={{fontSize:'0.7rem',fontWeight:'bold',color:'#64748B',marginBottom:4}}>{title}</p>
+      <div style={{...styles.bracketTeam, ...(match?.winner_id === match?.team1_id && styles.bracketWinner)}}>
+        <span>{match?.team1_name || '??'}</span>
+        <span>{match?.team1_score ?? '-'}</span>
+      </div>
+      <hr style={{margin:'2px 0',borderColor:'#E2E8F0'}}/>
+      <div style={{...styles.bracketTeam, ...(match?.winner_id === match?.team2_id && styles.bracketWinner)}}>
+        <span>{match?.team2_name || '??'}</span>
+        <span>{match?.team2_score ?? '-'}</span>
+      </div>
+    </div>
+  );
+
+  /* --------------------------- Render ------------------------------ */
+  return (
+    <div>
+      <select
+        value={activeTournamentId ?? ''}
+        onChange={e => setActiveTournamentId(parseInt(e.target.value))}
+        style={styles.teamSelect}
+      >
+        {tournaments?.map(t => (
+          <option key={t.id} value={t.id}>{t.name}</option>
+        ))}
+      </select>
+
+      {/* Si hay semifinales, dibujamos el bracket; si no, mostramos grupos */}
+      {semifinals.length > 0 ? (
+        <div style={styles.bracketContainer}>
+          <div style={styles.bracketRound}>
+            <BracketMatch match={semifinals[0]} title="Semifinal 1" />
+            <BracketMatch match={semifinals[1]} title="Semifinal 2" />
+          </div>
+          <div style={styles.finalRound}>
+            <BracketMatch match={gold[0]}   title="Final Oro/Plata" />
+            <BracketMatch match={bronze[0]} title="Final Bronce" />
+          </div>
         </div>
-    );
-    
-    return (
-        <div>
-            <select onChange={e => setActiveTournamentId(parseInt(e.target.value))} value={activeTournamentId || ''} style={styles.teamSelect}>
-                {tournaments && tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-            </select>
-
-            {playoffMatches.semifinals.length > 0 ? (
-                <div style={styles.bracketContainer}>
-                    <div style={styles.bracketRound}>
-                        <BracketMatch match={playoffMatches.semifinals[0]} title="Semifinal 1" />
-                        <BracketMatch match={playoffMatches.semifinals[1]} title="Semifinal 2" />
-                    </div>
-                    <div style={styles.finalRound}>
-                        <BracketMatch match={playoffMatches.gold[0]} title="Final Oro/Plata" />
-                        <BracketMatch match={playoffMatches.bronze[0]} title="Final Bronce" />
-                    </div>
-                </div>
-            ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                    {standingsByGroup.map((group, groupIndex) => (
-                        <div key={groupIndex} style={{...styles.card, margin: 0}}>
-                            <div style={{...styles.cardHeader, backgroundColor: '#051638', color: 'white'}}><h2 style={{fontSize: '1.1rem'}}>{group.name}</h2></div>
-                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                                <thead>
-                                    <tr style={{ borderBottom: '2px solid #E2E8F0' }}>
-                                        <th style={{...styles.tableHeader, width: '40px', textAlign: 'center'}}>#</th>
-                                        <th style={styles.tableHeader}>Equipo</th>
-                                        <th style={{...styles.tableHeader, textAlign: 'center'}}>G/P</th>
-                                        <th style={{...styles.tableHeader, textAlign: 'center'}}>Dif.</th>
-                                        <th style={{...styles.tableHeader, textAlign: 'center'}}>Pts.</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {group.teams.map((team, index) => (
-                                        <tr key={team.id} style={styles.tableRow}>
-                                            <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{index + 1}</td>
-                                            <td style={{...styles.tableCell, fontWeight: '500'}}>
-                                                <div style={{display: 'flex', alignItems: 'center'}}>
-                                                    {index === 0 && <img src="/icon1.png" alt="Líder" style={styles.winnerIcon} />}
-                                                    {team.name}
-                                                </div>
-                                            </td>
-                                            <td style={{...styles.tableCell, textAlign: 'center', fontFamily: 'monospace'}}>{team.stats.G}/{team.stats.P}</td>
-                                            <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{team.diff}</td>
-                                            <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold', color: '#E51937'}}>{team.tournament_points}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
-                    ))}
-                </div>
-            )}
+      ) : (
+        /* Tabla de posiciones por grupo */
+        <div style={{display:'flex',flexDirection:'column',gap:'2rem'}}>
+          {standingsByGroup.map(group => (
+            <div key={group.id} style={styles.card}>
+              <div style={{...styles.cardHeader,background:'#051638',color:'#fff'}}>
+                <h2 style={{fontSize:'1.1rem'}}>{group.name}</h2>
+              </div>
+              <table style={{width:'100%',borderCollapse:'collapse'}}>
+                <thead>
+                  <tr style={{borderBottom:'2px solid #E2E8F0'}}>
+                    <th style={{...styles.tableHeader,width:40,textAlign:'center'}}>#</th>
+                    <th style={styles.tableHeader}>Equipo</th>
+                    <th style={{...styles.tableHeader,textAlign:'center'}}>G/P</th>
+                    <th style={{...styles.tableHeader,textAlign:'center'}}>Dif.</th>
+                    <th style={{...styles.tableHeader,textAlign:'center'}}>Pts.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.teams.map((team,idx) => (
+                    <tr key={team.id} style={styles.tableRow}>
+                      <td style={{...styles.tableCell,textAlign:'center',fontWeight:'bold'}}>{idx+1}</td>
+                      <td style={{...styles.tableCell,fontWeight:500}}>{team.name}</td>
+                      <td style={{...styles.tableCell,textAlign:'center',fontFamily:'monospace'}}>{team.stats.G}/{team.stats.P}</td>
+                      <td style={{...styles.tableCell,textAlign:'center',fontWeight:'bold'}}>{team.diff}</td>
+                      <td style={{...styles.tableCell,textAlign:'center',fontWeight:'bold',color:'#E51937'}}>{team.tournament_points}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
         </div>
-    );
+      )}
+    </div>
+  );
 };
 /* 3. Schedule ------------------------------------------------------- */
 const ScheduleView = ({ matches }) => {
@@ -993,7 +1029,7 @@ export default function TournamentHubPage() {
     }
   };
 
-  /* -------- JSX principal -------- */
+
   return (
     <div style={styles.page}>
       <header style={styles.header}>
