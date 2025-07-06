@@ -979,10 +979,7 @@ export default function TournamentHubPage() {
     if (error) return <Placeholder>{error}</Placeholder>;
 
     switch (activeView) {
-      case "standings":     return (   <StandingsView      allTeams={teams}      allMatches={matches}
-     tournaments={tournaments}
-   />;
-
+      case "standings":     return <StandingsView allTeams={teams} allMatches={matches} tournaments={tournaments} />;
       case "schedule":      return <ScheduleView  matches={matches} />;
       case "my-team":       return <MyTeamView    teams={teams} matches={matches} />;
       case "finals":        return <FinalsView     matches={matches} />;
