@@ -613,6 +613,11 @@ const StandingsView = ({ allTeams, allMatches, tournaments }) => {
         ))}
       </select>
 
+
+
+
+
+      
       {/* Si hay semifinales, dibujamos el bracket; si no, mostramos grupos */}
       {semifinals.length > 0 ? (
         <div style={styles.bracketContainer}>
@@ -659,6 +664,10 @@ const StandingsView = ({ allTeams, allMatches, tournaments }) => {
           ))}
         </div>
       )}
+      <Placeholder>  
+        Aún no hay grupos definidos ni partidos de playoff para este torneo.
+      </Placeholder>
+
     </div>
   );
 };
