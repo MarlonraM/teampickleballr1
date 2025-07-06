@@ -1020,7 +1020,7 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
     const [expandedRows, setExpandedRows] = useState({});
     const [showTiebreakers, setShowTiebreakers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-    const [activeTournamentId, setActiveTournamentId] = useState(2);
+    
     // Función para cargar todos los datos
      const handleGeneratePlayoffs = async () => {
   if (!activeTournamentId) {
@@ -1761,7 +1761,7 @@ const HorariosTab = ({ matches, courts, openScheduleModal, tournamentStartDate }
 export default function TournamentAdminPage() {
     const [activeTab, setActiveTab] = useState('partidos');
     const [tournaments, setTournaments] = useState([]);
-    const [activeTournamentId, setActiveTournamentId] = useState(null);
+    const [activeTournamentId, setActiveTournamentId] = useState(2);
     const [allData, setAllData] = useState({ matches: [], teams: [], courts: [] });
     const [allTeamsForSelection, setAllTeamsForSelection] = useState([]);
     const [loading, setLoading] = useState(true);
