@@ -479,7 +479,15 @@ const ScoreboardView = ({ matches }) => {
 
 /* 2. Standings ------------------------------------------------------ */
 const StandingsView = ({ allTeams, allMatches, tournaments }) => {
-    const [activeTournamentId, setActiveTournamentId] = useState(tournaments[0]?.id || null);
+    // 1. Inicializa el estado como null
+    const [activeTournamentId, setActiveTournamentId] = useState(null);
+
+    // 2. Usa un efecto para establecer el ID activo solo cuando la lista de torneos esté disponible
+    useEffect(() => {
+        if (tournaments && tournaments.length > 0 && !activeTournamentId) {
+            setActiveTournamentId(tournaments[0].id);
+        }
+    }, [tournaments, activeTournamentId]);
 
     const { standingsByGroup, playoffMatches } = useMemo(() => {
         if (!activeTournamentId || !allTeams || !allMatches) return { standingsByGroup: [], playoffMatches: {} };
@@ -598,7 +606,6 @@ const StandingsView = ({ allTeams, allMatches, tournaments }) => {
         </div>
     );
 };
-
 /* 3. Schedule ------------------------------------------------------- */
 const ScheduleView = ({ matches }) => {
   const upcoming = useMemo(
