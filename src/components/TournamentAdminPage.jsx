@@ -1020,6 +1020,7 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
     const [expandedRows, setExpandedRows] = useState({});
     const [showTiebreakers, setShowTiebreakers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [activeTournamentId, setActiveTournamentId] = useState(2);
     // Función para cargar todos los datos
      const handleGeneratePlayoffs = async () => {
   if (!activeTournamentId) {
