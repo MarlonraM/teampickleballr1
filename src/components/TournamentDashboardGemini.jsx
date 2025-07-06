@@ -35,15 +35,35 @@ const c = {
 /*  Estilos en JS                                                      */
 /* ------------------------------------------------------------------ */
 const styles = {
-  page:         { fontFamily: "'Inter', sans-serif", backgroundColor: "#F8F8F8", minHeight: "100vh" },
-  header:       { position: "sticky", top: 0, zIndex: 10, backgroundColor: "white", boxShadow: "0 2px 4px rgba(0,0,0,0.05)" },
-  headerContent:{ padding: "0.75rem 1rem", borderBottom: "1px solid #E2E8F0", textAlign: "center" },
-  tournamentName:{ fontSize: "1.25rem", fontWeight: "bold", color: c.navy },
-  tournamentDate:{ fontSize: "0.875rem", color: "#64748B" },
-  nav:          { display: "flex", justifyContent: "space-around", padding: "0.5rem 0", borderBottom: "1px solid #E2E8F0" },
-  navButton:    { display: "flex", flexDirection: "column", alignItems: "center", gap: "0.25rem", color: "#64748B", fontSize: "0.75rem", border: "none", background: "none", cursor: "pointer", padding: "0.5rem", flex: 1 },
-  navButtonActive:{ color: c.red, fontWeight: "bold" },
-  content:      { padding: "1rem" },
+// --- Estilos ---
+const styles = {
+    page: { fontFamily: "'Inter', sans-serif", backgroundColor: '#F8F8F8', minHeight: '100vh' },
+    header: { position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
+    headerContent: { padding: '0.75rem 1rem', borderBottom: '1px solid #E2E8F0', textAlign: 'center' },
+    tournamentName: { fontSize: '1.25rem', fontWeight: 'bold', color: '#051638' },
+    tournamentDate: { fontSize: '0.875rem', color: '#64748B' },
+    nav: { display: 'flex', justifyContent: 'space-around', padding: '0.5rem 0', borderBottom: '1px solid #E2E8F0' },
+    navButton: { display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem', color: '#64748B', fontSize: '0.75rem', border: 'none', background: 'none', cursor: 'pointer', padding: '0.5rem', flex: 1 },
+    navButtonActive: { color: '#E51937', fontWeight: 'bold' },
+    content: { padding: '1rem' },
+    card: { backgroundColor: 'white', borderRadius: '0.75rem', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', marginBottom: '1rem', border: '1px solid #E2E8F0' },
+    cardHeader: { padding: '0.75rem 1rem', borderBottom: '1px solid #E2E8F0', fontWeight: 'bold', color: '#051638' },
+    cardBody: { padding: '1rem' },
+    tableHeader: { padding: '12px', textAlign: 'left', fontWeight: 'bold', borderBottom: '2px solid #E2E8F0', fontSize: '0.8rem' },
+    tableCell: { padding: '12px', verticalAlign: 'middle' },
+    tableRow: { borderBottom: '1px solid #f0f0f0' },
+    winnerIcon: { height: '20px', marginRight: '8px' },
+    teamSelect: { width: '100%', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #E2E8F0', backgroundColor: '#F8F8F8', marginBottom: '1rem' },
+    bracketContainer: { display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem', flexDirection: 'column', gap: '2rem' },
+    bracketRound: { display: 'flex', flexDirection: 'column', gap: '2.5rem' },
+    bracketMatch: { position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: '#F1F5F9', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #E2E8F0', width: '250px' },
+    bracketTeam: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' },
+    bracketWinner: { fontWeight: 'bold', color: '#166534' },
+    bracketConnector: { position: 'absolute', top: '25%', right: '-20px', width: '20px', height: '50%', borderTop: '2px solid #CBD5E1', borderBottom: '2px solid #CBD5E1', borderRight: '2px solid #CBD5E1' },
+    finalRound: { display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1rem' },
+
+  
+  
   serviceDotsContainer: { display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center', alignItems: 'center' },
   serviceDot: { width: '10px', height: '10px', borderRadius: '50%', transition: 'all 0.3s ease' },
   serviceDotActive: { backgroundColor: '#FFB81C', boxShadow: '0 0 8px #FFB81C' },
@@ -460,42 +480,99 @@ const ScoreboardView = ({ matches }) => {
 }
 
 /* 2. Standings ------------------------------------------------------ */
-const StandingsView = ({ groups }) => (
-  groups.length ? (
-    <div className="p-2 space-y-4">
-      {groups.map((g) => (
-        <div key={g.name} className="border rounded-lg overflow-hidden">
-          <header className="text-center text-sm font-bold py-2"
-                  style={{ backgroundColor: c.navy, color: "white" }}>
-            {g.name}
-          </header>
-          <table className="w-full text-[11px]">
-            <thead>
-              <tr style={{ background: c.gray }}>
-                <th className="py-2">#</th>
-                <th className="text-left py-2">Equipo</th>
-                <th className="py-2">G/P</th>
-                <th className="py-2">Dif</th>
-                <th className="py-2">Pts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {g.teams.map((t, i) => (
-                <tr key={t.id} className="text-center border-t">
-                  <td className="py-2">{i + 1}</td>
-                  <td className="text-left font-semibold py-2">{t.name}</td>
-                  <td className="py-2">{t.stats.G}/{t.stats.P}</td>
-                  <td className="py-2">{t.diff}</td>
-                  <td className="font-bold py-2" style={{ color: c.red }}>{t.tournament_points}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+const StandingsView = ({ allTeams, allMatches, tournaments }) => {
+    const [activeTournamentId, setActiveTournamentId] = useState(tournaments[0]?.id || null);
+
+    const { standingsByGroup, playoffMatches } = useMemo(() => {
+        if (!activeTournamentId || !allTeams || !allMatches) return { standingsByGroup: [], playoffMatches: {} };
+        
+        const teamsOfTournament = allTeams.filter(t => t.tournament_id === activeTournamentId);
+        const matchesOfTournament = allMatches.filter(m => m.tournament_id === activeTournamentId);
+        
+        const getGroupLetter = (id) => id ? String.fromCharCode(64 + id) : null;
+        
+        const groups = teamsOfTournament.reduce((acc, team) => {
+            const groupKey = team.groupId;
+            if (groupKey) {
+                if (!acc[groupKey]) {
+                    acc[groupKey] = { name: `Grupo ${getGroupLetter(groupKey)}`, id: groupKey, teams: [] };
+                }
+                const teamMatches = matchesOfTournament.filter(m => !m.is_tiebreaker && (m.team1_id === team.id || m.team2_id === team.id));
+                const stats = teamMatches.reduce((s, match) => {
+                    if (match.status !== 'finalizado') return s;
+                    const isTeam1 = match.team1_id === team.id;
+                    const myScore = isTeam1 ? (match.team1_score || 0) : (match.team2_score || 0);
+                    const opponentScore = isTeam1 ? (match.team2_score || 0) : (match.team1_score || 0);
+                    s.GF += myScore; s.GC += opponentScore;
+                    if (myScore > opponentScore) s.G += 1; else s.P += 1;
+                    return s;
+                }, { G: 0, P: 0, GF: 0, GC: 0 });
+                acc[groupKey].teams.push({ ...team, stats, diff: stats.GF - stats.GC });
+            }
+            return acc;
+        }, {});
+
+        for(const groupKey in groups) {
+            groups[groupKey].teams.sort((a, b) => {
+                if (b.tournament_points !== a.tournament_points) return b.tournament_points - a.tournament_points;
+                if (b.diff !== a.diff) return b.diff - a.diff;
+                return b.stats.GF - a.stats.GF;
+            });
+        }
+        
+        const playoffMatches = {
+            semifinals: matchesOfTournament.filter(m => m.match_type === 'semifinal'),
+            bronze: matchesOfTournament.filter(m => m.match_type === 'final_bronce'),
+            gold: matchesOfTournament.filter(m => m.match_type === 'final_oro')
+        };
+
+        return { standingsByGroup: Object.values(groups), playoffMatches };
+    }, [activeTournamentId, allTeams, allMatches]);
+
+    const BracketMatch = ({ match, title }) => (
+        <div style={styles.bracketMatch}>
+            <p style={{fontSize: '0.7rem', fontWeight: 'bold', color: '#64748B', marginBottom: '0.5rem'}}>{title}</p>
+            <div style={{...styles.bracketTeam, ...(match?.winner_id === match?.team1_id && styles.bracketWinner)}}>
+                <span>{match?.team1_name || '??'}</span>
+                <span>{match?.team1_score ?? '-'}</span>
+            </div>
+            <hr style={{margin: '0.25rem 0', borderColor: '#E2E8F0'}}/>
+            <div style={{...styles.bracketTeam, ...(match?.winner_id === match?.team2_id && styles.bracketWinner)}}>
+                <span>{match?.team2_name || '??'}</span>
+                <span>{match?.team2_score ?? '-'}</span>
+            </div>
         </div>
-      ))}
-    </div>
-  ) : <Placeholder>Sin data de grupos</Placeholder>
-);
+    );
+    
+    return (
+        <div>
+            <select onChange={e => setActiveTournamentId(parseInt(e.target.value))} value={activeTournamentId || ''} style={styles.teamSelect}>
+                {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+            </select>
+
+            {playoffMatches.semifinals.length > 0 ? (
+                <div style={styles.bracketContainer}>
+                    <div style={styles.bracketRound}>
+                        <BracketMatch match={playoffMatches.semifinals[0]} title="Semifinal 1" />
+                        <BracketMatch match={playoffMatches.semifinals[1]} title="Semifinal 2" />
+                    </div>
+                    <div style={styles.finalRound}>
+                        <BracketMatch match={playoffMatches.gold[0]} title="Final Oro/Plata" />
+                        <BracketMatch match={playoffMatches.bronze[0]} title="Final Bronce" />
+                    </div>
+                </div>
+            ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                    {standingsByGroup.map((group, groupIndex) => (
+                        <div key={groupIndex} style={{...styles.card, margin: 0}}>
+                            {/* ... JSX de la tabla de standings de grupo ... */}
+                        </div>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+};
 
 /* 3. Schedule ------------------------------------------------------- */
 const ScheduleView = ({ matches }) => {
