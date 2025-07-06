@@ -35,8 +35,6 @@ const c = {
 /*  Estilos en JS                                                      */
 /* ------------------------------------------------------------------ */
 const styles = {
-// --- Estilos ---
-const styles = {
     page: { fontFamily: "'Inter', sans-serif", backgroundColor: '#F8F8F8', minHeight: '100vh' },
     header: { position: 'sticky', top: 0, zIndex: 10, backgroundColor: 'white', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' },
     headerContent: { padding: '0.75rem 1rem', borderBottom: '1px solid #E2E8F0', textAlign: 'center' },
