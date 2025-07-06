@@ -1026,46 +1026,17 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
     alert('Selecciona un torneo primero');
     return;
   }
-
   setIsSaving(true);
   try {
     const res = await fetch(`${API_BASE_URL}/api/matches/generate-playoffs`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tournament_id: activeTournamentId })   // 👈 AQUI
+      body: JSON.stringify({ tournament_id: activeTournamentId }),
     });
-
     if (!res.ok) {
       const err = await res.json();
       throw new Error(err.msg || 'Error al generar play-offs');
     }
-
-    alert('¡Play-offs generados!');
-    await fetchDataForTournament(activeTournamentId, true);
-  } catch (err) {
-    alert(err.message);
-  } finally {
-    setIsSaving(false);
-  }
-};const handleGeneratePlayoffs = async () => {
-  if (!activeTournamentId) {
-    alert('Selecciona un torneo primero');
-    return;
-  }
-
-  setIsSaving(true);
-  try {
-    const res = await fetch(`${API_BASE_URL}/api/matches/generate-playoffs`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ tournament_id: activeTournamentId })   // 👈 AQUI
-    });
-
-    if (!res.ok) {
-      const err = await res.json();
-      throw new Error(err.msg || 'Error al generar play-offs');
-    }
-
     alert('¡Play-offs generados!');
     await fetchDataForTournament(activeTournamentId, true);
   } catch (err) {
