@@ -81,7 +81,7 @@ const styles = {
     bracketMatch: { position: 'relative', display: 'flex', flexDirection: 'column', backgroundColor: '#F1F5F9', padding: '0.75rem', borderRadius: '0.5rem', border: '1px solid #E2E8F0', width: '250px' },
     bracketTeam: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.875rem' },
     bracketWinner: { fontWeight: 'bold', color: '#166534' },
-    finalRound: { display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1rem' }
+    finalRound: { display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '1rem' },
   
   
   serviceDotsContainer: { display: 'flex', flexDirection: 'column', gap: '4px', justifyContent: 'center', alignItems: 'center' },
