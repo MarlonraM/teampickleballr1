@@ -501,10 +501,8 @@ const ScoreboardView = ({ matches }) => {
 
 /* 2. Standings ------------------------------------------------------ */
 const StandingsView = ({ allTeams, allMatches, tournaments }) => {
-    // 1. Inicializa el estado como null para evitar errores
     const [activeTournamentId, setActiveTournamentId] = useState(null);
 
-    // 2. Usa un efecto para establecer el ID activo solo cuando la lista de torneos esté disponible
     useEffect(() => {
         if (tournaments && tournaments.length > 0 && !activeTournamentId) {
             setActiveTournamentId(tournaments[0].id);
@@ -628,7 +626,6 @@ const StandingsView = ({ allTeams, allMatches, tournaments }) => {
         </div>
     );
 };
-
 /* 3. Schedule ------------------------------------------------------- */
 const ScheduleView = ({ matches }) => {
   const upcoming = useMemo(
