@@ -5,6 +5,7 @@ import.meta.env.VITE_API_URL;
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 const WS_URL = API_BASE_URL.replace(/^http/, 'ws');
+
 // --- Componentes de UI Reutilizables ---
 const Card = ({ children, title, icon: Icon, titleClassName = 'text-cyan-400', extraHeaderContent }) => (
     <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl shadow-lg">
@@ -1013,13 +1014,35 @@ const handleSaveAndGenerateMatches = async () => {
 
     
 // --- PESTAÑA 2: GESTIÓN DE TORNEO ---
-const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount, setModalData, refreshData }) => {
+const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount, setModalData, refreshData, activeTournamentId }) => {
     const { teams, matches } = allData;
+    const [isGeneratingPlayoffs, setIsGeneratingPlayoffs] = useState(false);
     const [expandedRows, setExpandedRows] = useState({});
     const [showTiebreakers, setShowTiebreakers] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     // Función para cargar todos los datos
-      
+     const handleGeneratePlayoffs = async () => {
+        if (!window.confirm("¿Estás seguro de que deseas generar los playoffs? Esta acción no se puede deshacer.")) return;
+        setIsGeneratingPlayoffs(true);
+        try {
+            const response = await fetch(`${API_BASE_URL}/api/matches/generate-playoffs`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ tournament_id: activeTournamentId })
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.msg || 'Error al generar playoffs.');
+            }
+            alert('¡Playoffs generados exitosamente!');
+            refreshData();
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsGeneratingPlayoffs(false);
+        }
+    };
+    
      const handleGenerateTiebreakers = async (tiedTeams, category) => {
         const team_ids = tiedTeams.map(t => t.id);
         setIsSaving(true);
@@ -1058,6 +1081,70 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
         }, { G: 0, P: 0, GF: 0, GC: 0, TournamentPoints: 0 });
     };
 
+const { roundRobinMatches, semifinalMatches, finalMatches, bronzeMatches } = useMemo(() => {
+        return {
+            roundRobinMatches: matches.filter(m => m.match_type === 'round_robin'),
+            semifinalMatches: matches.filter(m => m.match_type === 'semifinal'),
+            finalMatches: matches.filter(m => m.match_type === 'final_oro'),
+            bronzeMatches: matches.filter(m => m.match_type === 'final_bronce'),
+        };
+    }, [matches]);
+
+    const allRoundRobinFinished = useMemo(() => {
+        if (roundRobinMatches.length === 0) return false;
+        return roundRobinMatches.every(m => m.status === 'finalizado');
+    }, [roundRobinMatches]);
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
     const tiebreakerInfo = useMemo(() => {
         const tiebreakers = {};
         const teamsWithPoints = teams.map(team => ({...team, tournament_points: team.tournament_points || 0}));
@@ -1170,38 +1257,53 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
                 })
             ) : ( <Card title="Gestión de Torneo" icon={Gamepad2}><div className="text-center text-slate-400 py-8"><p>No se encontraron partidos.</p></div></Card> )}
             
-             <Card title="Juegos de Desempate (Tie-Breaks)" icon={Swords} titleClassName="text-amber-400">
-                <button onClick={() => setShowTiebreakers(!showTiebreakers)} className="text-sm text-slate-300 flex items-center">{showTiebreakers ? 'Ocultar Desempates' : 'Mostrar Desempates'} <ChevronsUpDown size={16} className="ml-2" /></button>
-                {showTiebreakers && (
-                    <div className="mt-4 space-y-4">
-                        {Object.entries(tiebreakerInfo).map(([groupId, ties]) => (
-                            ties.length > 0 && (
-                                <div key={groupId}>
-                                    <h4 className="font-bold mb-2">Grupo {String.fromCharCode(64 + parseInt(groupId))}</h4>
-                                    {ties.map((tiedTeams, index) => (
-                                        <div key={index} className="bg-slate-900/50 p-3 rounded-lg mb-2">
-                                            <p className="text-sm font-semibold">Empate en {tiedTeams[0].tournament_points} puntos entre: <span className="text-amber-400">{tiedTeams.map(t => t.name).join(', ')}</span></p>
-                                            <div className="mt-2 text-xs space-y-1">
-                                                <p className="font-bold">Generar partidos de desempate por categoría:</p>
-                                                <div className="flex gap-2">
-                                                    {['Avanzado', 'Intermedio Fuerte', 'Intermedio', 'Femenina'].map(category => (
-                                                        <button key={category} onClick={() => handleGenerateTiebreakers(tiedTeams, category)} className="bg-rose-600 hover:bg-rose-700 px-3 py-1 rounded-md text-xs">{category}</button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )
-                        ))}
-                         {Object.values(tiebreakerInfo).every(v => v.length === 0) && <p className="text-sm text-slate-500">No hay empates que requieran desempate en este momento.</p>}
-                    </div>
-                )}
-             </Card>
+              
+            <Card title="Fase de Eliminación (Playoffs)" icon={Trophy}>
+                <div className="space-y-4">
+                    <button 
+                        onClick={handleGeneratePlayoffs}
+                        disabled={!allRoundRobinFinished || isGeneratingPlayoffs || semifinalMatches.length > 0}
+                        className="bg-cyan-600 hover:bg-cyan-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded-lg flex items-center"
+                    >
+                        {isGeneratingPlayoffs && <Loader2 className="animate-spin mr-2" />}
+                        Generar Playoffs
+                    </button>
+                    {!allRoundRobinFinished && <p className="text-xs text-slate-400">El botón se activará cuando todos los partidos de la fase de grupos hayan finalizado.</p>}
+                </div>
+
+                <div className="mt-6 space-y-6">
+                    {semifinalMatches.length > 0 && <PlayoffBracket title="Semifinales" matches={semifinalMatches} setModalData={setModalData} />}
+                    {finalMatches.length > 0 && <PlayoffBracket title="Final por el Oro" matches={finalMatches} setModalData={setModalData} />}
+                    {bronzeMatches.length > 0 && <PlayoffBracket title="Final por el Bronce" matches={bronzeMatches} setModalData={setModalData} />}
+                </div>
+            </Card>
         </div>
     );
 };
- 
+
+const PlayoffBracket = ({ title, matches, setModalData }) => (
+    <div>
+        <h4 className="text-lg font-semibold text-amber-400 mb-2">{title}</h4>
+        <div className="space-y-2">
+            {matches.map(match => (
+                <div key={match.id} onClick={() => setModalData(match)} className="bg-slate-700/50 p-3 rounded-md flex justify-between items-center cursor-pointer hover:bg-slate-700">
+                    <div>
+                        <p className="font-semibold">{match.team1_name || '??'} vs {match.team2_name || '??'}</p>
+                        <p className="text-xs text-slate-400">{match.category}</p>
+                    </div>
+                    <div className="font-mono text-sm">{match.team1_score ?? '-'} / {match.team2_score ?? '-'}</div>
+                </div>
+            ))}
+        </div>
+    </div>
+);
+
+
+
+
+
+
+
 // --- PESTAÑA 3: STANDING (CORREGIDA) ---
 const StandingTab = ({ teams, matches, eliminationCount }) => {
     const calculateStats = (teamMatches, teamId) => {
