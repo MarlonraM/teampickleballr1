@@ -1023,10 +1023,7 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
     
     // Función para cargar todos los datos
      const handleGeneratePlayoffs = async () => {
-  if (!activeTournamentId) {
-    alert('Selecciona un torneo primero');
-    return;
-  }
+
   setIsSaving(true);
   try {
     const res = await fetch(`${API_BASE_URL}/api/matches/generate-playoffs`, {
