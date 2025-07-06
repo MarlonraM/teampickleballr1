@@ -30,7 +30,7 @@ function App() {
         <Route path="/scoreboard/michelob" element={<PublicScoreboardMichelob />} />
       {/*<Route path="/scoreboard/Dashboard" element={<TournamentDashboard />} />*/}
         <Route path="/scoreboard/gemini" element={<TournamentDashboardGemini />} />
-        
+        <Route path="/match/:matchId" element={<ScorekeeperPage />} />
 
 
         {/* RUTAS PROTEGIDAS */}
@@ -39,14 +39,6 @@ function App() {
           element={
             <ProtectedRoute>
               <TournamentAdminPage />
-            </ProtectedRoute>
-          } 
-        />
-        <Route 
-          path="/match/:matchId" 
-          element={
-            <ProtectedRoute>
-              <ScorekeeperPage />
             </ProtectedRoute>
           } 
         />
