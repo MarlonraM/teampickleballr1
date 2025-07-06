@@ -501,7 +501,7 @@ const ScoreboardView = ({ matches }) => {
 
 /* 2. Standings ------------------------------------------------------ */
 const StandingsView = ({ allTeams, allMatches, tournaments }) => {
-    // 1. Inicializa el estado como null
+    // 1. Inicializa el estado como null para evitar errores
     const [activeTournamentId, setActiveTournamentId] = useState(null);
 
     // 2. Usa un efecto para establecer el ID activo solo cuando la lista de torneos esté disponible
@@ -575,7 +575,7 @@ const StandingsView = ({ allTeams, allMatches, tournaments }) => {
     return (
         <div>
             <select onChange={e => setActiveTournamentId(parseInt(e.target.value))} value={activeTournamentId || ''} style={styles.teamSelect}>
-                {tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {tournaments && tournaments.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
             </select>
 
             {playoffMatches.semifinals.length > 0 ? (
@@ -628,6 +628,7 @@ const StandingsView = ({ allTeams, allMatches, tournaments }) => {
         </div>
     );
 };
+
 /* 3. Schedule ------------------------------------------------------- */
 const ScheduleView = ({ matches }) => {
   const upcoming = useMemo(
