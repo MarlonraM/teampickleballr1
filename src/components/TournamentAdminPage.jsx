@@ -1022,26 +1022,58 @@ const GestionTorneoTab = ({ allData, onEliminationCountChange, eliminationCount,
     const [isSaving, setIsSaving] = useState(false);
     // Función para cargar todos los datos
      const handleGeneratePlayoffs = async () => {
-        if (!window.confirm("¿Estás seguro de que deseas generar los playoffs? Esta acción no se puede deshacer.")) return;
-        setIsGeneratingPlayoffs(true);
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/matches/generate-playoffs`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ tournament_id: activeTournamentId })
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.msg || 'Error al generar playoffs.');
-            }
-            alert('¡Playoffs generados exitosamente!');
-            refreshData();
-        } catch (err) {
-            alert(err.message);
-        } finally {
-            setIsGeneratingPlayoffs(false);
-        }
-    };
+  if (!activeTournamentId) {
+    alert('Selecciona un torneo primero');
+    return;
+  }
+
+  setIsSaving(true);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/matches/generate-playoffs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournament_id: activeTournamentId })   // 👈 AQUI
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.msg || 'Error al generar play-offs');
+    }
+
+    alert('¡Play-offs generados!');
+    await fetchDataForTournament(activeTournamentId, true);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    setIsSaving(false);
+  }
+};const handleGeneratePlayoffs = async () => {
+  if (!activeTournamentId) {
+    alert('Selecciona un torneo primero');
+    return;
+  }
+
+  setIsSaving(true);
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/matches/generate-playoffs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tournament_id: activeTournamentId })   // 👈 AQUI
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.msg || 'Error al generar play-offs');
+    }
+
+    alert('¡Play-offs generados!');
+    await fetchDataForTournament(activeTournamentId, true);
+  } catch (err) {
+    alert(err.message);
+  } finally {
+    setIsSaving(false);
+  }
+};
     
      const handleGenerateTiebreakers = async (tiedTeams, category) => {
         const team_ids = tiedTeams.map(t => t.id);
