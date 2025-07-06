@@ -505,7 +505,7 @@ const StandingsView = ({ allTeams, allMatches, tournaments }) => {
                     if (myScore > opponentScore) s.G += 1; else s.P += 1;
                     return s;
                 }, { G: 0, P: 0, GF: 0, GC: 0 });
-                acc[groupKey].teams.push({ ...team, stats, diff: stats.GF - stats.GC });
+                acc[groupKey].teams.push({ ...team, stats, diff: stats.GF - stats.GC, tournament_points: team.tournament_points || 0 });
             }
             return acc;
         }, {});
@@ -563,7 +563,34 @@ const StandingsView = ({ allTeams, allMatches, tournaments }) => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
                     {standingsByGroup.map((group, groupIndex) => (
                         <div key={groupIndex} style={{...styles.card, margin: 0}}>
-                            {/* ... JSX de la tabla de standings de grupo ... */}
+                            <div style={{...styles.cardHeader, backgroundColor: '#051638', color: 'white'}}><h2 style={{fontSize: '1.1rem'}}>{group.name}</h2></div>
+                            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                                <thead>
+                                    <tr style={{ borderBottom: '2px solid #E2E8F0' }}>
+                                        <th style={{...styles.tableHeader, width: '40px', textAlign: 'center'}}>#</th>
+                                        <th style={styles.tableHeader}>Equipo</th>
+                                        <th style={{...styles.tableHeader, textAlign: 'center'}}>G/P</th>
+                                        <th style={{...styles.tableHeader, textAlign: 'center'}}>Dif.</th>
+                                        <th style={{...styles.tableHeader, textAlign: 'center'}}>Pts.</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {group.teams.map((team, index) => (
+                                        <tr key={team.id} style={styles.tableRow}>
+                                            <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{index + 1}</td>
+                                            <td style={{...styles.tableCell, fontWeight: '500'}}>
+                                                <div style={{display: 'flex', alignItems: 'center'}}>
+                                                    {index === 0 && <img src="/icon1.png" alt="Líder" style={styles.winnerIcon} />}
+                                                    {team.name}
+                                                </div>
+                                            </td>
+                                            <td style={{...styles.tableCell, textAlign: 'center', fontFamily: 'monospace'}}>{team.stats.G}/{team.stats.P}</td>
+                                            <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold'}}>{team.diff}</td>
+                                            <td style={{...styles.tableCell, textAlign: 'center', fontWeight: 'bold', color: '#E51937'}}>{team.tournament_points}</td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
                         </div>
                     ))}
                 </div>
